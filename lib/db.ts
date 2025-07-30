@@ -1,13 +1,21 @@
 import { neon } from "@neondatabase/serverless"
 
-const connectionString =
-  process.env.DATABASE_URL_OVERRIDE ||
-  process.env.DATABASE_URL ||
-  process.env.POSTGRES_URL ||
-  process.env.POSTGRES_PRISMA_URL ||
-  process.env.POSTGRES_URL_NON_POOLING ||
-  process.env.POSTGRES_URL_NO_SSL ||
-  ""
+const connectionString = process.env.DATABASE_URL || ""
+
+// Debug logging to see what we're actually getting
+console.log("🔍 Database connection debug:")
+console.log("DATABASE_URL exists:", !!process.env.DATABASE_URL)
+console.log("DATABASE_URL starts with postgresql:", process.env.DATABASE_URL?.startsWith("postgresql://"))
+console.log("Connection string length:", connectionString.length)
+console.log("Connection string preview:", connectionString.substring(0, 50) + "...")
+
+// Check for problematic environment variables
+if (process.env.POSTGRES_URL && process.env.POSTGRES_URL.includes("psql")) {
+  console.warn("⚠️ POSTGRES_URL contains psql prefix:", process.env.POSTGRES_URL.substring(0, 50))
+}
+if (process.env.POSTGRES_PRISMA_URL && process.env.POSTGRES_PRISMA_URL.includes("psql")) {
+  console.warn("⚠️ POSTGRES_PRISMA_URL contains psql prefix:", process.env.POSTGRES_PRISMA_URL.substring(0, 50))
+}
 
 // Detect whether we have a plausible Postgres URL
 const isPostgresUrl = connectionString.startsWith("postgres://") || connectionString.startsWith("postgresql://")
