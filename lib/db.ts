@@ -1,10 +1,10 @@
 import { neon } from "@neondatabase/serverless"
 
-// Clean the connection string by removing any psql command prefix
-function cleanConnectionString(connectionString: string | undefined): string {
-  if (!connectionString) return ""
+// Function to clean connection string if it has psql prefix
+function cleanConnectionString(connectionString: string): string {
+  if (!connectionString) return connectionString
 
-  // Remove psql command prefix if it exists
+  // Remove psql prefix and quotes if present
   if (connectionString.startsWith("psql '") && connectionString.endsWith("'")) {
     return connectionString.slice(6, -1) // Remove "psql '" from start and "'" from end
   }
@@ -12,7 +12,7 @@ function cleanConnectionString(connectionString: string | undefined): string {
   return connectionString
 }
 
-// Get the first available connection string and clean it
+// Get the connection string with fallbacks
 const rawConnectionString =
   process.env.DATABASE_URL_OVERRIDE ||
   process.env.DATABASE_URL ||
@@ -22,10 +22,18 @@ const rawConnectionString =
   process.env.POSTGRES_URL_NO_SSL ||
   ""
 
+// Clean the connection string
 const connectionString = cleanConnectionString(rawConnectionString)
 
 if (!connectionString) {
   throw new Error("No database connection string found in environment variables")
+}
+
+// Validate that it's a proper PostgreSQL URL
+if (!connectionString.startsWith("postgresql://") && !connectionString.startsWith("postgres://")) {
+  throw new Error(
+    `Invalid database connection string format. Expected postgresql:// or postgres://, got: ${connectionString.substring(0, 20)}...`,
+  )
 }
 
 export const sql = neon(connectionString)
