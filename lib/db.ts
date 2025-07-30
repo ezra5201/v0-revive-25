@@ -1,11 +1,43 @@
 import { neon } from "@neondatabase/serverless"
 
-const connectionString = process.env.DATABASE_URL || ""
+// Clean the connection string by removing any psql command prefix
+function cleanConnectionString(connectionString: string | undefined): string {
+  if (!connectionString) return ""
+
+  // Remove psql command prefix if it exists
+  if (connectionString.startsWith("psql '") && connectionString.endsWith("'")) {
+    return connectionString.slice(6, -1) // Remove "psql '" from start and "'" from end
+  }
+
+  return connectionString
+}
+
+// Get the first available connection string and clean it
+const rawConnectionString =
+  process.env.DATABASE_URL_OVERRIDE ||
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.POSTGRES_URL_NON_POOLING ||
+  process.env.POSTGRES_URL_NO_SSL ||
+  ""
+
+const connectionString = cleanConnectionString(rawConnectionString)
+
+if (!connectionString) {
+  throw new Error("No database connection string found in environment variables")
+}
+
+export const sql = neon(connectionString)
 
 // Debug logging to see what we're actually getting
 console.log("🔍 Database connection debug:")
+console.log("DATABASE_URL_OVERRIDE exists:", !!process.env.DATABASE_URL_OVERRIDE)
 console.log("DATABASE_URL exists:", !!process.env.DATABASE_URL)
-console.log("DATABASE_URL starts with postgresql:", process.env.DATABASE_URL?.startsWith("postgresql://"))
+console.log("POSTGRES_URL exists:", !!process.env.POSTGRES_URL)
+console.log("POSTGRES_PRISMA_URL exists:", !!process.env.POSTGRES_PRISMA_URL)
+console.log("POSTGRES_URL_NON_POOLING exists:", !!process.env.POSTGRES_URL_NON_POOLING)
+console.log("POSTGRES_URL_NO_SSL exists:", !!process.env.POSTGRES_URL_NO_SSL)
 console.log("Connection string length:", connectionString.length)
 console.log("Connection string preview:", connectionString.substring(0, 50) + "...")
 
@@ -36,23 +68,6 @@ if (isPostgresUrl && connectionString) {
     }
   }
 }
-
-/* ------------------------------------------------------------------
-   SAFETY: In some sandboxed environments (e.g. Next.js preview)
-   outbound fetch to Neon's proxy is blocked.  That throws 
-   "TypeError: Failed to fetch" at import-time, killing the route.
-   We catch that here and degrade to `null`, letting API routes
-   fall back gracefully to empty responses.
-------------------------------------------------------------------- */
-export const sql = (() => {
-  if (!isPostgresUrl) return null
-  try {
-    return neon(connectionString)
-  } catch (err) {
-    console.error("Error connecting to database:", err)
-    return null
-  }
-})()
 
 const maleFirstNames = [
   "James",
@@ -390,7 +405,7 @@ export async function getDatabaseStats() {
         (SELECT COUNT(*) FROM contacts) as contacts,
         (SELECT COUNT(*) FROM clients) as clients,
         (SELECT COUNT(DISTINCT name) FROM providers) as providers,
-        (SELECT COUNT(*) FROM alerts WHERE status = 'active') as alerts
+        (SELECT COUNT(*) FROM alerts WHERE is_read = FALSE) as alerts
     `
 
     // Get unique people count (distinct client names from contacts)
