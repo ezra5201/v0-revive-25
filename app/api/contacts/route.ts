@@ -55,14 +55,7 @@ export async function GET(request: NextRequest) {
   )`)
     } else if (serviceFilter === "ot") {
       whereConditions.push(`(
-    (c.services_requested IS NOT NULL AND (
-      c.services_requested::text ILIKE '%Occupational Therapy%' OR
-      c.services_requested::text ILIKE '%OT%'
-    )) OR
-    (c.services_provided IS NOT NULL AND (
-      c.services_provided::text ILIKE '%Occupational Therapy%' OR
-      c.services_provided::text ILIKE '%OT%'
-    ))
+    c.occupational_therapy_requested = 1 OR c.occupational_therapy_provided = 1
   )`)
     }
 
