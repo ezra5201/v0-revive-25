@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { sql } from "@/lib/db"
+import { neon } from "@neondatabase/serverless"
 
 export async function GET() {
   if (!sql) {
@@ -102,6 +103,16 @@ export async function GET() {
 
     const completed = hasHighAmericanNamePercentage && hasGoodDiversity
 
+    // Check for the presence of '70%' in client names using the new neon client
+    const sqlNeon = neon(process.env.DATABASE_URL!)
+    const result = await sqlNeon`
+      SELECT COUNT(*) as count
+      FROM contacts
+      WHERE client_name LIKE '%70%'
+    `
+
+    const count = Number(result[0]?.count || 0)
+
     return NextResponse.json({
       completed,
       reason: completed ? "High American name percentage and good diversity detected" : "Insufficient indicators",
@@ -111,6 +122,8 @@ export async function GET() {
         americanNamePercentage: Math.round(americanNamePercentage),
         hasHighAmericanNamePercentage,
         hasGoodDiversity,
+        hasSeventyPercentNames: count > 0,
+        count,
       },
     })
   } catch (error) {

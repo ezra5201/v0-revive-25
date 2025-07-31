@@ -22,6 +22,7 @@ export async function GET() {
       nodeEnv: process.env.NODE_ENV,
       vercelEnv: process.env.VERCEL_ENV,
       timestamp: new Date().toISOString(),
+      hasDbUrl: !!process.env.DATABASE_URL,
     }
 
     return NextResponse.json(envVars)

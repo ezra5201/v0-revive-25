@@ -1,54 +1,57 @@
-import { initializeDatabase, seedDatabase, isDatabaseInitialized } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { neon } from "@neondatabase/serverless"
 
 export async function POST() {
   try {
-    console.log("🚀 Starting database setup...")
+    const sql = neon(process.env.DATABASE_URL!)
 
-    const isAlreadyInitialized = await isDatabaseInitialized()
+    // Create contacts table
+    await sql`
+      CREATE TABLE IF NOT EXISTS contacts (
+        id SERIAL PRIMARY KEY,
+        client_name VARCHAR(255) NOT NULL,
+        provider_name VARCHAR(255),
+        service_type VARCHAR(100),
+        contact_date DATE,
+        notes TEXT,
+        service_completed BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `
 
-    if (isAlreadyInitialized) {
-      console.log("📊 Database already initialized, skipping setup")
-      return NextResponse.json({
-        message: "Database is already initialized and contains data.",
-        status: "already_initialized",
-      })
-    }
+    // Create monthly_service_summary table
+    await sql`
+      CREATE TABLE IF NOT EXISTS monthly_service_summary (
+        id SERIAL PRIMARY KEY,
+        year INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        service_name VARCHAR(100) NOT NULL,
+        total_requested INTEGER DEFAULT 0,
+        total_provided INTEGER DEFAULT 0,
+        completion_rate DECIMAL(5,2) DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(year, month, service_name)
+      )
+    `
 
-    await initializeDatabase()
-    console.log("✅ Tables verified/created")
+    // Create alerts table
+    await sql`
+      CREATE TABLE IF NOT EXISTS alerts (
+        id SERIAL PRIMARY KEY,
+        type VARCHAR(50) NOT NULL,
+        message TEXT NOT NULL,
+        client_name VARCHAR(255),
+        severity VARCHAR(20) DEFAULT 'medium',
+        resolved BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `
 
-    await seedDatabase()
-    console.log("✅ Minimal data seeded")
-
-    return NextResponse.json({
-      message: "Database initialized successfully with minimal sample data.",
-      status: "initialized",
-    })
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("❌ Setup failed:", error)
-    return NextResponse.json(
-      {
-        error: `Database setup failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-        status: "error",
-      },
-      { status: 500 },
-    )
-  }
-}
-
-export async function GET() {
-  try {
-    const isInitialized = await isDatabaseInitialized()
-    return NextResponse.json({
-      initialized: isInitialized,
-      timestamp: new Date().toISOString(),
-    })
-  } catch (error) {
-    console.error("❌ Status check failed:", error)
-    return NextResponse.json({
-      initialized: false,
-      error: "Failed to check database status",
-    })
+    console.error("Database setup error:", error)
+    return NextResponse.json({ success: false, error: "Failed to setup database" }, { status: 500 })
   }
 }

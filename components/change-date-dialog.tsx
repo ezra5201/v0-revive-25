@@ -5,135 +5,107 @@ import type React from "react"
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Calendar, AlertCircle } from "lucide-react"
-import { getMaxAllowedDate } from "@/lib/date-utils"
+import { Label } from "@/components/ui/label"
+import { Calendar } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 interface ChangeDateDialogProps {
   isOpen: boolean
   onClose: () => void
-  selectedCount: number
-  onDateChange?: (newDate: string) => void
+  contactId: number
+  currentDate: string
+  clientName: string
+  onDateChanged: () => void
 }
 
-export function ChangeDateDialog({ isOpen, onClose, selectedCount, onDateChange }: ChangeDateDialogProps) {
-  const [selectedDate, setSelectedDate] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export function ChangeDateDialog({
+  isOpen,
+  onClose,
+  contactId,
+  currentDate,
+  clientName,
+  onDateChanged,
+}: ChangeDateDialogProps) {
+  const [newDate, setNewDate] = useState(currentDate)
+  const [isLoading, setIsLoading] = useState(false)
+  const { toast } = useToast()
 
-  // Get today's date in Chicago time (06/30/2025) for max date validation
-  const maxDate = getMaxAllowedDate()
-
-  const handleClose = () => {
-    setSelectedDate("")
-    setIsSubmitting(false)
-    setError(null)
-    onClose()
-  }
-
-  const handleSubmit = async () => {
-    if (!selectedDate) {
-      setError("Please select a date")
-      return
-    }
-
-    // Validate that the selected date is not in the future
-    if (selectedDate > maxDate) {
-      setError("Cannot select a future date")
-      return
-    }
-
-    setIsSubmitting(true)
-    setError(null)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
 
     try {
-      onDateChange?.(selectedDate)
-      handleClose()
-    } catch (error) {
-      setError("Failed to update date")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+      const response = await fetch("/api/change-date", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contactId,
+          newDate,
+        }),
+      })
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedDate(e.target.value)
-    setError(null)
+      if (response.ok) {
+        toast({
+          title: "Date Updated",
+          description: `Contact date changed to ${new Date(newDate).toLocaleDateString()}`,
+        })
+        onDateChanged()
+        onClose()
+      } else {
+        throw new Error("Failed to update date")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update contact date",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md" aria-describedby="dialog-description">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Change Contact Date</DialogTitle>
-          <div id="dialog-description" className="sr-only">
-            Change the contact date for {selectedCount} selected contact{selectedCount > 1 ? "s" : ""}
-          </div>
+          <DialogTitle className="flex items-center space-x-2">
+            <Calendar className="h-5 w-5" />
+            <span>Change Contact Date</span>
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          <div className="flex items-center space-x-2 text-sm text-gray-600 bg-blue-50 p-3 rounded">
-            <AlertCircle className="h-4 w-4 text-blue-600" />
-            <span>
-              This will update the contact date for {selectedCount} selected contact{selectedCount > 1 ? "s" : ""}.
-            </span>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="client">Client</Label>
+            <Input id="client" value={clientName} disabled className="bg-gray-50" />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="contact-date">New Contact Date *</Label>
-            <div className="relative">
-              <Input
-                id="contact-date"
-                type="date"
-                value={selectedDate}
-                onChange={handleDateChange}
-                max={maxDate}
-                className="w-full pr-10"
-                placeholder="Select date"
-              />
-              <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-            </div>
-            <p className="text-xs text-gray-500">
-              Select a date on or before today (
-              {new Date().toLocaleDateString("en-US", {
-                month: "2-digit",
-                day: "2-digit",
-                year: "numeric",
-                timeZone: "America/Chicago",
-              })}
-              )
-            </p>
+          <div>
+            <Label htmlFor="currentDate">Current Date</Label>
+            <Input
+              id="currentDate"
+              value={new Date(currentDate).toLocaleDateString()}
+              disabled
+              className="bg-gray-50"
+            />
           </div>
 
-          {error && (
-            <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded">
-              <AlertCircle className="h-4 w-4" />
-              <span className="text-sm">{error}</span>
-            </div>
-          )}
+          <div>
+            <Label htmlFor="newDate">New Date</Label>
+            <Input id="newDate" type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} required />
+          </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              className="flex-1 sm:flex-none bg-transparent"
-              disabled={isSubmitting}
-            >
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} className="flex-1" disabled={!selectedDate || isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Updating...
-                </>
-              ) : (
-                "Save Changes"
-              )}
+            <Button type="submit" disabled={isLoading || newDate === currentDate}>
+              {isLoading ? "Updating..." : "Update Date"}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   )

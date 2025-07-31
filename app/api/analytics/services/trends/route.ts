@@ -25,76 +25,41 @@ export async function GET(request: Request) {
     // Add debugging
     console.log(`Fetching trends for service: "${service}"`)
 
-    // Test query - fetch just one month of Food data to verify connection
-    // const testQuery = await sql<
-    //   {
-    //     year: number
-    //     month: number
-    //     total_requested: number
-    //     total_provided: number
-    //     completion_rate: number
-    //   }[]
-    // >(
-    //   `
-    // SELECT
-    //   year,
-    //   month,
-    //   total_requested,
-    //   total_provided,
-    //   completion_rate
-    // FROM   monthly_service_summary
-    // WHERE  LOWER(service_name) = LOWER($1)
-    // ORDER  BY year DESC, month DESC
-    // LIMIT  1;
-    // `,
-    //   [service],
-    // )
-
-    // console.log(`Test query result for ${service}:`, testQuery)
-
     /* ---------- optionally-limited query ---------- */
     const rows = await sql<
       {
-        year: number
-        month: number
-        total_requested: number
-        total_provided: number
-        completion_rate: number
+        service_type: string
+        month: Date
+        usage_count: number
       }[]
-    >(
-      `
-    SELECT
-      year,
-      month,
-      total_requested,
-      total_provided,
-      completion_rate
-    FROM   monthly_service_summary
-    WHERE  LOWER(service_name) = LOWER($1)
-    ORDER  BY year, month
-    ${limit ? "LIMIT " + limit : ""}
-  `,
-      [service],
-    )
+    >`
+      SELECT 
+        service_type,
+        DATE_TRUNC('month', contact_date) as month,
+        COUNT(*) as usage_count
+      FROM contacts
+      WHERE contact_date >= CURRENT_DATE - INTERVAL '6 months'
+        AND service_type IS NOT NULL
+        AND LOWER(service_type) = LOWER(${service})
+      GROUP BY service_type, DATE_TRUNC('month', contact_date)
+      ORDER BY month, service_type
+      ${limit ? `LIMIT ${limit}` : ""}
+    `
 
     /* ---------- shape for the dashboard ---------- */
     const trends = rows.map((r) => {
-      const date = new Date(r.year, r.month - 1) // JS months are 0-indexed
+      const date = new Date(r.month)
       return {
-        month: `${r.year}-${String(r.month).padStart(2, "0")}`,
+        serviceType: r.service_type,
+        month: date.toISOString().split("T")[0],
         monthLabel: date.toLocaleDateString("en-US", { year: "numeric", month: "short" }),
-        requested: r.total_requested ?? 0,
-        provided: r.total_provided ?? 0,
-        completionRate: r.completion_rate ?? 0,
+        usageCount: r.usage_count,
       }
     })
 
     /* ---------- summary stats ---------- */
     const summary = {
-      totalRequested: trends.reduce((t, m) => t + m.requested, 0),
-      totalProvided: trends.reduce((t, m) => t + m.provided, 0),
-      averageCompletionRate:
-        trends.length > 0 ? Math.round(trends.reduce((t, m) => t + m.completionRate, 0) / trends.length) : 0,
+      totalUsageCount: trends.reduce((t, m) => t + m.usageCount, 0),
     }
 
     /* ---------- always succeed with at least an empty data set ---------- */
@@ -106,7 +71,7 @@ export async function GET(request: Request) {
         error: "Failed to fetch service trends",
         service: "Unknown",
         trends: [],
-        summary: { totalRequested: 0, totalProvided: 0, averageCompletionRate: 0 },
+        summary: { totalUsageCount: 0 },
       },
       { status: 500 },
     )

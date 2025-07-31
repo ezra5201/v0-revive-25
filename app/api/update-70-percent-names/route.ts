@@ -1,5 +1,5 @@
-import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { neon } from "@neondatabase/serverless"
 
 // Name pools for generating realistic names
 const maleFirstNames = [
@@ -174,9 +174,12 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 export async function POST() {
-  if (!sql) {
-    return NextResponse.json({ error: "Database connection not available" }, { status: 500 })
+  const dbUrl = process.env.DATABASE_URL
+  if (!dbUrl) {
+    return NextResponse.json({ error: "Database URL not available" }, { status: 500 })
   }
+
+  const sql = neon(dbUrl)
 
   try {
     // Start transaction

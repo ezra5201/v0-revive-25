@@ -2,104 +2,128 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, User, Clock } from "lucide-react"
-
-interface ClientData {
-  name: string
-  category: string
-  active: boolean
-  created_at: string
-  updated_at: string
-}
+import { User, Calendar, Building, Phone, Mail, MapPin } from "lucide-react"
 
 interface ClientBasicInfoProps {
-  clientData: ClientData
-  contactHistoryLength: number
+  clientName: string
+  totalContacts: number
+  firstContact: string
+  lastContact: string
+  primaryProvider?: string
+  contactInfo?: {
+    phone?: string
+    email?: string
+    address?: string
+  }
 }
 
-export function ClientBasicInfo({ clientData, contactHistoryLength }: ClientBasicInfoProps) {
+export function ClientBasicInfo({
+  clientName,
+  totalContacts,
+  firstContact,
+  lastContact,
+  primaryProvider,
+  contactInfo,
+}: ClientBasicInfoProps) {
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    })
+    return new Date(dateString).toLocaleDateString()
   }
 
-  const getCategoryColor = (category: string) => {
-    switch (category.toLowerCase()) {
-      case "prospect":
-        return "bg-yellow-100 text-yellow-800"
-      case "client":
-        return "bg-green-100 text-green-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
+  const daysSinceLastContact = Math.floor(
+    (new Date().getTime() - new Date(lastContact).getTime()) / (1000 * 60 * 60 * 24),
+  )
+
+  const getActivityStatus = () => {
+    if (daysSinceLastContact <= 7) return { label: "Active", color: "bg-green-100 text-green-800" }
+    if (daysSinceLastContact <= 30) return { label: "Recent", color: "bg-yellow-100 text-yellow-800" }
+    return { label: "Inactive", color: "bg-red-100 text-red-800" }
   }
+
+  const activityStatus = getActivityStatus()
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Basic Information Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <User className="h-5 w-5" />
-              <span>Basic Information</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-500">Full Name</label>
-              <p className="text-lg font-semibold text-gray-900">{clientData.name}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Category</label>
-              <div className="mt-1">
-                <Badge className={getCategoryColor(clientData.category)}>{clientData.category}</Badge>
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Status</label>
-              <div className="mt-1">
-                <Badge className={clientData.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                  {clientData.active ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <User className="h-5 w-5" />
+            <span>Client Information</span>
+          </div>
+          <Badge className={activityStatus.color}>{activityStatus.label}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-bold">{clientName}</h2>
+          <p className="text-sm text-muted-foreground">{totalContacts} total contacts</p>
+        </div>
 
-        {/* Timeline Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Clock className="h-5 w-5" />
-              <span>Timeline</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-500">First Added</label>
-              <div className="flex items-center space-x-2 mt-1">
-                <Calendar className="h-4 w-4 text-gray-400" />
-                <p className="text-gray-900">{formatDate(clientData.created_at)}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">First Contact</p>
+                <p className="text-sm text-muted-foreground">{formatDate(firstContact)}</p>
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Last Updated</label>
-              <div className="flex items-center space-x-2 mt-1">
-                <Calendar className="h-4 w-4 text-gray-400" />
-                <p className="text-gray-900">{formatDate(clientData.updated_at)}</p>
+
+            <div className="flex items-center space-x-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Last Contact</p>
+                <p className="text-sm text-muted-foreground">
+                  {formatDate(lastContact)} ({daysSinceLastContact} days ago)
+                </p>
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Total Contacts</label>
-              <p className="text-2xl font-bold text-blue-600">{contactHistoryLength}</p>
+
+            {primaryProvider && (
+              <div className="flex items-center space-x-2">
+                <Building className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Primary Provider</p>
+                  <p className="text-sm text-muted-foreground">{primaryProvider}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {contactInfo && (
+            <div className="space-y-3">
+              {contactInfo.phone && (
+                <div className="flex items-center space-x-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Phone</p>
+                    <p className="text-sm text-muted-foreground">{contactInfo.phone}</p>
+                  </div>
+                </div>
+              )}
+
+              {contactInfo.email && (
+                <div className="flex items-center space-x-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Email</p>
+                    <p className="text-sm text-muted-foreground">{contactInfo.email}</p>
+                  </div>
+                </div>
+              )}
+
+              {contactInfo.address && (
+                <div className="flex items-center space-x-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Address</p>
+                    <p className="text-sm text-muted-foreground">{contactInfo.address}</p>
+                  </div>
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

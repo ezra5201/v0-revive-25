@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { neon } from "@neondatabase/serverless"
 
 export async function POST(request: Request) {
   if (!sql) {
@@ -61,6 +62,14 @@ export async function POST(request: Request) {
           JSON.stringify(updatedServicesProvided),
           contactId,
         ])
+
+        // Use Neon to update the service_completed field
+        const neonSql = neon(process.env.DATABASE_URL!)
+        await neonSql`
+          UPDATE contacts 
+          SET service_completed = true
+          WHERE id = ${contactId}
+        `
 
         completedContacts.push({
           id: contactId,

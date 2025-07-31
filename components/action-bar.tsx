@@ -3,7 +3,18 @@
 import type React from "react"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Download, Utensils, ChevronDown, X, UserPlus, Calendar, CalendarDays, SlidersHorizontal } from "lucide-react"
+import {
+  Download,
+  Utensils,
+  ChevronDown,
+  X,
+  UserPlus,
+  Calendar,
+  CalendarDays,
+  SlidersHorizontal,
+  RefreshCw,
+  Plus,
+} from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -25,6 +36,11 @@ interface ActionBarProps {
   onFiltersChange?: (filters: { categories: string[]; providers: string[] }) => void
   onServiceCompleted?: () => void
   onDateChangeClick?: () => void
+  totalContacts: number
+  filteredContacts: number
+  onRefresh: () => void
+  onAddContact?: () => void
+  isLoading?: boolean
 }
 
 // Helper function to properly capitalize names
@@ -52,6 +68,11 @@ export function ActionBar({
   onFiltersChange,
   onServiceCompleted,
   onDateChangeClick,
+  totalContacts,
+  filteredContacts,
+  onRefresh,
+  onAddContact,
+  isLoading = false,
 }: ActionBarProps) {
   const [searchValue, setSearchValue] = useState("")
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -328,7 +349,7 @@ export function ActionBar({
 
   return (
     <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         {/* Main action bar */}
         <div className="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between">
           {/* Left side - Client Search */}
@@ -623,6 +644,21 @@ export function ActionBar({
               Clear all
             </Button>
           </div>
+        )}
+      </div>
+
+      {/* Refresh and Add Contact Buttons */}
+      <div className="flex items-center space-x-2 mt-4 sm:mt-0">
+        <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+
+        {onAddContact && (
+          <Button size="sm" onClick={onAddContact}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Contact
+          </Button>
         )}
       </div>
     </div>

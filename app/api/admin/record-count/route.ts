@@ -1,12 +1,10 @@
-import { sql } from "@/lib/db"
+import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
 export async function GET() {
-  if (!sql) {
-    return NextResponse.json({ error: "Database not available" }, { status: 500 })
-  }
-
   try {
+    const sql = neon(process.env.DATABASE_URL!)
+
     // Get basic counts
     const basicStats = await sql`
       SELECT 

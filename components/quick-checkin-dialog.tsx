@@ -1,308 +1,159 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { AlertTriangle } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Clock } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
-interface ClientDialogProps {
+interface QuickCheckinDialogProps {
   isOpen: boolean
   onClose: () => void
-  clientName: string
-  onCheckInSubmit?: (data: CheckInData) => void
+  onCheckinAdded: () => void
 }
 
-interface CheckInData {
-  clientName: string
-  objectives: string[]
-  accessedFood: boolean
-  comments: string
-  hasAlert: boolean
-  alertDetails: string
-}
-
-type DialogView = "initial" | "checkin"
-
-const objectives = [
-  { value: "Case Management", label: "Case Management (CM)" },
-  { value: "Employment", label: "Employment Services" },
-  { value: "Food", label: "Food" },
-  { value: "Healthcare", label: "Healthcare Support" },
-  { value: "Housing", label: "Housing Support" },
-  { value: "ID", label: "ID/Documentation" },
-  { value: "Laundry", label: "Laundry" },
-  { value: "Occupational", label: "Occupational Therapy (OT)" },
-  { value: "Recreation", label: "Recreation" },
-  { value: "Other", label: "Other" },
+const serviceTypes = [
+  "Case Management",
+  "Occupational Therapy",
+  "Food",
+  "Healthcare",
+  "Housing",
+  "Employment",
+  "Benefits",
+  "Legal",
+  "Transportation",
+  "Mental Health",
 ]
 
-export function QuickCheckinDialog({ isOpen, onClose, clientName, onCheckInSubmit }: ClientDialogProps) {
-  const [currentView, setCurrentView] = useState<DialogView>("initial")
-  const [selectedObjectives, setSelectedObjectives] = useState<string[]>([])
-  const [accessedFood, setAccessedFood] = useState(false)
-  const [comments, setComments] = useState("")
-  const [hasAlert, setHasAlert] = useState(false)
-  const [alertDetails, setAlertDetails] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
+export function QuickCheckinDialog({ isOpen, onClose, onCheckinAdded }: QuickCheckinDialogProps) {
+  const [formData, setFormData] = useState({
+    client_name: "",
+    service_type: "",
+    notes: "",
+    service_completed: false,
+  })
+  const [isLoading, setIsLoading] = useState(false)
+  const { toast } = useToast()
 
-  const handleClose = () => {
-    setCurrentView("initial")
-    setSelectedObjectives([])
-    setAccessedFood(false)
-    setComments("")
-    setHasAlert(false)
-    setAlertDetails("")
-    setIsSubmitting(false)
-    setSubmitError(null)
-    onClose()
-  }
-
-  const handleObjectiveChange = (objective: string, checked: boolean) => {
-    if (checked) {
-      setSelectedObjectives([...selectedObjectives, objective])
-    } else {
-      setSelectedObjectives(selectedObjectives.filter((obj) => obj !== objective))
-    }
-  }
-
-  const handleSubmit = async () => {
-    setIsSubmitting(true)
-    setSubmitError(null)
-
-    console.log("Starting check-in submission for:", clientName)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
 
     try {
-      // First, submit the check-in (all fields are optional except client name)
-      const checkInData = {
-        clientName,
-        objectives: selectedObjectives, // Can be empty array
-        accessedFood: false,
-        comments: comments || "", // Can be empty string
-        providerName: "Andrea Leflore", // TODO: Get from current user context
-      }
-
-      console.log("Sending check-in data:", checkInData)
-
       const response = await fetch("/api/checkin", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(checkInData),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          contact_date: new Date().toISOString().split("T")[0],
+          provider_name: "Quick Check-in",
+        }),
       })
 
-      console.log("Check-in response status:", response.status)
-
-      const isJson = response.headers.get("content-type")?.toLowerCase().includes("application/json")
-
-      const data = isJson ? await response.json().catch(() => ({})) : await response.text()
-
-      if (!response.ok) {
-        // API returned an error
-        setSubmitError((isJson && (data?.error as string)) || (typeof data === "string" && data) || "Check-in failed")
-        return
-      }
-
-      console.log("Check-in response data:", data)
-
       if (response.ok) {
-        let alertCreated = false
-
-        // If there's an alert, create it and link it to the contact
-        if (hasAlert) {
-          try {
-            const alertData = {
-              contactId: data.contact.id,
-              clientName,
-              providerName: "Andrea Leflore", // TODO: Get from current user context
-              alertType: "behavioral",
-              alertDetails: alertDetails.trim() || "Alert flagged - no details provided",
-              severity: "medium",
-            }
-
-            console.log("Creating alert with data:", alertData)
-
-            const alertResponse = await fetch("/api/alerts", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(alertData),
-            })
-
-            const alertResult = await alertResponse.json()
-            console.log("Alert response:", alertResult)
-
-            if (alertResponse.ok) {
-              alertCreated = true
-              console.log("Alert created successfully")
-            } else {
-              console.error("Failed to create alert:", alertResult)
-            }
-          } catch (alertError) {
-            console.error("Alert creation failed:", alertError)
-          }
-        }
-
-        // Submit the check-in data to parent
-        const checkInResult: CheckInData = {
-          clientName,
-          objectives: selectedObjectives,
-          accessedFood,
-          comments,
-          hasAlert,
-          alertDetails,
-        }
-
-        onCheckInSubmit?.(checkInResult)
-        handleClose()
+        toast({
+          title: "Success",
+          description: "Quick check-in recorded successfully",
+        })
+        onCheckinAdded()
+        onClose()
+        setFormData({
+          client_name: "",
+          service_type: "",
+          notes: "",
+          service_completed: false,
+        })
       } else {
-        setSubmitError(data.error || "Check-in failed")
+        throw new Error("Failed to record check-in")
       }
     } catch (error) {
-      console.error("Check-in submission error:", error)
-      setSubmitError("Failed to connect to server")
+      toast({
+        title: "Error",
+        description: "Failed to record check-in",
+        variant: "destructive",
+      })
     } finally {
-      setIsSubmitting(false)
+      setIsLoading(false)
     }
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent
-        className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto"
-        aria-describedby="dialog-description"
-      >
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{clientName}</DialogTitle>
-          <div id="dialog-description" className="sr-only">
-            Client interaction dialog for {clientName}
-          </div>
+          <DialogTitle className="flex items-center space-x-2">
+            <Clock className="h-5 w-5" />
+            <span>Quick Check-in</span>
+          </DialogTitle>
         </DialogHeader>
 
-        {currentView === "initial" && (
-          <div className="space-y-6">
-            <p className="text-gray-600">What would you like to do?</p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button onClick={() => setCurrentView("checkin")} className="flex-1">
-                Quick Check-In
-              </Button>
-              <Button variant="outline" onClick={handleClose} className="flex-1 sm:flex-none bg-transparent">
-                Cancel
-              </Button>
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="client_name">Client Name *</Label>
+            <Input
+              id="client_name"
+              value={formData.client_name}
+              onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+              placeholder="Enter client name"
+              required
+            />
           </div>
-        )}
 
-        {currentView === "checkin" && (
-          <div className="space-y-6">
-            <div>
-              <Label className="text-base font-medium">Client objective for visiting today (optional):</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                {objectives.map((objective) => (
-                  <div key={objective.value} className="flex items-center space-x-3 py-2 px-1 min-h-[44px]">
-                    <Checkbox
-                      id={objective.value}
-                      checked={selectedObjectives.includes(objective.value)}
-                      onCheckedChange={(checked) => handleObjectiveChange(objective.value, checked as boolean)}
-                    />
-                    <Label htmlFor={objective.value} className="text-sm font-normal cursor-pointer">
-                      {objective.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Alert Section */}
-            <div
-              className={`space-y-3 p-4 rounded-lg border-2 ${hasAlert ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50"}`}
+          <div>
+            <Label htmlFor="service_type">Service Type</Label>
+            <Select
+              value={formData.service_type}
+              onValueChange={(value) => setFormData({ ...formData, service_type: value })}
             >
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hasAlert"
-                  checked={hasAlert}
-                  onCheckedChange={(checked) => {
-                    setHasAlert(checked as boolean)
-                    if (!checked) {
-                      setAlertDetails("")
-                    }
-                  }}
-                />
-                <Label htmlFor="hasAlert" className="cursor-pointer flex items-center space-x-2">
-                  <AlertTriangle className={`h-4 w-4 ${hasAlert ? "text-red-600" : "text-gray-400"}`} />
-                  <span className={hasAlert ? "text-red-800 font-medium" : "text-gray-700"}>
-                    Flag as Alert - Client displaying concerning behavior
-                  </span>
-                </Label>
-              </div>
-
-              {hasAlert && (
-                <div className="space-y-2">
-                  <Label htmlFor="alertDetails" className="text-sm font-medium text-red-800">
-                    Describe the concerning behavior (optional):
-                  </Label>
-                  <Textarea
-                    id="alertDetails"
-                    value={alertDetails}
-                    onChange={(e) => setAlertDetails(e.target.value)}
-                    placeholder="Please describe what you observed that is concerning (behavior, statements, appearance, etc.)"
-                    rows={3}
-                    className="border-red-300 focus:border-red-500 focus:ring-red-500"
-                  />
-                  <p className="text-xs text-red-600">
-                    This alert will be visible to all staff members immediately. Details are optional.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="comments">Comments (optional):</Label>
-              <Textarea
-                id="comments"
-                value={comments}
-                onChange={(e) => setComments(e.target.value)}
-                placeholder="Enter any additional notes or comments here..."
-                rows={4}
-              />
-            </div>
-
-            {submitError && (
-              <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded">
-                <div className="h-5 w-5 rounded-full bg-red-600 flex items-center justify-center">
-                  <div className="h-1 w-3 bg-white rounded" />
-                </div>
-                <span className="text-sm">{submitError}</span>
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setCurrentView("initial")}
-                className="flex-1 sm:flex-none bg-transparent"
-                disabled={isSubmitting}
-              >
-                Back
-              </Button>
-              <Button onClick={handleSubmit} className="flex-1" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    Submitting...
-                  </>
-                ) : (
-                  "Submit Check-In"
-                )}
-              </Button>
-            </div>
+              <SelectTrigger>
+                <SelectValue placeholder="Select service type" />
+              </SelectTrigger>
+              <SelectContent>
+                {serviceTypes.map((service) => (
+                  <SelectItem key={service} value={service}>
+                    {service}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        )}
+
+          <div>
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="Enter check-in notes"
+              rows={3}
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="service_completed"
+              checked={formData.service_completed}
+              onCheckedChange={(checked) => setFormData({ ...formData, service_completed: checked as boolean })}
+            />
+            <Label htmlFor="service_completed">Service completed</Label>
+          </div>
+
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Recording..." : "Record Check-in"}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   )

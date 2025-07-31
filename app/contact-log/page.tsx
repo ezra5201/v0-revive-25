@@ -1,335 +1,216 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
-import { ContactTable } from "@/components/contact-table"
-import { QuickCheckinDialog } from "@/components/quick-checkin-dialog"
-import { NewProspectDialog } from "@/components/new-prospect-dialog"
-import { ChangeDateDialog } from "@/components/change-date-dialog"
-import { UpdateServicesDialog } from "@/components/update-services-dialog"
-import { ClientMasterRecord } from "@/components/client-master-record"
-import { Header } from "@/components/header"
-import { ActionBar } from "@/components/action-bar"
-import { DatabaseSetup } from "@/components/database-setup"
-import { useContacts } from "@/hooks/use-contacts"
-import { useDatabase } from "@/hooks/use-database"
-import { X } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Calendar, User, Building, FileText, CheckCircle, Clock } from "lucide-react"
 
-type MainTab = "today" | "all" | "client"
-type ClientSection = "basic-info" | "contact-history" | "journey-timeline"
+interface Contact {
+  id: number
+  client_name: string
+  provider_name: string
+  service_type: string
+  contact_date: string
+  notes: string
+  service_completed: boolean
+  created_at: string
+}
 
 export default function ContactLogPage() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [filteredContacts, setFilteredContacts] = useState<Contact[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [serviceFilter, setServiceFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
 
-  // Enhanced state management
-  const [activeTab, setActiveTab] = useState<MainTab>("today")
-  const [selectedClient, setSelectedClient] = useState<string | null>(null)
-  const [activeClientSection, setActiveClientSection] = useState<ClientSection>("basic-info")
-
-  // Existing state (PRESERVED)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isNewProspectDialogOpen, setIsNewProspectDialogOpen] = useState(false)
-  const [isChangeDateDialogOpen, setIsChangeDateDialogOpen] = useState(false)
-  const [isUpdateServicesDialogOpen, setIsUpdateServicesDialogOpen] = useState(false)
-  const [selectedContactForUpdate, setSelectedContactForUpdate] = useState<any>(null)
-  const [selectedCount, setSelectedCount] = useState(0)
-  const [selectedContactIds, setSelectedContactIds] = useState<number[]>([])
-  const [filters, setFilters] = useState<{ categories: string[]; providers: string[] }>({
-    categories: [],
-    providers: [],
-  })
-  const [prefilledProspectName, setPrefilledProspectName] = useState("")
-
-  // Initialize state from URL parameters
   useEffect(() => {
-    const tab = searchParams.get("tab")
-    const name = searchParams.get("name")
-    const section = searchParams.get("section")
+    fetchContacts()
+  }, [])
 
-    if (tab === "client" && name) {
-      setActiveTab("client")
-      setSelectedClient(name)
-      setActiveClientSection((section as ClientSection) || "basic-info")
-    } else if (tab === "all") {
-      setActiveTab("all")
-    } else {
-      setActiveTab("today")
+  useEffect(() => {
+    filterContacts()
+  }, [contacts, searchTerm, serviceFilter, statusFilter])
+
+  const fetchContacts = async () => {
+    try {
+      const response = await fetch("/api/contacts")
+      const data = await response.json()
+      setContacts(data.contacts || [])
+    } catch (error) {
+      console.error("Failed to fetch contacts:", error)
+    } finally {
+      setLoading(false)
     }
-  }, [searchParams])
-
-  // Custom hooks for data management (PRESERVED)
-  const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
-  const {
-    contacts,
-    filterData,
-    isLoading: contactsLoading,
-    error: contactsError,
-    refetch: refetchContacts,
-  } = useContacts(activeTab === "client" ? "all" : activeTab, filters)
-
-  // URL update helper
-  const updateURL = useCallback(
-    (tab: MainTab, clientName?: string, section?: ClientSection) => {
-      const params = new URLSearchParams()
-
-      if (tab === "client" && clientName) {
-        params.set("tab", "client")
-        params.set("name", clientName)
-        params.set("section", section || "basic-info")
-      } else if (tab === "all") {
-        params.set("tab", "all")
-      }
-      // For 'today' tab, we don't set any params (default state)
-
-      const newURL = params.toString() ? `/contact-log?${params.toString()}` : "/contact-log"
-      router.replace(newURL)
-    },
-    [router],
-  )
-
-  // NEW: Client row click handler for "All Clients" tab
-  const handleClientRowClick = useCallback(
-    (clientName: string) => {
-      setActiveTab("client")
-      setSelectedClient(clientName)
-      setActiveClientSection("basic-info")
-      updateURL("client", clientName, "basic-info")
-    },
-    [updateURL],
-  )
-
-  // NEW: Close client tab handler
-  const handleCloseClientTab = useCallback(() => {
-    setActiveTab("all")
-    setSelectedClient(null)
-    setActiveClientSection("basic-info")
-    updateURL("all")
-  }, [updateURL])
-
-  // NEW: Client section change handler
-  const handleClientSectionChange = useCallback(
-    (section: ClientSection) => {
-      setActiveClientSection(section)
-      if (selectedClient) {
-        updateURL("client", selectedClient, section)
-      }
-    },
-    [selectedClient, updateURL],
-  )
-
-  // PRESERVED: Existing handlers
-  const handleClientClick = useCallback((clientName: string, isToday?: boolean) => {
-    if (isToday) {
-      setSelectedClient(clientName)
-      setIsDialogOpen(true)
-    }
-  }, [])
-
-  const handleClientSearch = useCallback((clientName: string) => {
-    setSelectedClient(clientName)
-    setIsDialogOpen(true)
-  }, [])
-
-  const handleNewProspectClick = useCallback((searchedName?: string) => {
-    setPrefilledProspectName(searchedName || "")
-    setIsNewProspectDialogOpen(true)
-  }, [])
-
-  const handleTabChange = useCallback(
-    (tab: MainTab) => {
-      setActiveTab(tab)
-      setSelectedCount(0)
-      setSelectedContactIds([])
-      setFilters({ categories: [], providers: [] })
-
-      if (tab !== "client") {
-        setSelectedClient(null)
-        setActiveClientSection("basic-info")
-      }
-
-      updateURL(tab)
-    },
-    [updateURL],
-  )
-
-  const handleSelectionChange = useCallback((count: number, selectedIds: number[]) => {
-    setSelectedCount(count)
-    setSelectedContactIds(selectedIds)
-  }, [])
-
-  const handleDataUpdate = useCallback(() => {
-    refetchContacts()
-    setSelectedCount(0)
-    setSelectedContactIds([])
-  }, [refetchContacts])
-
-  const handleUpdateServicesClick = useCallback((contact: any) => {
-    setSelectedContactForUpdate(contact)
-    setIsUpdateServicesDialogOpen(true)
-  }, [])
-
-  const handleCloseUpdateServicesDialog = useCallback(() => {
-    setIsUpdateServicesDialogOpen(false)
-    setSelectedContactForUpdate(null)
-  }, [])
-
-  const handleServicesUpdated = useCallback(() => {
-    refetchContacts()
-    setIsUpdateServicesDialogOpen(false)
-    setSelectedContactForUpdate(null)
-  }, [refetchContacts])
-
-  // Show database setup if not initialized (PRESERVED)
-  if (!isInitialized && !dbLoading) {
-    return <DatabaseSetup />
   }
 
-  // Show loading state (PRESERVED)
-  if (dbLoading) {
+  const filterContacts = () => {
+    let filtered = contacts
+
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (contact) =>
+          contact.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          contact.provider_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          contact.service_type?.toLowerCase().includes(searchTerm.toLowerCase()),
+      )
+    }
+
+    if (serviceFilter !== "all") {
+      filtered = filtered.filter((contact) => contact.service_type === serviceFilter)
+    }
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((contact) =>
+        statusFilter === "completed" ? contact.service_completed : !contact.service_completed,
+      )
+    }
+
+    setFilteredContacts(filtered)
+  }
+
+  const getUniqueServices = () => {
+    const services = contacts.map((c) => c.service_type).filter(Boolean)
+    return [...new Set(services)]
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString()
+  }
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mx-auto mb-4" />
-          <p className="text-gray-600">Loading application...</p>
-        </div>
+      <div className="container mx-auto p-6">
+        <div className="text-center">Loading contact log...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-
-      {/* Enhanced Tab Navigation */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="px-4 sm:px-6">
-          <nav className="flex space-x-8" aria-label="Tabs">
-            {/* PRESERVED: Existing tabs */}
-            <button
-              onClick={() => handleTabChange("today")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "today"
-                  ? "border-orange-500 text-orange-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Today's Check-ins
-            </button>
-            <button
-              onClick={() => handleTabChange("all")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "all"
-                  ? "border-orange-500 text-orange-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              All Clients
-            </button>
-
-            {/* NEW: Dynamic client tab */}
-            {selectedClient && (
-              <button
-                onClick={() => handleTabChange("client")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                  activeTab === "client"
-                    ? "border-orange-500 text-orange-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <span>{selectedClient}</span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleCloseClientTab()
-                  }}
-                  className="ml-2 p-1 rounded-full hover:bg-gray-200 transition-colors"
-                  aria-label="Close client tab"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </button>
-            )}
-          </nav>
+    <div className="container mx-auto p-6">
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Contact Log</h1>
+          <Badge variant="secondary">
+            {filteredContacts.length} of {contacts.length} contacts
+          </Badge>
         </div>
+
+        {/* Filters */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Filters</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Search</label>
+                <Input
+                  placeholder="Search clients, providers, or services..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Service Type</label>
+                <Select value={serviceFilter} onValueChange={setServiceFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All services" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Services</SelectItem>
+                    {getUniqueServices().map((service) => (
+                      <SelectItem key={service} value={service}>
+                        {service}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Contact List */}
+        <div className="space-y-4">
+          {filteredContacts.map((contact) => (
+            <Card key={contact.id}>
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center space-x-2">
+                    <User className="h-5 w-5 text-blue-600" />
+                    <h3 className="text-lg font-semibold">{contact.client_name}</h3>
+                    <Badge variant={contact.service_completed ? "default" : "secondary"}>
+                      {contact.service_completed ? (
+                        <>
+                          <CheckCircle className="h-3 w-3 mr-1" /> Completed
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="h-3 w-3 mr-1" /> Pending
+                        </>
+                      )}
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-gray-500">ID: {contact.id}</div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Building className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm">
+                      <strong>Provider:</strong> {contact.provider_name || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <FileText className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm">
+                      <strong>Service:</strong> {contact.service_type || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm">
+                      <strong>Date:</strong> {formatDate(contact.contact_date)}
+                    </span>
+                  </div>
+                </div>
+
+                {contact.notes && (
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <p className="text-sm text-gray-700">{contact.notes}</p>
+                  </div>
+                )}
+
+                <div className="mt-4 text-xs text-gray-500">Created: {formatDate(contact.created_at)}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {filteredContacts.length === 0 && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <p className="text-gray-500">No contacts found matching your filters.</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
-
-      {/* Conditional Content Rendering */}
-      {activeTab !== "client" && (
-        <>
-          <ActionBar
-            activeTab={activeTab}
-            selectedCount={selectedCount}
-            selectedContactIds={selectedContactIds}
-            onExport={() => console.log("Export")}
-            clients={filterData.clients}
-            onClientSelect={handleClientSearch}
-            onNewProspect={handleNewProspectClick}
-            providers={filterData.providers}
-            categories={filterData.categories}
-            onFiltersChange={setFilters}
-            onServiceCompleted={handleDataUpdate}
-            onDateChangeClick={() => setIsChangeDateDialogOpen(true)}
-          />
-
-          <main className="bg-white">
-            <ContactTable
-              activeTab={activeTab}
-              contacts={contacts}
-              isLoading={contactsLoading}
-              error={contactsError}
-              onClientClick={handleClientClick}
-              onSelectionChange={handleSelectionChange}
-              onUpdateServicesClick={handleUpdateServicesClick}
-              onClientRowClick={handleClientRowClick} // NEW: Pass client row click handler
-            />
-          </main>
-        </>
-      )}
-
-      {/* NEW: Client Master Record */}
-      {activeTab === "client" && selectedClient && (
-        <main>
-          <ClientMasterRecord
-            clientName={selectedClient}
-            activeSection={activeClientSection}
-            onSectionChange={handleClientSectionChange}
-          />
-        </main>
-      )}
-
-      {/* PRESERVED: All existing dialogs */}
-      <QuickCheckinDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        clientName={selectedClient || ""}
-        onCheckInSubmit={handleDataUpdate}
-      />
-
-      <NewProspectDialog
-        isOpen={isNewProspectDialogOpen}
-        onClose={() => setIsNewProspectDialogOpen(false)}
-        onCheckInSubmit={handleDataUpdate}
-        prefilledName={prefilledProspectName}
-        existingClients={filterData.clients}
-      />
-
-      <ChangeDateDialog
-        isOpen={isChangeDateDialogOpen}
-        onClose={() => setIsChangeDateDialogOpen(false)}
-        selectedCount={selectedCount}
-        onDateChange={async (newDate: string) => {
-          // Handle date change logic
-          handleDataUpdate()
-        }}
-      />
-
-      <UpdateServicesDialog
-        isOpen={isUpdateServicesDialogOpen}
-        onClose={handleCloseUpdateServicesDialog}
-        contactData={selectedContactForUpdate}
-        onServicesUpdate={handleServicesUpdated}
-      />
     </div>
   )
 }

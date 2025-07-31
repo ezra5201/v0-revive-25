@@ -1,13 +1,11 @@
-import { sql } from "@/lib/db"
+import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 import { getTodayString } from "@/lib/date-utils"
 
 export async function POST() {
-  if (!sql) {
-    return NextResponse.json({ error: "Database not available" }, { status: 500 })
-  }
-
   try {
+    const sql = neon(process.env.DATABASE_URL!)
+
     console.log("🚨 EMERGENCY FIX: Correcting all future dates...")
 
     // Get today's date in Chicago time (06/30/2025)
@@ -24,18 +22,15 @@ export async function POST() {
 
     let updatedCount = 0
     if (futureCount[0].count > 0) {
-      // Update all future dates to random dates between 2021-01-01 and today
-      console.log("Updating future dates to valid range...")
+      // Update all future dates to today
+      console.log("Updating future dates to today...")
 
       const updated = await sql`
         UPDATE contacts 
         SET 
-          contact_date = (
-            DATE '2021-01-01' + 
-            (RANDOM() * ((${todayString})::DATE - DATE '2021-01-01'))::INTEGER
-          ),
+          contact_date = CURRENT_DATE,
           updated_at = NOW()
-        WHERE contact_date > (${todayString})::DATE
+        WHERE contact_date > CURRENT_DATE
         RETURNING id
       `
 
