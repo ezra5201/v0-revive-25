@@ -7,20 +7,18 @@ import { useRouter, usePathname } from "next/navigation"
 import { AlertHeaderIndicator } from "./alert-header-indicator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DatabaseStatsModal } from "./database-stats-modal"
-import { SyncModal } from "./sync-modal"
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false)
-  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
 
   const navigationItems = [
     { name: "CONTACT LOG", path: "/contact-log" },
-    { name: "OUTREACH", path: "/outreach" },
     { name: "CM", path: "/cm" },
     { name: "OT", path: "/ot" },
+    { name: "OUTREACH", path: "/outreach" },
     { name: "DASHBOARD", path: "/dashboard" },
   ]
 
@@ -111,9 +109,6 @@ export function Header() {
                 <DropdownMenuItem onClick={() => setIsStatsModalOpen(true)} className="min-h-[44px] flex items-center">
                   Database Statistics
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsSyncModalOpen(true)} className="min-h-[44px] flex items-center">
-                  Monthly Data Sync
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -172,9 +167,6 @@ export function Header() {
                   >
                     Database Statistics
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsSyncModalOpen(true)} className="min-h-[44px] flex items-center">
-                    Monthly Data Sync
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -184,7 +176,6 @@ export function Header() {
 
       {/* Database Stats Modal */}
       <DatabaseStatsModal open={isStatsModalOpen} onOpenChange={setIsStatsModalOpen} />
-      <SyncModal open={isSyncModalOpen} onOpenChange={setIsSyncModalOpen} />
     </header>
   )
 }
