@@ -1,5 +1,7 @@
 import { neon } from "@neondatabase/serverless"
 
+const sql = neon(process.env.DATABASE_URL!)
+
 /**
  * Synchronizes monthly service summary data for a specific month and year
  * @param targetMonth - Month to sync (1-12), defaults to current month
@@ -10,18 +12,15 @@ export async function syncMonthlyServiceSummary(
   targetMonth?: number,
   targetYear?: number,
 ): Promise<{ success: boolean; message: string; recordsProcessed: number }> {
-  const sql = neon(process.env.DATABASE_URL!)
-
-  // Default to current month/year if not provided
   const now = new Date()
   const month = targetMonth ?? now.getMonth() + 1
   const year = targetYear ?? now.getFullYear()
 
-  // Validate parameters
+  // Parameter validation
   if (month < 1 || month > 12) {
     return {
       success: false,
-      message: `Invalid month: ${month}. Must be between 1 and 12.`,
+      message: "Invalid month. Must be between 1 and 12.",
       recordsProcessed: 0,
     }
   }
@@ -29,7 +28,7 @@ export async function syncMonthlyServiceSummary(
   if (year < 1900 || year > 2099) {
     return {
       success: false,
-      message: `Invalid year: ${year}. Must be between 1900 and 2099.`,
+      message: "Invalid year. Must be between 1900 and 2099.",
       recordsProcessed: 0,
     }
   }
@@ -38,68 +37,71 @@ export async function syncMonthlyServiceSummary(
   console.log(`[${timestamp}] Starting sync for ${year}-${month.toString().padStart(2, "0")}`)
 
   try {
-    // Create monthly_service_summary table if it doesn't exist
-    await sql`
-      CREATE TABLE IF NOT EXISTS monthly_service_summary (
-        id SERIAL PRIMARY KEY,
-        month INTEGER NOT NULL,
-        year INTEGER NOT NULL,
-        service_type VARCHAR(50) NOT NULL,
-        total_contacts INTEGER NOT NULL DEFAULT 0,
-        unique_clients INTEGER NOT NULL DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(month, year, service_type)
-      )
-    `
-
-    // Delete existing data for this month/year
-    await sql`
+    // First, delete existing records for this month/year
+    const deleteResult = await sql`
       DELETE FROM monthly_service_summary 
       WHERE month = ${month} AND year = ${year}
     `
 
-    // Get aggregated data for the target month/year
-    const results = await sql`
+    console.log(
+      `[${timestamp}] Deleted ${deleteResult.length} existing records for ${year}-${month.toString().padStart(2, "0")}`,
+    )
+
+    // Get the date range for the target month
+    const startDate = `${year}-${month.toString().padStart(2, "0")}-01`
+    const endDate = new Date(year, month, 0).toISOString().split("T")[0] // Last day of month
+
+    // Aggregate and insert new data
+    const insertResult = await sql`
+      INSERT INTO monthly_service_summary (
+        client_name, 
+        provider_name, 
+        service_type, 
+        month, 
+        year, 
+        total_contacts, 
+        completed_services, 
+        pending_services, 
+        last_contact_date,
+        created_at,
+        updated_at
+      )
       SELECT 
-        service_type,
+        c.client_name,
+        c.provider_name,
+        c.service_type,
+        ${month} as month,
+        ${year} as year,
         COUNT(*) as total_contacts,
-        COUNT(DISTINCT client_name) as unique_clients
-      FROM contacts 
-      WHERE EXTRACT(MONTH FROM contact_date) = ${month}
-        AND EXTRACT(YEAR FROM contact_date) = ${year}
-      GROUP BY service_type
-      ORDER BY service_type
+        COUNT(CASE WHEN c.service_completed = true THEN 1 END) as completed_services,
+        COUNT(CASE WHEN c.service_completed = false THEN 1 END) as pending_services,
+        MAX(c.contact_date) as last_contact_date,
+        NOW() as created_at,
+        NOW() as updated_at
+      FROM contacts c
+      WHERE c.contact_date >= ${startDate}
+        AND c.contact_date <= ${endDate}
+      GROUP BY c.client_name, c.provider_name, c.service_type
+      ORDER BY c.client_name, c.provider_name, c.service_type
     `
 
-    let recordsProcessed = 0
+    const recordsProcessed = insertResult.length
+    const successMessage = `Successfully synced ${recordsProcessed} records for ${year}-${month.toString().padStart(2, "0")}`
 
-    // Insert aggregated data
-    for (const row of results) {
-      await sql`
-        INSERT INTO monthly_service_summary (month, year, service_type, total_contacts, unique_clients)
-        VALUES (${month}, ${year}, ${row.service_type}, ${row.total_contacts}, ${row.unique_clients})
-      `
-      recordsProcessed++
-    }
-
-    const endTimestamp = new Date().toISOString()
-    console.log(
-      `[${endTimestamp}] Completed sync for ${year}-${month.toString().padStart(2, "0")}: ${recordsProcessed} records processed`,
-    )
+    console.log(`[${timestamp}] ${successMessage}`)
 
     return {
       success: true,
-      message: `Successfully synced ${year}-${month.toString().padStart(2, "0")}: ${recordsProcessed} service types processed`,
+      message: successMessage,
       recordsProcessed,
     }
   } catch (error) {
-    const errorTimestamp = new Date().toISOString()
-    console.error(`[${errorTimestamp}] Error syncing ${year}-${month.toString().padStart(2, "0")}:`, error)
+    const errorMessage = `Failed to sync ${year}-${month.toString().padStart(2, "0")}: ${error instanceof Error ? error.message : "Unknown error"}`
+    console.error(`[${timestamp}] ${errorMessage}`)
 
     return {
       success: false,
-      message: `Failed to sync ${year}-${month.toString().padStart(2, "0")}: ${error instanceof Error ? error.message : "Unknown error"}`,
+      message: errorMessage,
       recordsProcessed: 0,
     }
   }
