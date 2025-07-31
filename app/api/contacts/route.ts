@@ -50,11 +50,9 @@ export async function GET(request: NextRequest) {
     // Add service filter if specified
     if (serviceFilter === "cm") {
       whereConditions.push(`(
-        c.services_requested @> $${queryParams.length + 1}::jsonb OR
-        c.services_provided @> $${queryParams.length + 2}::jsonb
-      )`)
-      queryParams.push(JSON.stringify(["Case Management"]))
-      queryParams.push(JSON.stringify([{ service: "Case Management" }]))
+    (c.services_requested IS NOT NULL AND c.services_requested::text ILIKE '%Case Management%') OR
+    (c.services_provided IS NOT NULL AND c.services_provided::text ILIKE '%Case Management%')
+  )`)
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : ""
@@ -153,7 +151,6 @@ export async function GET(request: NextRequest) {
               c.category,
               c.food_accessed,
               c.alert_id,
-              c.created_at,
               c.services_requested,
               c.services_provided,
               -- Calculate actual days from current Chicago today to the contact date
