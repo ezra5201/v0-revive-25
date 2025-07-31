@@ -3,15 +3,41 @@ import { NextResponse } from "next/server"
 export async function GET() {
   try {
     const envVars = {
-      DATABASE_URL: process.env.DATABASE_URL ? "Set" : "Not set",
+      DATABASE_URL: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 50) + "..." : "undefined",
+      POSTGRES_URL: process.env.POSTGRES_URL ? process.env.POSTGRES_URL.substring(0, 50) + "..." : "undefined",
+      POSTGRES_PRISMA_URL: process.env.POSTGRES_PRISMA_URL
+        ? process.env.POSTGRES_PRISMA_URL.substring(0, 50) + "..."
+        : "undefined",
+      POSTGRES_URL_NON_POOLING: process.env.POSTGRES_URL_NON_POOLING
+        ? process.env.POSTGRES_URL_NON_POOLING.substring(0, 50) + "..."
+        : "undefined",
+      POSTGRES_URL_NO_SSL: process.env.POSTGRES_URL_NO_SSL
+        ? process.env.POSTGRES_URL_NO_SSL.substring(0, 50) + "..."
+        : "undefined",
+      hasProblematicVars: {
+        DATABASE_URL_has_psql: process.env.DATABASE_URL?.includes("psql") || false,
+        POSTGRES_URL_has_psql: process.env.POSTGRES_URL?.includes("psql") || false,
+        POSTGRES_PRISMA_URL_has_psql: process.env.POSTGRES_PRISMA_URL?.includes("psql") || false,
+      },
       NODE_ENV: process.env.NODE_ENV,
-      VERCEL: process.env.VERCEL ? "Yes" : "No",
-      VERCEL_ENV: process.env.VERCEL_ENV,
+      VERCEL: process.env.VERCEL ? "true" : "false",
+      timestamp: new Date().toISOString(),
     }
 
-    return NextResponse.json({ envVars })
+    return NextResponse.json({
+      success: true,
+      environment: envVars,
+      timestamp: new Date().toISOString(),
+    })
   } catch (error) {
-    console.error("Error checking environment:", error)
-    return NextResponse.json({ error: "Failed to check environment" }, { status: 500 })
+    console.error("Debug env error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to get environment info",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

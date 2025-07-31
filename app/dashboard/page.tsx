@@ -6,7 +6,7 @@ import { DatabaseSetup } from "@/components/database-setup"
 import { ServicesPanel } from "@/components/services-panel"
 import { useDatabase } from "@/hooks/use-database"
 import { Card, CardContent } from "@/components/ui/card"
-import { Users, UserPlus, Activity, AlertTriangle } from "lucide-react"
+import { Users, UserPlus, Activity, AlertTriangle, MapPin, TrendingUp } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface OverviewData {
@@ -23,70 +23,37 @@ interface LocationData {
   engagementRate: number
 }
 
-interface TrendData {
-  month: string
-  totalRequested: number
-  totalProvided: number
-  completionRate: number
-  servicesCount: number
-}
-
-interface ServiceData {
-  serviceName: string
-  totalRequested: number
-  totalProvided: number
-  completionRate: number
-  monthsActive: number
-}
-
 export default function DashboardPage() {
   const { isInitialized, isLoading: dbLoading } = useDatabase()
   const [overview, setOverview] = useState<OverviewData | null>(null)
   const [locations, setLocations] = useState<LocationData[]>([])
-  const [trends, setTrends] = useState<TrendData[]>([])
-  const [services, setServices] = useState<ServiceData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedPeriod, setSelectedPeriod] = useState<string>("This Month")
 
   useEffect(() => {
-    const fetchAllAnalytics = async () => {
+    const fetchAnalytics = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        // Fetch all analytics data in parallel
-        const [overviewRes, locationsRes, trendsRes, servicesRes] = await Promise.all([
+        const [overviewRes, locationsRes] = await Promise.all([
           fetch(`/api/analytics/overview?period=${encodeURIComponent(selectedPeriod)}`),
           fetch("/api/analytics/locations"),
-          fetch("/api/analytics/monthly-trends"),
-          fetch("/api/analytics/service-completion"),
         ])
 
         if (!overviewRes.ok) {
           throw new Error("Failed to fetch overview data")
         }
+
         if (!locationsRes.ok) {
           throw new Error("Failed to fetch locations data")
         }
-        if (!trendsRes.ok) {
-          throw new Error("Failed to fetch trends data")
-        }
-        if (!servicesRes.ok) {
-          throw new Error("Failed to fetch services data")
-        }
 
-        const [overviewData, locationsData, trendsData, servicesData] = await Promise.all([
-          overviewRes.json(),
-          locationsRes.json(),
-          trendsRes.json(),
-          servicesRes.json(),
-        ])
+        const [overviewData, locationsData] = await Promise.all([overviewRes.json(), locationsRes.json()])
 
         setOverview(overviewData)
         setLocations(locationsData.locations || [])
-        setTrends(trendsData.trends || [])
-        setServices(servicesData.services || [])
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load analytics")
       } finally {
@@ -95,7 +62,7 @@ export default function DashboardPage() {
     }
 
     if (isInitialized) {
-      fetchAllAnalytics()
+      fetchAnalytics()
     }
   }, [isInitialized, selectedPeriod])
 
@@ -234,16 +201,52 @@ export default function DashboardPage() {
             {/* Services Panel */}
             <ServicesPanel />
 
-            <div className="bg-gray-50 rounded-lg p-8 border border-gray-200 text-center">
-              <div className="text-gray-500 mb-4">
-                <Activity className="mx-auto h-12 w-12 text-gray-400" />
-              </div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Detailed Analytics Coming Soon</h2>
-              <p className="text-gray-600">
-                Charts and detailed analytics are being added progressively. The KPI metrics above show your current
-                performance for {selectedPeriod.toLowerCase()}.
-              </p>
-            </div>
+            {/* Location Performance Section */}
+            <Card className="mb-8">
+              <CardContent className="p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">Location Performance</h2>
+                {locations.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {locations.map((location, index) => (
+                      <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center">
+                            <div className="p-2 bg-orange-100 rounded-lg">
+                              <MapPin className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <h3 className="ml-3 font-medium text-gray-900">{location.location}</h3>
+                          </div>
+                          <div className="flex items-center text-green-600">
+                            <TrendingUp className="h-4 w-4 mr-1" />
+                            <span className="text-sm font-medium">{location.engagementRate.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Total Visits</span>
+                            <span className="font-medium text-gray-900">{location.visits}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Total Clients</span>
+                            <span className="font-medium text-gray-900">{location.totalClients}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Engaged Clients</span>
+                            <span className="font-medium text-gray-900">{location.totalEngaged}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <MapPin className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Location Data</h3>
+                    <p className="text-gray-600">Location performance data will appear here once available.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>

@@ -7,28 +7,31 @@ export async function GET() {
   try {
     const trends = await sql`
       SELECT 
+        month_year,
         service_name,
-        year,
-        month,
         total_requested,
         total_provided,
-        completion_rate
+        ROUND(
+          (total_provided::numeric / NULLIF(total_requested, 0)) * 100, 
+          2
+        ) as completion_rate
       FROM monthly_service_summary
-      ORDER BY service_name, year, month
+      ORDER BY month_year DESC, service_name
     `
 
-    const formattedTrends = trends.map((row) => ({
-      serviceName: row.service_name,
-      year: row.year,
-      month: row.month,
-      totalRequested: Number.parseInt(row.total_requested),
-      totalProvided: Number.parseInt(row.total_provided),
-      completionRate: Number.parseFloat(row.completion_rate),
-    }))
-
-    return NextResponse.json({ trends: formattedTrends })
+    return NextResponse.json({
+      success: true,
+      trends,
+    })
   } catch (error) {
-    console.error("Error fetching service trends:", error)
-    return NextResponse.json({ error: "Failed to fetch service trends" }, { status: 500 })
+    console.error("Service trends error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fetch service trends",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

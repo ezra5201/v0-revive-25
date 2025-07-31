@@ -28,11 +28,11 @@ export async function GET() {
       // Settings table might not exist yet, continue with other checks
     }
 
-    // Check if the 70% update has been applied
+    // Check if 70% update has been applied
     const result = await sql`
       SELECT COUNT(*) as count
-      FROM contacts
-      WHERE client_name LIKE '%70%'
+      FROM clients 
+      WHERE name LIKE '%70%'
     `
 
     const has70PercentUpdate = Number.parseInt(result[0].count) > 0
@@ -111,7 +111,7 @@ export async function GET() {
     const hasHighAmericanNamePercentage = americanNamePercentage > 60
     const hasGoodDiversity = totalUniqueNames > 50
 
-    const completed = has70PercentUpdate && hasHighAmericanNamePercentage && hasGoodDiversity
+    const completed = hasHighAmericanNamePercentage && hasGoodDiversity
 
     return NextResponse.json({
       completed,

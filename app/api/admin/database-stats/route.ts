@@ -5,44 +5,42 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
-    // Get table statistics
-    const tableStats = await sql`
-      SELECT 
-        schemaname,
-        tablename,
-        n_tup_ins as inserts,
-        n_tup_upd as updates,
-        n_tup_del as deletes,
-        n_live_tup as live_tuples,
-        n_dead_tup as dead_tuples
-      FROM pg_stat_user_tables
-      ORDER BY n_live_tup DESC
+    // Get table counts
+    const tables = ["providers", "clients", "contacts", "monthly_service_summary"]
+
+    const stats = {}
+
+    for (const table of tables) {
+      const result = await sql`
+        SELECT COUNT(*) as count 
+        FROM ${sql(table)}
+      `
+      stats[table] = Number.parseInt(result[0].count)
+    }
+
+    // Get recent activity
+    const recentContacts = await sql`
+      SELECT COUNT(*) as count
+      FROM contacts 
+      WHERE contact_date >= CURRENT_DATE - INTERVAL '7 days'
     `
 
-    // Get database size
-    const dbSize = await sql`
-      SELECT pg_size_pretty(pg_database_size(current_database())) as size
-    `
-
-    // Get table sizes
-    const tableSizes = await sql`
-      SELECT 
-        schemaname,
-        tablename,
-        pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size,
-        pg_total_relation_size(schemaname||'.'||tablename) as size_bytes
-      FROM pg_tables 
-      WHERE schemaname = 'public'
-      ORDER BY size_bytes DESC
-    `
+    stats["recent_contacts_7_days"] = Number.parseInt(recentContacts[0].count)
 
     return NextResponse.json({
-      tableStats,
-      databaseSize: dbSize[0]?.size || "Unknown",
-      tableSizes,
+      success: true,
+      stats,
+      timestamp: new Date().toISOString(),
     })
   } catch (error) {
     console.error("Database stats error:", error)
-    return NextResponse.json({ error: "Failed to fetch database statistics" }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fetch database statistics",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

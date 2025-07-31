@@ -272,16 +272,26 @@ export async function POST(request: Request) {
   const { oldName, newName } = await request.json()
 
   if (!oldName || !newName) {
-    return NextResponse.json({ error: "Both old name and new name are required" }, { status: 400 })
+    return NextResponse.json({ success: false, error: "Both old name and new name are required" }, { status: 400 })
   }
 
-  // Update all contacts with the old name
+  // Update client name
   const result = await sqlClient`
-    UPDATE contacts
-    SET client_name = ${newName}
-    WHERE client_name = ${oldName}
-    RETURNING id
+    UPDATE clients 
+    SET name = ${newName}
+    WHERE name = ${oldName}
+    RETURNING *
   `
+
+  if (result.length === 0) {
+    return NextResponse.json({ success: false, error: "Client not found" }, { status: 404 })
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: "Client name updated successfully",
+    client: result[0],
+  })
 
   if (!sqlClient) {
     return NextResponse.json({ error: "Database not available" }, { status: 500 })

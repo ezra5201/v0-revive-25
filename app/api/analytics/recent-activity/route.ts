@@ -7,29 +7,32 @@ export async function GET() {
   try {
     const recentActivity = await sql`
       SELECT 
-        client_name,
-        contact_date,
-        provider_name,
-        location,
-        services_requested,
-        services_provided
-      FROM contacts
-      ORDER BY contact_date DESC
-      LIMIT 50
+        c.contact_date,
+        c.contact_type,
+        cl.name as client_name,
+        cl.location,
+        p.name as provider_name,
+        c.notes
+      FROM contacts c
+      JOIN clients cl ON c.client_id = cl.id
+      JOIN providers p ON cl.provider_id = p.id
+      ORDER BY c.contact_date DESC
+      LIMIT 20
     `
 
-    const formattedActivity = recentActivity.map((row) => ({
-      clientName: row.client_name,
-      contactDate: row.contact_date,
-      providerName: row.provider_name,
-      location: row.location,
-      servicesRequested: row.services_requested,
-      servicesProvided: row.services_provided,
-    }))
-
-    return NextResponse.json({ activity: formattedActivity })
+    return NextResponse.json({
+      success: true,
+      activities: recentActivity,
+    })
   } catch (error) {
-    console.error("Error fetching recent activity:", error)
-    return NextResponse.json({ error: "Failed to fetch recent activity" }, { status: 500 })
+    console.error("Recent activity error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fetch recent activity",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

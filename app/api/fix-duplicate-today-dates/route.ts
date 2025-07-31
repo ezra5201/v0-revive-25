@@ -5,40 +5,38 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function POST() {
   try {
-    // Find duplicates for today
+    // Find and remove duplicate contacts for today
     const duplicates = await sql`
-      SELECT 
-        client_name,
-        MIN(id) as keep_id,
-        array_agg(id ORDER BY id) as all_ids
-      FROM contacts
-      WHERE contact_date = CURRENT_DATE
-      GROUP BY client_name
-      HAVING COUNT(*) > 1
+      DELETE FROM contacts 
+      WHERE id IN (
+        SELECT id FROM (
+          SELECT id,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY client_id, contact_date 
+                   ORDER BY id DESC
+                 ) as rn
+          FROM contacts 
+          WHERE contact_date = CURRENT_DATE
+        ) t 
+        WHERE t.rn > 1
+      )
+      RETURNING id, client_id
     `
-
-    let deletedCount = 0
-
-    // Delete duplicates, keeping only the first one
-    for (const duplicate of duplicates) {
-      const idsToDelete = duplicate.all_ids.slice(1) // Remove first ID (keep it)
-
-      if (idsToDelete.length > 0) {
-        await sql`
-          DELETE FROM contacts
-          WHERE id = ANY(${idsToDelete})
-        `
-        deletedCount += idsToDelete.length
-      }
-    }
 
     return NextResponse.json({
       success: true,
-      deletedCount,
-      duplicateGroups: duplicates.length,
+      message: `Removed ${duplicates.length} duplicate contacts for today`,
+      removedContacts: duplicates,
     })
   } catch (error) {
-    console.error("Error fixing duplicate today dates:", error)
-    return NextResponse.json({ error: "Failed to fix duplicate today dates" }, { status: 500 })
+    console.error("Fix duplicate today dates error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fix duplicate dates",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

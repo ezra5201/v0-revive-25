@@ -9,32 +9,48 @@ export async function GET() {
     const tables = await sql`
       SELECT 
         table_name,
-        column_name,
-        data_type,
-        is_nullable,
-        column_default
-      FROM information_schema.columns
+        table_type
+      FROM information_schema.tables 
       WHERE table_schema = 'public'
-      ORDER BY table_name, ordinal_position
+      ORDER BY table_name
     `
 
-    // Group columns by table
-    const schema = tables.reduce((acc: any, row: any) => {
-      if (!acc[row.table_name]) {
-        acc[row.table_name] = []
-      }
-      acc[row.table_name].push({
-        name: row.column_name,
-        type: row.data_type,
-        nullable: row.is_nullable === "YES",
-        default: row.column_default,
-      })
-      return acc
-    }, {})
+    // Get column information for each table
+    const schema = {}
 
-    return NextResponse.json({ schema })
+    for (const table of tables) {
+      const columns = await sql`
+        SELECT 
+          column_name,
+          data_type,
+          is_nullable,
+          column_default
+        FROM information_schema.columns
+        WHERE table_schema = 'public' 
+        AND table_name = ${table.table_name}
+        ORDER BY ordinal_position
+      `
+
+      schema[table.table_name] = {
+        type: table.table_type,
+        columns,
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      schema,
+      timestamp: new Date().toISOString(),
+    })
   } catch (error) {
-    console.error("Error fetching database schema:", error)
-    return NextResponse.json({ error: "Failed to fetch database schema" }, { status: 500 })
+    console.error("Database schema error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fetch database schema",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

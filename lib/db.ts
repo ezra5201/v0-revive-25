@@ -222,30 +222,26 @@ export async function isDatabaseInitialized(): Promise<boolean> {
 
   try {
     const tablesCheck = await sql`
-  SELECT 
-    (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'contacts') as contacts_table,
-    (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'clients') as clients_table,
-    (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'providers') as providers_table,
-    (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'monthly_service_summary') as monthly_service_summary_table
-`
+      SELECT 
+        (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'contacts') as contacts_table,
+        (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'clients') as clients_table,
+        (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'providers') as providers_table
     `
 
     const tables = tablesCheck[0]
-if (tables.contacts_table === 0 || tables.clients_table === 0 || tables.providers_table === 0 || tables.monthly_service_summary_table === 0) {
-  return false
-}
+    if (tables.contacts_table === 0 || tables.clients_table === 0 || tables.providers_table === 0) {
+      return false
+    }
 
-const dataCheck = await sql`
-  SELECT 
-    (SELECT COUNT(*) FROM contacts) as contact_count,
-    (SELECT COUNT(*) FROM clients) as client_count,
-    (SELECT COUNT(*) FROM providers) as provider_count,
-    (SELECT COUNT(*) FROM monthly_service_summary) as summary_count
-`
+    const dataCheck = await sql`
+      SELECT 
+        (SELECT COUNT(*) FROM contacts) as contact_count,
+        (SELECT COUNT(*) FROM clients) as client_count,
+        (SELECT COUNT(*) FROM providers) as provider_count
     `
 
     const data = dataCheck[0]
-    return data.contact_count > 0 && data.client_count > 0 && data.provider_count > 0 && data.summary_count > 0
+    return data.contact_count > 0 && data.client_count > 0 && data.provider_count > 0
   } catch (error) {
     console.error("Database initialization check failed:", error)
     return false

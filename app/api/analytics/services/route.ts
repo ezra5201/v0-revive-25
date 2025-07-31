@@ -10,22 +10,29 @@ export async function GET() {
         service_name,
         SUM(total_requested) as total_requested,
         SUM(total_provided) as total_provided,
-        ROUND(AVG(completion_rate), 2) as avg_completion_rate
+        ROUND(
+          (SUM(total_provided)::numeric / NULLIF(SUM(total_requested), 0)) * 100, 
+          2
+        ) as completion_rate,
+        COUNT(DISTINCT month_year) as months_active
       FROM monthly_service_summary
       GROUP BY service_name
       ORDER BY total_requested DESC
     `
 
-    const formattedServices = services.map((row) => ({
-      serviceName: row.service_name,
-      totalRequested: Number.parseInt(row.total_requested),
-      totalProvided: Number.parseInt(row.total_provided),
-      avgCompletionRate: Number.parseFloat(row.avg_completion_rate),
-    }))
-
-    return NextResponse.json({ services: formattedServices })
+    return NextResponse.json({
+      success: true,
+      services,
+    })
   } catch (error) {
-    console.error("Error fetching services data:", error)
-    return NextResponse.json({ error: "Failed to fetch services data" }, { status: 500 })
+    console.error("Services analytics error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fetch services analytics",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

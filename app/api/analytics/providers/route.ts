@@ -7,25 +7,34 @@ export async function GET() {
   try {
     const providers = await sql`
       SELECT 
-        COALESCE(provider_name, 'Unassigned') as provider_name,
-        COUNT(*) as total_contacts,
-        COUNT(DISTINCT client_name) as unique_clients,
-        COUNT(DISTINCT DATE(contact_date)) as active_days
-      FROM contacts
-      GROUP BY provider_name
+        p.name,
+        p.location,
+        COUNT(DISTINCT c.id) as total_clients,
+        COUNT(co.id) as total_contacts,
+        ROUND(
+          COUNT(co.id)::numeric / NULLIF(COUNT(DISTINCT c.id), 0), 
+          2
+        ) as avg_contacts_per_client
+      FROM providers p
+      LEFT JOIN clients c ON p.id = c.provider_id
+      LEFT JOIN contacts co ON c.id = co.client_id
+      GROUP BY p.id, p.name, p.location
       ORDER BY total_contacts DESC
     `
 
-    const formattedProviders = providers.map((row) => ({
-      providerName: row.provider_name,
-      totalContacts: Number.parseInt(row.total_contacts),
-      uniqueClients: Number.parseInt(row.unique_clients),
-      activeDays: Number.parseInt(row.active_days),
-    }))
-
-    return NextResponse.json({ providers: formattedProviders })
+    return NextResponse.json({
+      success: true,
+      providers,
+    })
   } catch (error) {
-    console.error("Error fetching provider data:", error)
-    return NextResponse.json({ error: "Failed to fetch provider data" }, { status: 500 })
+    console.error("Provider analytics error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fetch provider analytics",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

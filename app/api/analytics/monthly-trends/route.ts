@@ -5,39 +5,35 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
-    console.log("Fetching monthly trends data...")
-
-    const query = `
+    const trends = await sql`
       SELECT 
-        CONCAT(year, '-', LPAD(month::text, 2, '0')) as month,
+        month_year as month,
         SUM(total_requested) as total_requested,
         SUM(total_provided) as total_provided,
-        CASE 
-          WHEN SUM(total_requested) > 0 
-          THEN ROUND((SUM(total_provided)::numeric / SUM(total_requested)::numeric) * 100, 2)
-          ELSE 0 
-        END as completion_rate,
+        ROUND(
+          (SUM(total_provided)::numeric / NULLIF(SUM(total_requested), 0)) * 100, 
+          2
+        ) as completion_rate,
         COUNT(DISTINCT service_name) as services_count
-      FROM monthly_service_summary 
-      GROUP BY year, month
-      ORDER BY year ASC, month ASC
+      FROM monthly_service_summary
+      GROUP BY month_year
+      ORDER BY month_year DESC
+      LIMIT 12
     `
 
-    console.log("Executing monthly trends query:", query)
-    const result = await sql(query)
-
-    const trends = result.map((row) => ({
-      month: row.month,
-      totalRequested: Number.parseInt(row.total_requested),
-      totalProvided: Number.parseInt(row.total_provided),
-      completionRate: Number.parseFloat(row.completion_rate),
-      servicesCount: Number.parseInt(row.services_count),
-    }))
-
-    console.log(`Found ${trends.length} monthly trend records`)
-    return NextResponse.json({ trends })
+    return NextResponse.json({
+      success: true,
+      trends,
+    })
   } catch (error) {
-    console.error("Error fetching monthly trends data:", error)
-    return NextResponse.json({ error: "Failed to fetch monthly trends data" }, { status: 500 })
+    console.error("Monthly trends error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fetch monthly trends",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

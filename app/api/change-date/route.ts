@@ -8,19 +8,34 @@ export async function POST(request: Request) {
     const { contactId, newDate } = await request.json()
 
     if (!contactId || !newDate) {
-      return NextResponse.json({ error: "Contact ID and new date are required" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "Contact ID and new date are required" }, { status: 400 })
     }
 
     // Update the contact date
-    await sql`
+    const result = await sql`
       UPDATE contacts 
       SET contact_date = ${newDate}
       WHERE id = ${contactId}
+      RETURNING *
     `
 
-    return NextResponse.json({ success: true })
+    if (result.length === 0) {
+      return NextResponse.json({ success: false, error: "Contact not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      contact: result[0],
+    })
   } catch (error) {
-    console.error("Error updating contact date:", error)
-    return NextResponse.json({ error: "Failed to update contact date" }, { status: 500 })
+    console.error("Change date error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to change contact date",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

@@ -14,45 +14,40 @@ export async function GET(request: Request) {
     switch (period) {
       case "This Month":
         dateFilter = "AND contact_date >= DATE_TRUNC('month', CURRENT_DATE)"
-        newClientsDateFilter = "AND first_contact >= DATE_TRUNC('month', CURRENT_DATE)"
+        newClientsDateFilter = "AND created_at >= DATE_TRUNC('month', CURRENT_DATE)"
         break
       case "Last Month":
         dateFilter = `AND contact_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
                      AND contact_date < DATE_TRUNC('month', CURRENT_DATE)`
-        newClientsDateFilter = `AND first_contact >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
-                               AND first_contact < DATE_TRUNC('month', CURRENT_DATE)`
+        newClientsDateFilter = `AND created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
+                               AND created_at < DATE_TRUNC('month', CURRENT_DATE)`
         break
       case "This Year":
         dateFilter = "AND contact_date >= DATE_TRUNC('year', CURRENT_DATE)"
-        newClientsDateFilter = "AND first_contact >= DATE_TRUNC('year', CURRENT_DATE)"
+        newClientsDateFilter = "AND created_at >= DATE_TRUNC('year', CURRENT_DATE)"
         break
+      default:
+        // Default to this month
+        dateFilter = "AND contact_date >= DATE_TRUNC('month', CURRENT_DATE)"
+        newClientsDateFilter = "AND created_at >= DATE_TRUNC('month', CURRENT_DATE)"
     }
 
-    // Get total clients (all time)
+    // Get total clients
     const totalClientsResult = await sql`
-      SELECT COUNT(DISTINCT client_name) as count
-      FROM contacts
+      SELECT COUNT(DISTINCT id) as count FROM clients
     `
 
     // Get total contacts for the period
-    const totalContactsQuery = `
-      SELECT COUNT(*) as count
-      FROM contacts
-      WHERE 1=1 ${dateFilter}
+    const totalContactsResult = await sql`
+      SELECT COUNT(*) as count FROM contacts 
+      WHERE 1=1 ${sql.unsafe(dateFilter)}
     `
-    const totalContactsResult = await sql(totalContactsQuery)
 
     // Get new clients for the period
-    const newClientsQuery = `
-      SELECT COUNT(*) as count
-      FROM (
-        SELECT client_name, MIN(contact_date) as first_contact
-        FROM contacts
-        GROUP BY client_name
-      ) first_contacts
-      WHERE 1=1 ${newClientsDateFilter}
+    const newClientsResult = await sql`
+      SELECT COUNT(*) as count FROM clients 
+      WHERE 1=1 ${sql.unsafe(newClientsDateFilter)}
     `
-    const newClientsResult = await sql(newClientsQuery)
 
     return NextResponse.json({
       totalClients: Number.parseInt(totalClientsResult[0].count),
@@ -60,7 +55,14 @@ export async function GET(request: Request) {
       newClientsThisMonth: Number.parseInt(newClientsResult[0].count),
     })
   } catch (error) {
-    console.error("Error fetching overview data:", error)
-    return NextResponse.json({ error: "Failed to fetch overview data" }, { status: 500 })
+    console.error("Overview analytics error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fetch overview analytics",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

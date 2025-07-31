@@ -5,17 +5,31 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const alertId = params.id
+    const alertId = Number.parseInt(params.id)
+
+    if (isNaN(alertId)) {
+      return NextResponse.json({ success: false, error: "Invalid alert ID" }, { status: 400 })
+    }
 
     // Delete the alert
-    await sql`
+    const result = await sql`
       DELETE FROM alerts 
       WHERE id = ${alertId}
     `
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      message: "Alert deleted successfully",
+    })
   } catch (error) {
-    console.error("Error deleting alert:", error)
-    return NextResponse.json({ error: "Failed to delete alert" }, { status: 500 })
+    console.error("Delete alert error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to delete alert",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

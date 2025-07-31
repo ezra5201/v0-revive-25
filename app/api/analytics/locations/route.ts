@@ -5,40 +5,36 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
-    console.log("Fetching location performance data...")
-
-    const query = `
+    const locations = await sql`
       SELECT 
-        COALESCE(location, 'Unknown') as location,
-        COUNT(*) as visits,
-        COUNT(DISTINCT client_name) as total_clients,
-        COUNT(CASE WHEN provider_name IS NOT NULL THEN 1 END) as total_engaged,
-        CASE 
-          WHEN COUNT(*) > 0 
-          THEN ROUND((COUNT(CASE WHEN provider_name IS NOT NULL THEN 1 END)::numeric / COUNT(*)::numeric) * 100, 2)
-          ELSE 0 
-        END as engagement_rate
-      FROM contacts 
-      GROUP BY location
-      ORDER BY visits DESC
-      LIMIT 50
+        c.location,
+        COUNT(DISTINCT co.id) as visits,
+        COUNT(DISTINCT c.id) as total_clients,
+        COUNT(DISTINCT CASE WHEN co.id IS NOT NULL THEN c.id END) as total_engaged,
+        ROUND(
+          (COUNT(DISTINCT CASE WHEN co.id IS NOT NULL THEN c.id END)::numeric / 
+           NULLIF(COUNT(DISTINCT c.id), 0)) * 100, 
+          2
+        ) as engagement_rate
+      FROM clients c
+      LEFT JOIN contacts co ON c.id = co.client_id
+      GROUP BY c.location
+      ORDER BY engagement_rate DESC, total_clients DESC
     `
 
-    console.log("Executing locations query:", query)
-    const result = await sql(query)
-
-    const locations = result.map((row) => ({
-      location: row.location,
-      visits: Number.parseInt(row.visits),
-      totalClients: Number.parseInt(row.total_clients),
-      totalEngaged: Number.parseInt(row.total_engaged),
-      engagementRate: Number.parseFloat(row.engagement_rate),
-    }))
-
-    console.log(`Found ${locations.length} locations`)
-    return NextResponse.json({ locations })
+    return NextResponse.json({
+      success: true,
+      locations,
+    })
   } catch (error) {
-    console.error("Error fetching location data:", error)
-    return NextResponse.json({ error: "Failed to fetch location data" }, { status: 500 })
+    console.error("Location analytics error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fetch location analytics",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

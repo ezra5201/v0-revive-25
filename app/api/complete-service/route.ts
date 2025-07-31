@@ -1,87 +1,74 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 
-const sqlClient = neon(process.env.DATABASE_URL!)
+const sql = neon(process.env.DATABASE_URL!)
 
 export async function POST(request: Request) {
-  if (!sqlClient) {
-    return NextResponse.json({ error: "Database not available" }, { status: 500 })
-  }
-
   try {
-    const body = await request.json()
-    const { contactIds, serviceName, providerName } = body
+    const { contactId, serviceName } = await request.json()
 
-    // Validate required fields
-    if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
-      return NextResponse.json({ error: "Contact IDs are required" }, { status: 400 })
+    if (!contactId || !serviceName) {
+      return NextResponse.json({ success: false, error: "Contact ID and service name are required" }, { status: 400 })
     }
 
-    if (!serviceName || !providerName) {
-      return NextResponse.json({ error: "Service name and provider name are required" }, { status: 400 })
+    // Get contact details to update the monthly summary
+    const contact = await sql`
+      SELECT 
+        c.*,
+        cl.location,
+        p.name as provider_name
+      FROM contacts c
+      JOIN clients cl ON c.client_id = cl.id
+      JOIN providers p ON cl.provider_id = p.id
+      WHERE c.id = ${contactId}
+    `
+
+    if (contact.length === 0) {
+      return NextResponse.json({ success: false, error: "Contact not found" }, { status: 404 })
     }
 
-    const completedContacts = []
+    const contactData = contact[0]
+    const monthYear = new Date(contactData.contact_date).toISOString().slice(0, 7) // YYYY-MM format
 
-    // Process each contact
-    for (const contactId of contactIds) {
-      try {
-        // Get current contact data
-        const contactResult = await sqlClient.query(
-          "SELECT id, services_requested, services_provided FROM contacts WHERE id = $1",
-          [contactId],
-        )
+    // Update or insert monthly service summary
+    await sql`
+      INSERT INTO monthly_service_summary (
+        month_year, location, provider_name, service_name, 
+        total_requested, total_provided
+      )
+      VALUES (
+        ${monthYear}, ${contactData.location}, ${contactData.provider_name}, 
+        ${serviceName}, 0, 1
+      )
+      ON CONFLICT (month_year, location, provider_name, service_name)
+      DO UPDATE SET 
+        total_provided = monthly_service_summary.total_provided + 1
+    `
 
-        if (contactResult.length === 0) {
-          console.warn(`Contact ${contactId} not found`)
-          continue
-        }
-
-        const contact = contactResult[0]
-        const servicesRequested = contact.services_requested || []
-        const servicesProvided = contact.services_provided || []
-
-        // Check if service is already provided
-        const alreadyProvided = servicesProvided.some((service: any) => service.service === serviceName)
-
-        if (alreadyProvided) {
-          console.log(`Service ${serviceName} already provided for contact ${contactId}`)
-          continue
-        }
-
-        // Add the service to provided services
-        const newServiceProvided = {
-          service: serviceName,
-          provider: providerName,
-          completedAt: new Date().toISOString(),
-        }
-
-        const updatedServicesProvided = [...servicesProvided, newServiceProvided]
-
-        // Update the contact record
-        await sqlClient.query("UPDATE contacts SET services_provided = $1, updated_at = NOW() WHERE id = $2", [
-          JSON.stringify(updatedServicesProvided),
-          contactId,
-        ])
-
-        completedContacts.push({
-          id: contactId,
-          service: serviceName,
-          provider: providerName,
-        })
-      } catch (error) {
-        console.error(`Error processing contact ${contactId}:`, error)
-      }
-    }
+    // Mark the service as completed in the contact
+    await sql`
+      UPDATE contacts 
+      SET 
+        services_provided = COALESCE(services_provided, '') || 
+          CASE 
+            WHEN COALESCE(services_provided, '') = '' THEN ${serviceName}
+            ELSE ', ' || ${serviceName}
+          END
+      WHERE id = ${contactId}
+    `
 
     return NextResponse.json({
-      message: `${serviceName} service completed for ${completedContacts.length} contact(s)`,
-      completedContacts,
+      success: true,
+      message: "Service marked as completed",
     })
   } catch (error) {
-    console.error("Service completion failed:", error)
+    console.error("Complete service error:", error)
     return NextResponse.json(
-      { error: `Service completion failed: ${error instanceof Error ? error.message : "Unknown error"}` },
+      {
+        success: false,
+        error: "Failed to complete service",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 },
     )
   }
