@@ -9,6 +9,7 @@ function cleanConnectionString(connectionString: string): string {
   const match = connectionString.match(psqlPattern)
 
   if (match) {
+    console.log("🧹 Cleaned psql wrapper from connection string")
     return match[1] // Return the URL without the psql wrapper
   }
 
@@ -70,7 +71,7 @@ const isPostgresUrl = connectionString.startsWith("postgres://") || connectionSt
 // Log which database branch is being used
 if (isPostgresUrl && connectionString) {
   // Extract branch info from connection string
-  const urlParts = connectionString.match(/postgres:\/\/[^@]+@([^/]+)\/([^?]+)/)
+  const urlParts = connectionString.match(/postgres(?:ql)?:\/\/[^@]+@([^/]+)\/([^?]+)/)
   if (urlParts) {
     const host = urlParts[1]
     const database = urlParts[2]

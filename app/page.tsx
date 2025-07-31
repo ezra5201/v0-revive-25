@@ -3,12 +3,11 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 
-type ActiveTab = "today" | "all"
-
-export default function ContactLogPage() {
+export default function HomePage() {
   const router = useRouter()
 
   useEffect(() => {
+    // Use replace to avoid adding to browser history
     router.replace("/contact-log")
   }, [router])
 
@@ -17,7 +16,7 @@ export default function ContactLogPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="text-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mx-auto mb-4" />
-        <p className="text-gray-600">Redirecting...</p>
+        <p className="text-gray-600">Loading ReVive 25...</p>
       </div>
     </div>
   )
