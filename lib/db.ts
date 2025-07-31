@@ -41,7 +41,7 @@ if (!connectionString.startsWith("postgresql://") && !connectionString.startsWit
 }
 
 // Create the SQL client
-const sql = neon(connectionString)
+export const sql = neon(connectionString)
 
 // Export the connection string for debugging
 export const debugConnectionString = connectionString.substring(0, 50) + "..."
@@ -269,6 +269,16 @@ export async function initializeDatabase() {
       )
     `
 
+    // Create providers table
+    await sql`
+      CREATE TABLE IF NOT EXISTS providers (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+
     // Create monthly_service_summary table
     await sql`
       CREATE TABLE IF NOT EXISTS monthly_service_summary (
@@ -292,6 +302,7 @@ export async function initializeDatabase() {
         alert_type VARCHAR(100) NOT NULL,
         message TEXT NOT NULL,
         severity VARCHAR(20) DEFAULT 'medium',
+        is_read BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         resolved_at TIMESTAMP
       )
@@ -328,6 +339,15 @@ export async function seedDatabase() {
       "Legal Aid",
       "Transportation",
     ]
+
+    // Insert providers first
+    for (const provider of providers) {
+      await sql`
+        INSERT INTO providers (name) 
+        VALUES (${provider})
+        ON CONFLICT (name) DO NOTHING
+      `
+    }
 
     // Generate sample contacts
     const sampleContacts = []
@@ -407,10 +427,6 @@ export async function seedDatabase() {
 }
 
 export async function getDatabaseStats() {
-  if (!sql) {
-    throw new Error("Database connection not available")
-  }
-
   try {
     // Get basic counts
     const basicStats = await sql`
@@ -447,13 +463,13 @@ export async function getDatabaseStats() {
       consistency.master_clients > 0 ? Math.round((consistency.master_clients / consistency.contacts_clients) * 100) : 0
 
     return {
-      contacts: Number(basicStats[0].contacts),
-      clients: Number(basicStats[0].clients),
-      providers: Number(basicStats[0].providers),
-      alerts: Number(basicStats[0].alerts),
-      unique_people: Number(uniquePeople[0].unique_people),
-      master_records_gap: Number(masterRecordsGap[0].gap),
-      data_consistency_percentage: dataConsistencyPercentage,
+      contacts: Number(basicStats[0].contacts) || 0,
+      clients: Number(basicStats[0].clients) || 0,
+      providers: Number(basicStats[0].providers) || 0,
+      alerts: Number(basicStats[0].alerts) || 0,
+      unique_people: Number(uniquePeople[0].unique_people) || 0,
+      master_records_gap: Number(masterRecordsGap[0].gap) || 0,
+      data_consistency_percentage: dataConsistencyPercentage || 0,
       lastUpdated: new Date().toISOString(),
     }
   } catch (error) {

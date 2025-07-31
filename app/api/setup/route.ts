@@ -1,54 +1,53 @@
-import { initializeDatabase, seedDatabase, isDatabaseInitialized } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { isDatabaseInitialized, initializeDatabase, seedDatabase } from "@/lib/db"
 
-export async function POST() {
+export async function GET() {
   try {
-    console.log("🚀 Starting database setup...")
-
-    const isAlreadyInitialized = await isDatabaseInitialized()
-
-    if (isAlreadyInitialized) {
-      console.log("📊 Database already initialized, skipping setup")
-      return NextResponse.json({
-        message: "Database is already initialized and contains data.",
-        status: "already_initialized",
-      })
-    }
-
-    await initializeDatabase()
-    console.log("✅ Tables verified/created")
-
-    await seedDatabase()
-    console.log("✅ Minimal data seeded")
+    console.log("🔍 Checking database status...")
+    const initialized = await isDatabaseInitialized()
 
     return NextResponse.json({
-      message: "Database initialized successfully with minimal sample data.",
-      status: "initialized",
+      initialized,
+      timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    console.error("❌ Setup failed:", error)
+    console.error("❌ Status check failed:", error)
     return NextResponse.json(
       {
-        error: `Database setup failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-        status: "error",
+        error: "Failed to check database status",
+        details: error instanceof Error ? error.message : "Unknown error",
+        initialized: false,
       },
       { status: 500 },
     )
   }
 }
 
-export async function GET() {
+export async function POST() {
   try {
-    const isInitialized = await isDatabaseInitialized()
+    console.log("🚀 Starting database setup...")
+
+    // Initialize database tables
+    await initializeDatabase()
+    console.log("✅ Database tables created")
+
+    // Seed with sample data
+    await seedDatabase()
+    console.log("✅ Database seeded")
+
     return NextResponse.json({
-      initialized: isInitialized,
+      success: true,
+      message: "Database setup completed successfully",
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    console.error("❌ Status check failed:", error)
-    return NextResponse.json({
-      initialized: false,
-      error: "Failed to check database status",
-    })
+    console.error("❌ Database setup failed:", error)
+    return NextResponse.json(
+      {
+        error: "Database setup failed",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
