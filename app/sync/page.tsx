@@ -1,137 +1,247 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, CheckCircle, XCircle, Calendar, Database } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Loader2, Calendar, Database, CheckCircle, XCircle } from "lucide-react"
 
 interface SyncResult {
   success: boolean
-  message: string
-  recordsProcessed: number
   month: number
   year: number
+  recordsProcessed: number
+  message: string
   timestamp: string
-  apiDuration?: string
+  duration: number
+  error?: string
+}
+
+interface DataRange {
+  earliest: string | null
+  latest: string | null
+  totalMonths: number
 }
 
 export default function SyncPage() {
-  const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth() + 1))
-  const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()))
+  const [selectedMonth, setSelectedMonth] = useState<string>("")
+  const [selectedYear, setSelectedYear] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
   const [isHistoricalLoading, setIsHistoricalLoading] = useState(false)
+  const [isDetectingRange, setIsDetectingRange] = useState(false)
   const [results, setResults] = useState<SyncResult[]>([])
+  const [dataRange, setDataRange] = useState<DataRange | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const months = [
-    { value: "1", label: "January" },
-    { value: "2", label: "February" },
-    { value: "3", label: "March" },
-    { value: "4", label: "April" },
-    { value: "5", label: "May" },
-    { value: "6", label: "June" },
-    { value: "7", label: "July" },
-    { value: "8", label: "August" },
-    { value: "9", label: "September" },
-    { value: "10", label: "October" },
-    { value: "11", label: "November" },
-    { value: "12", label: "December" },
+  // Initialize with current month/year
+  useEffect(() => {
+    const now = new Date()
+    setSelectedMonth((now.getMonth() + 1).toString())
+    setSelectedYear(now.getFullYear().toString())
+  }, [])
+
+  // Generate year options (1900 to current year + 1)
+  const currentYear = new Date().getFullYear()
+  const yearOptions = Array.from({ length: currentYear - 1900 + 2 }, (_, i) => 1900 + i)
+
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ]
 
-  const years = Array.from({ length: 11 }, (_, i) => 2020 + i).map((year) => ({
-    value: String(year),
-    label: String(year),
-  }))
+  /**
+   * Detect the data range in the contacts table
+   */
+  const detectDataRange = async () => {
+    setIsDetectingRange(true)
+    setError(null)
 
-  const handleSync = async () => {
+    try {
+      const response = await fetch("/api/contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "getDateRange" }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.dateRange) {
+        const earliest = data.dateRange.earliest ? new Date(data.dateRange.earliest) : null
+        const latest = data.dateRange.latest ? new Date(data.dateRange.latest) : null
+
+        let totalMonths = 0
+        if (earliest && latest) {
+          const yearDiff = latest.getFullYear() - earliest.getFullYear()
+          const monthDiff = latest.getMonth() - earliest.getMonth()
+          totalMonths = yearDiff * 12 + monthDiff + 1
+        }
+
+        setDataRange({
+          earliest: data.dateRange.earliest,
+          latest: data.dateRange.latest,
+          totalMonths,
+        })
+      } else {
+        setError("Failed to detect data range")
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error"
+      setError(`Failed to detect data range: ${errorMessage}`)
+    } finally {
+      setIsDetectingRange(false)
+    }
+  }
+
+  /**
+   * Sync a single month
+   */
+  const syncSingleMonth = async () => {
+    if (!selectedMonth || !selectedYear) {
+      setError("Please select both month and year")
+      return
+    }
+
     setIsLoading(true)
+    setError(null)
 
     try {
       const response = await fetch("/api/sync-services", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           month: Number.parseInt(selectedMonth),
           year: Number.parseInt(selectedYear),
         }),
       })
 
-      const result = await response.json()
-      setResults((prev) => [result, ...prev])
-    } catch (error) {
-      const errorResult: SyncResult = {
-        success: false,
-        message: `Network error: ${error instanceof Error ? error.message : "Unknown error"}`,
-        recordsProcessed: 0,
-        month: Number.parseInt(selectedMonth),
-        year: Number.parseInt(selectedYear),
-        timestamp: new Date().toISOString(),
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        const result: SyncResult = {
+          success: true,
+          month: data.data.month,
+          year: data.data.year,
+          recordsProcessed: data.data.recordsProcessed,
+          message: data.data.message,
+          timestamp: data.data.timestamp,
+          duration: data.data.duration,
+        }
+        setResults((prev) => [result, ...prev])
+      } else {
+        setError(data.error || "Sync failed")
       }
-      setResults((prev) => [errorResult, ...prev])
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error"
+      setError(`Sync failed: ${errorMessage}`)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleHistoricalSync = async () => {
+  /**
+   * Sync all historical data
+   */
+  const syncAllHistorical = async () => {
     setIsHistoricalLoading(true)
-    const currentDate = new Date()
-    const currentYear = currentDate.getFullYear()
-    const currentMonth = currentDate.getMonth() + 1
+    setError(null)
+    setResults([])
 
-    const monthsToSync = []
+    try {
+      // First detect the data range
+      await detectDataRange()
 
-    // Generate all months from January 2024 to current month
-    for (let year = 2024; year <= currentYear; year++) {
-      const startMonth = year === 2024 ? 1 : 1
-      const endMonth = year === currentYear ? currentMonth : 12
+      // For now, we'll sync from 2024 onwards as a reasonable default
+      // In a real implementation, this would use the detected range
+      const startYear = 2024
+      const endYear = currentYear
+      const currentMonth = new Date().getMonth() + 1
 
-      for (let month = startMonth; month <= endMonth; month++) {
-        monthsToSync.push({ month, year })
-      }
-    }
+      const monthsToSync: Array<{ month: number; year: number }> = []
 
-    console.log(`Starting historical sync for ${monthsToSync.length} months`)
-
-    for (const { month, year } of monthsToSync) {
-      try {
-        const response = await fetch("/api/sync-services", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ month, year }),
-        })
-
-        const result = await response.json()
-        setResults((prev) => [result, ...prev])
-
-        // Small delay to prevent overwhelming the database
-        await new Promise((resolve) => setTimeout(resolve, 100))
-      } catch (error) {
-        const errorResult: SyncResult = {
-          success: false,
-          message: `Network error for ${month}/${year}: ${error instanceof Error ? error.message : "Unknown error"}`,
-          recordsProcessed: 0,
-          month,
-          year,
-          timestamp: new Date().toISOString(),
+      for (let year = startYear; year <= endYear; year++) {
+        const maxMonth = year === endYear ? currentMonth : 12
+        for (let month = 1; month <= maxMonth; month++) {
+          monthsToSync.push({ month, year })
         }
-        setResults((prev) => [errorResult, ...prev])
       }
-    }
 
-    setIsHistoricalLoading(false)
+      console.log(`Syncing ${monthsToSync.length} months from ${startYear} to ${endYear}`)
+
+      for (let i = 0; i < monthsToSync.length; i++) {
+        const { month, year } = monthsToSync[i]
+
+        try {
+          const response = await fetch("/api/sync-services", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ month, year }),
+          })
+
+          const data = await response.json()
+
+          const result: SyncResult = {
+            success: data.success,
+            month,
+            year,
+            recordsProcessed: data.data?.recordsProcessed || 0,
+            message: data.data?.message || data.error || "Unknown result",
+            timestamp: data.data?.timestamp || new Date().toISOString(),
+            duration: data.data?.duration || 0,
+            error: data.success ? undefined : data.error || "Unknown error",
+          }
+
+          setResults((prev) => [result, ...prev])
+
+          // Small delay to prevent overwhelming the database
+          if (i < monthsToSync.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 100))
+          }
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : "Unknown error"
+          const result: SyncResult = {
+            success: false,
+            month,
+            year,
+            recordsProcessed: 0,
+            message: `Failed: ${errorMessage}`,
+            timestamp: new Date().toISOString(),
+            duration: 0,
+            error: errorMessage,
+          }
+          setResults((prev) => [result, ...prev])
+        }
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error"
+      setError(`Historical sync failed: ${errorMessage}`)
+    } finally {
+      setIsHistoricalLoading(false)
+    }
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
+    <div className="container mx-auto p-6 max-w-6xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Service Data Synchronization</h1>
-        <p className="text-muted-foreground">Manually trigger synchronization of monthly service summary data</p>
+        <p className="text-muted-foreground">
+          Sync contact data into monthly service summaries for reporting and analytics.
+        </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -150,12 +260,12 @@ export default function SyncPage() {
                 <label className="text-sm font-medium mb-2 block">Month</label>
                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select month" />
                   </SelectTrigger>
                   <SelectContent>
-                    {months.map((month) => (
-                      <SelectItem key={month.value} value={month.value}>
-                        {month.label}
+                    {monthNames.map((month, index) => (
+                      <SelectItem key={index + 1} value={(index + 1).toString()}>
+                        {month}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -165,101 +275,141 @@ export default function SyncPage() {
                 <label className="text-sm font-medium mb-2 block">Year</label>
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select year" />
                   </SelectTrigger>
                   <SelectContent>
-                    {years.map((year) => (
-                      <SelectItem key={year.value} value={year.value}>
-                        {year.label}
+                    {yearOptions.reverse().map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <Button onClick={handleSync} disabled={isLoading || isHistoricalLoading} className="w-full">
+            <Button
+              onClick={syncSingleMonth}
+              disabled={isLoading || !selectedMonth || !selectedYear}
+              className="w-full"
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Syncing...
                 </>
               ) : (
-                "Sync Selected Month"
+                "Sync Month"
               )}
             </Button>
           </CardContent>
         </Card>
 
-        {/* Historical Sync */}
+        {/* Data Range Detection */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
-              Historical Data Sync
+              Data Range Detection
             </CardTitle>
-            <CardDescription>Sync all data from January 2024 to current month</CardDescription>
+            <CardDescription>Discover the date range of available contact data</CardDescription>
           </CardHeader>
-          <CardContent>
-            <Alert className="mb-4">
-              <AlertDescription>
-                This will process all months from January 2024 to present. This may take several minutes to complete.
-              </AlertDescription>
-            </Alert>
+          <CardContent className="space-y-4">
+            {dataRange && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Earliest Date:</span>
+                  <span>{dataRange.earliest ? new Date(dataRange.earliest).toLocaleDateString() : "N/A"}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Latest Date:</span>
+                  <span>{dataRange.latest ? new Date(dataRange.latest).toLocaleDateString() : "N/A"}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Total Months:</span>
+                  <span>{dataRange.totalMonths}</span>
+                </div>
+              </div>
+            )}
             <Button
-              onClick={handleHistoricalSync}
-              disabled={isLoading || isHistoricalLoading}
+              onClick={detectDataRange}
+              disabled={isDetectingRange}
               variant="outline"
               className="w-full bg-transparent"
             >
-              {isHistoricalLoading ? (
+              {isDetectingRange ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Syncing Historical Data...
+                  Detecting...
                 </>
               ) : (
-                "Sync All Historical Data"
+                "Detect Data Range"
               )}
             </Button>
           </CardContent>
         </Card>
       </div>
 
+      {/* Historical Sync */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            Historical Data Sync
+          </CardTitle>
+          <CardDescription>Sync all available historical data (processes all months from 2024 onwards)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={syncAllHistorical} disabled={isHistoricalLoading} variant="secondary" className="w-full">
+            {isHistoricalLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Syncing All Historical Data...
+              </>
+            ) : (
+              "Sync All Historical Data"
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Error Display */}
+      {error && (
+        <Alert className="mt-6" variant="destructive">
+          <XCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Results */}
       {results.length > 0 && (
-        <Card className="mt-8">
+        <Card className="mt-6">
           <CardHeader>
             <CardTitle>Sync Results</CardTitle>
-            <CardDescription>Recent synchronization results (newest first)</CardDescription>
+            <CardDescription>Recent synchronization operations and their results</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-3">
               {results.map((result, index) => (
-                <div
-                  key={index}
-                  className={`p-4 rounded-lg border ${
-                    result.success ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      {result.success ? (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-600" />
-                      )}
-                      <div>
-                        <div className="font-medium">
-                          {months.find((m) => m.value === String(result.month))?.label} {result.year}
-                        </div>
-                        <div className="text-sm text-muted-foreground">{result.recordsProcessed} records processed</div>
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {result.success ? (
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-500" />
+                    )}
+                    <div>
+                      <div className="font-medium">
+                        {monthNames[result.month - 1]} {result.year}
                       </div>
+                      <div className="text-sm text-muted-foreground">{result.message}</div>
                     </div>
-                    <div className="text-xs text-muted-foreground">{new Date(result.timestamp).toLocaleString()}</div>
                   </div>
-                  <div className="mt-2 text-sm">{result.message}</div>
-                  {result.apiDuration && (
-                    <div className="mt-1 text-xs text-muted-foreground">Duration: {result.apiDuration}</div>
-                  )}
+                  <div className="text-right">
+                    <Badge variant={result.success ? "default" : "destructive"}>
+                      {result.recordsProcessed} records
+                    </Badge>
+                    <div className="text-xs text-muted-foreground mt-1">{result.duration}ms</div>
+                  </div>
                 </div>
               ))}
             </div>

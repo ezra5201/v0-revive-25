@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db"
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
+import { neon } from "@neondatabase/serverless"
 
 // Name pools for generating realistic names
 const maleFirstNames = [
@@ -266,7 +267,40 @@ function generateUniqueName(existingNames: Set<string>, isMale: boolean): string
   return fullName
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  try {
+    const { oldName, newName } = await request.json()
+
+    if (!oldName || !newName) {
+      return NextResponse.json({ success: false, error: "Both old name and new name are required" }, { status: 400 })
+    }
+
+    const db = neon(process.env.DATABASE_URL!)
+
+    // Update contacts table
+    const contactsResult = await db.sql`
+      UPDATE contacts 
+      SET name = ${newName}
+      WHERE name = ${oldName}
+    `
+
+    // Update monthly_service_summary table
+    const summaryResult = await db.sql`
+      UPDATE monthly_service_summary 
+      SET client_name = ${newName}
+      WHERE client_name = ${oldName}
+    `
+
+    return NextResponse.json({
+      success: true,
+      contactsUpdated: contactsResult.count || 0,
+      summaryUpdated: summaryResult.count || 0,
+    })
+  } catch (error) {
+    console.error("Update names error:", error)
+    return NextResponse.json({ success: false, error: "Failed to update names" }, { status: 500 })
+  }
+
   if (!sql) {
     return NextResponse.json({ error: "Database not available" }, { status: 500 })
   }
@@ -361,7 +395,10 @@ export async function POST() {
   } catch (error) {
     console.error("Failed to update client names:", error)
     return NextResponse.json(
-      { error: `Failed to update client names: ${error instanceof Error ? error.message : "Unknown error"}` },
+      {
+        success: false,
+        error: `Failed to update client names: ${error instanceof Error ? error.message : "Unknown error"}`,
+      },
       { status: 500 },
     )
   }

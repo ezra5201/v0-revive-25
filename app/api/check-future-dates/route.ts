@@ -1,33 +1,28 @@
-import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
-import { getTodayString } from "@/lib/date-utils"
+import { neon } from "@neondatabase/serverless"
 
 export async function GET() {
-  if (!sql) {
-    return NextResponse.json({ hasFutureDates: false })
-  }
-
   try {
-    const todayString = getTodayString()
+    const sql = neon(process.env.DATABASE_URL!)
 
-    // Check for any contacts with dates after today
     const futureDates = await sql`
-      SELECT COUNT(*) as count
+      SELECT 
+        id,
+        name,
+        contact_date,
+        created_at
       FROM contacts 
-      WHERE contact_date > (${todayString})::DATE
+      WHERE contact_date > CURRENT_DATE
+      ORDER BY contact_date DESC
     `
 
-    const hasFutureDates = futureDates[0].count > 0
-
-    console.log(`Future dates check: ${futureDates[0].count} records found after ${todayString}`)
-
     return NextResponse.json({
-      hasFutureDates,
-      count: futureDates[0].count,
-      todayInChicago: todayString,
+      success: true,
+      futureDates,
+      hasFutureDates: futureDates.length > 0,
     })
   } catch (error) {
-    console.error("Failed to check for future dates:", error)
-    return NextResponse.json({ hasFutureDates: false })
+    console.error("Check future dates error:", error)
+    return NextResponse.json({ success: false, error: "Failed to check future dates" }, { status: 500 })
   }
 }
