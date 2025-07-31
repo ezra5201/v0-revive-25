@@ -1,5 +1,5 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { sql } from "@/lib/db"
+import { NextResponse } from "next/server"
 
 // Name pools for generating realistic names
 const maleFirstNames = [
@@ -173,23 +173,14 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled
 }
 
-export async function POST(request: NextRequest) {
-  if (!process.env.DATABASE_URL) {
+export async function POST() {
+  if (!sql) {
     return NextResponse.json({ error: "Database connection not available" }, { status: 500 })
   }
-
-  const sql = neon(process.env.DATABASE_URL!)
 
   try {
     // Start transaction
     await sql`BEGIN`
-
-    // Update names containing "70%" to remove it
-    const result = await sql`
-      UPDATE contacts 
-      SET name = REPLACE(name, '70%', '')
-      WHERE name LIKE '%70%%'
-    `
 
     // Create app_settings table if it doesn't exist
     await sql`

@@ -1,78 +1,54 @@
+import { initializeDatabase, seedDatabase, isDatabaseInitialized } from "@/lib/db"
 import { NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
 
 export async function POST() {
   try {
-    const sql = neon(process.env.DATABASE_URL!)
+    console.log("🚀 Starting database setup...")
 
-    // Create contacts table
-    await sql`
-      CREATE TABLE IF NOT EXISTS contacts (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        contact_date DATE NOT NULL,
-        services TEXT,
-        provider VARCHAR(50),
-        notes TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `
+    const isAlreadyInitialized = await isDatabaseInitialized()
 
-    // Create monthly_service_summary table
-    await sql`
-      CREATE TABLE IF NOT EXISTS monthly_service_summary (
-        id SERIAL PRIMARY KEY,
-        client_name VARCHAR(255) NOT NULL,
-        month INTEGER NOT NULL,
-        year INTEGER NOT NULL,
-        shower INTEGER DEFAULT 0,
-        laundry INTEGER DEFAULT 0,
-        meal INTEGER DEFAULT 0,
-        clothing INTEGER DEFAULT 0,
-        mail INTEGER DEFAULT 0,
-        phone INTEGER DEFAULT 0,
-        computer INTEGER DEFAULT 0,
-        case_management INTEGER DEFAULT 0,
-        benefits INTEGER DEFAULT 0,
-        housing INTEGER DEFAULT 0,
-        medical INTEGER DEFAULT 0,
-        mental_health INTEGER DEFAULT 0,
-        substance_abuse INTEGER DEFAULT 0,
-        legal INTEGER DEFAULT 0,
-        transportation INTEGER DEFAULT 0,
-        id_docs INTEGER DEFAULT 0,
-        storage INTEGER DEFAULT 0,
-        other INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(client_name, month, year)
-      )
-    `
+    if (isAlreadyInitialized) {
+      console.log("📊 Database already initialized, skipping setup")
+      return NextResponse.json({
+        message: "Database is already initialized and contains data.",
+        status: "already_initialized",
+      })
+    }
 
-    // Create alerts table
-    await sql`
-      CREATE TABLE IF NOT EXISTS alerts (
-        id SERIAL PRIMARY KEY,
-        client_name VARCHAR(255),
-        alert_type VARCHAR(50) NOT NULL,
-        message TEXT NOT NULL,
-        is_resolved BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `
+    await initializeDatabase()
+    console.log("✅ Tables verified/created")
 
-    // Create indexes for better performance
-    await sql`CREATE INDEX IF NOT EXISTS idx_contacts_name ON contacts(name)`
-    await sql`CREATE INDEX IF NOT EXISTS idx_contacts_date ON contacts(contact_date)`
-    await sql`CREATE INDEX IF NOT EXISTS idx_contacts_provider ON contacts(provider)`
-    await sql`CREATE INDEX IF NOT EXISTS idx_summary_client_date ON monthly_service_summary(client_name, year, month)`
-    await sql`CREATE INDEX IF NOT EXISTS idx_alerts_resolved ON alerts(is_resolved)`
+    await seedDatabase()
+    console.log("✅ Minimal data seeded")
 
     return NextResponse.json({
-      success: true,
-      message: "Database tables created successfully",
+      message: "Database initialized successfully with minimal sample data.",
+      status: "initialized",
     })
   } catch (error) {
-    console.error("Database setup error:", error)
-    return NextResponse.json({ success: false, error: "Failed to setup database" }, { status: 500 })
+    console.error("❌ Setup failed:", error)
+    return NextResponse.json(
+      {
+        error: `Database setup failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        status: "error",
+      },
+      { status: 500 },
+    )
+  }
+}
+
+export async function GET() {
+  try {
+    const isInitialized = await isDatabaseInitialized()
+    return NextResponse.json({
+      initialized: isInitialized,
+      timestamp: new Date().toISOString(),
+    })
+  } catch (error) {
+    console.error("❌ Status check failed:", error)
+    return NextResponse.json({
+      initialized: false,
+      error: "Failed to check database status",
+    })
   }
 }

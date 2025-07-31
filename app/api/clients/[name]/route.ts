@@ -1,49 +1,28 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { sql } from "@/lib/db"
 
-export async function GET(request: NextRequest, { params }: { params: { name: string } }) {
+export async function GET(_request: NextRequest, { params }: { params: { name: string } }) {
+  if (!sql) {
+    return NextResponse.json({ error: "Database connection not available in this environment" }, { status: 503 })
+  }
+
   try {
     const clientName = decodeURIComponent(params.name)
-    const sql = neon(process.env.DATABASE_URL!)
 
-    // Get client's contact history
-    const contacts = await sql`
-      SELECT 
-        id,
-        name,
-        contact_date,
-        services,
-        provider,
-        notes,
-        created_at
-      FROM contacts 
+    const result = await sql`
+      SELECT name, category, active, created_at, updated_at
+      FROM clients
       WHERE name = ${clientName}
-      ORDER BY contact_date DESC, created_at DESC
+      LIMIT 1
     `
 
-    // Get client's service summary
-    const serviceSummary = await sql`
-      SELECT 
-        month,
-        year,
-        shower, laundry, meal, clothing, mail, phone, computer,
-        case_management, benefits, housing, medical, mental_health,
-        substance_abuse, legal, transportation, id_docs, storage, other
-      FROM monthly_service_summary
-      WHERE client_name = ${clientName}
-      ORDER BY year DESC, month DESC
-    `
+    if (result.length === 0) {
+      return NextResponse.json({ error: "Client not found" }, { status: 404 })
+    }
 
-    return NextResponse.json({
-      success: true,
-      client: {
-        name: clientName,
-        contacts,
-        serviceSummary,
-      },
-    })
+    return NextResponse.json(result[0])
   } catch (error) {
-    console.error("Get client error:", error)
-    return NextResponse.json({ success: false, error: "Failed to fetch client data" }, { status: 500 })
+    console.error("Error fetching client:", error)
+    return NextResponse.json({ error: "Failed to fetch client data" }, { status: 500 })
   }
 }

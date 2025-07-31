@@ -1,21 +1,38 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { sql } from "@/lib/db"
+import { NextResponse } from "next/server"
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
+  if (!sql) {
+    return NextResponse.json({ error: "Database not available" }, { status: 500 })
+  }
+
   try {
-    const { clientName } = await request.json()
+    const body = await request.json()
+    const { clientName, resolvedBy } = body
 
     if (!clientName) {
-      return NextResponse.json({ success: false, error: "Client name is required" }, { status: 400 })
+      return NextResponse.json({ error: "clientName is required" }, { status: 400 })
     }
 
-    const sql = neon(process.env.DATABASE_URL!)
+    // Update all active alerts for this client
+    const result = await sql`
+      UPDATE alerts 
+      SET 
+        status = 'resolved',
+        resolved_by = ${resolvedBy || "System"},
+        resolved_at = NOW(),
+        updated_at = NOW()
+      WHERE client_name = ${clientName} 
+        AND status = 'active'
+      RETURNING id, client_name
+    `
 
-    await sql`DELETE FROM alerts WHERE client_name = ${clientName}`
-
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      message: `Cleared ${result.length} alert(s) for ${clientName}`,
+      clearedAlerts: result.length,
+    })
   } catch (error) {
-    console.error("Clear client alerts error:", error)
-    return NextResponse.json({ success: false, error: "Failed to clear client alerts" }, { status: 500 })
+    console.error("Failed to clear client alerts:", error)
+    return NextResponse.json({ error: "Failed to clear client alerts" }, { status: 500 })
   }
 }

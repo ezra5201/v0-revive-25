@@ -1,25 +1,81 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { sql } from "@/lib/db"
+import { NextResponse } from "next/server"
+import { getTodayString, calculateDaysAgo } from "@/lib/date-utils"
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
+  if (!sql) {
+    return NextResponse.json({ error: "Database not available" }, { status: 500 })
+  }
+
   try {
-    const { contactId, newDate } = await request.json()
+    const body = await request.json()
+    const { contactIds, newDate } = body
 
-    if (!contactId || !newDate) {
-      return NextResponse.json({ success: false, error: "Contact ID and new date are required" }, { status: 400 })
+    // Validate required fields
+    if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
+      return NextResponse.json({ error: "Contact IDs are required" }, { status: 400 })
     }
 
-    const sql = neon(process.env.DATABASE_URL!)
+    if (!newDate) {
+      return NextResponse.json({ error: "New date is required" }, { status: 400 })
+    }
 
-    await sql`
-      UPDATE contacts 
-      SET contact_date = ${newDate}
-      WHERE id = ${contactId}
-    `
+    // Validate date format and ensure it's not in the future
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    if (!dateRegex.test(newDate)) {
+      return NextResponse.json({ error: "Invalid date format. Use YYYY-MM-DD" }, { status: 400 })
+    }
 
-    return NextResponse.json({ success: true })
+    const selectedDate = new Date(newDate)
+    const todayString = getTodayString()
+    const today = new Date(todayString)
+    today.setHours(23, 59, 59, 999) // Set to end of today for comparison
+
+    if (selectedDate > today) {
+      return NextResponse.json({ error: "Cannot set date in the future" }, { status: 400 })
+    }
+
+    // Calculate days ago from the new date using current Chicago time
+    const daysAgo = calculateDaysAgo(newDate)
+
+    const updatedContacts = []
+
+    // Process each contact
+    for (const contactId of contactIds) {
+      try {
+        // Update the contact record
+        const result = await sql.query(
+          `UPDATE contacts 
+           SET contact_date = $1, days_ago = $2, updated_at = NOW() 
+           WHERE id = $3
+           RETURNING id, contact_date, days_ago, client_name`,
+          [newDate, daysAgo, contactId],
+        )
+
+        if (result.length > 0) {
+          updatedContacts.push({
+            id: result[0].id,
+            clientName: result[0].client_name,
+            newDate: result[0].contact_date,
+            daysAgo: result[0].days_ago,
+          })
+        }
+      } catch (error) {
+        console.error(`Error updating contact ${contactId}:`, error)
+      }
+    }
+
+    return NextResponse.json({
+      message: `Contact date updated for ${updatedContacts.length} contact(s)`,
+      updatedContacts,
+      newDate,
+      daysAgo,
+    })
   } catch (error) {
-    console.error("Change date error:", error)
-    return NextResponse.json({ success: false, error: "Failed to change contact date" }, { status: 500 })
+    console.error("Date change failed:", error)
+    return NextResponse.json(
+      { error: `Date change failed: ${error instanceof Error ? error.message : "Unknown error"}` },
+      { status: 500 },
+    )
   }
 }

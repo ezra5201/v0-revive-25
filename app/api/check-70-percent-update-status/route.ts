@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { sql } from "@/lib/db"
-import { neon } from "@neondatabase/serverless"
 
 export async function GET() {
   if (!sql) {
@@ -8,8 +7,6 @@ export async function GET() {
   }
 
   try {
-    const sqlClient = neon(process.env.DATABASE_URL!)
-
     // Check if we have a record of the 70% update being completed
     // We'll look for a specific pattern that indicates the update was run
 
@@ -105,17 +102,6 @@ export async function GET() {
 
     const completed = hasHighAmericanNamePercentage && hasGoodDiversity
 
-    // Check for contacts with '70%' in their name
-    const result = await sqlClient`
-      SELECT 
-        COUNT(*) as total_contacts,
-        COUNT(CASE WHEN client_name LIKE '%70%' THEN 1 END) as contacts_with_70_percent
-      FROM contacts
-    `
-
-    const totalContacts = Number.parseInt(result[0].total_contacts)
-    const contactsWith70Percent = Number.parseInt(result[0].contacts_with_70_percent)
-
     return NextResponse.json({
       completed,
       reason: completed ? "High American name percentage and good diversity detected" : "Insufficient indicators",
@@ -126,12 +112,9 @@ export async function GET() {
         hasHighAmericanNamePercentage,
         hasGoodDiversity,
       },
-      totalContacts,
-      contactsWith70Percent,
-      needsUpdate: contactsWith70Percent > 0,
     })
   } catch (error) {
     console.error("Error checking 70% update status:", error)
-    return NextResponse.json({ success: false, error: "Failed to check update status" }, { status: 500 })
+    return NextResponse.json({ error: "Failed to check update status" }, { status: 500 })
   }
 }

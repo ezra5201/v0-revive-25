@@ -1,218 +1,116 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env node
 
 import { neon } from "@neondatabase/serverless"
 import { syncMonthlyServiceSummary } from "../lib/sync-monthly-summary"
 
-/**
- * Summary of the historical sync operation
- */
-interface SyncSummary {
-  totalMonths: number
-  successfulMonths: number
-  failedMonths: number
-  totalRecordsProcessed: number
-  dateRange: {
-    earliest: string
-    latest: string
-  }
-  duration: number
-  failedMonthDetails: Array<{
-    month: number
-    year: number
-    error: string
-  }>
-}
+const sql = neon(process.env.DATABASE_URL!)
 
-/**
- * Date range found in the contacts table
- */
-interface DateRange {
-  earliest: Date | null
-  latest: Date | null
-}
+async function syncAllHistorical() {
+  const isDryRun = process.argv.includes("--dry-run")
 
-/**
- * Get the date range of contacts in the database
- */
-async function getContactDateRange(): Promise<DateRange> {
-  const sql = neon(process.env.DATABASE_URL!)
-
-  console.log("🔍 Querying contact date range...")
-
-  const result = await sql`
-    SELECT 
-      MIN(contact_date) as earliest,
-      MAX(contact_date) as latest
-    FROM contacts
-    WHERE contact_date IS NOT NULL
-  `
-
-  const row = result[0]
-  return {
-    earliest: row.earliest ? new Date(row.earliest) : null,
-    latest: row.latest ? new Date(row.latest) : null,
-  }
-}
-
-/**
- * Generate list of months to sync based on date range
- */
-function generateMonthsToSync(earliest: Date, latest: Date): Array<{ month: number; year: number }> {
-  const months: Array<{ month: number; year: number }> = []
-
-  const current = new Date(earliest.getFullYear(), earliest.getMonth(), 1)
-  const end = new Date(latest.getFullYear(), latest.getMonth(), 1)
-
-  while (current <= end) {
-    months.push({
-      month: current.getMonth() + 1,
-      year: current.getFullYear(),
-    })
-    current.setMonth(current.getMonth() + 1)
-  }
-
-  return months
-}
-
-/**
- * Format month/year for display
- */
-function formatMonth(month: number, year: number): string {
-  return `${year}-${month.toString().padStart(2, "0")}`
-}
-
-/**
- * Main sync function
- */
-async function syncAllHistorical(dryRun = false): Promise<void> {
-  const startTime = Date.now()
-  console.log("🚀 Starting historical sync process...")
-
-  if (dryRun) {
-    console.log("📋 DRY RUN MODE - No actual syncing will be performed")
-  }
+  console.log(`🚀 Starting ${isDryRun ? "DRY RUN" : "historical sync"}...`)
+  console.log(`⏰ Started at: ${new Date().toISOString()}\n`)
 
   try {
-    // Get date range from contacts
-    const dateRange = await getContactDateRange()
+    // Query the contacts table to find the full date range
+    console.log("📊 Detecting data range...")
+    const dateRange = await sql`
+      SELECT 
+        MIN(contact_date) as earliest,
+        MAX(contact_date) as latest,
+        COUNT(*) as total_contacts
+      FROM contacts
+    `
 
-    if (!dateRange.earliest || !dateRange.latest) {
+    if (dateRange.length === 0 || !dateRange[0].earliest) {
       console.log("❌ No contact data found in database")
       return
     }
 
-    console.log(`📅 Date range found:`)
-    console.log(`   Earliest: ${dateRange.earliest.toISOString().split("T")[0]}`)
-    console.log(`   Latest: ${dateRange.latest.toISOString().split("T")[0]}`)
+    const earliest = new Date(dateRange[0].earliest)
+    const latest = new Date(dateRange[0].latest)
+    const totalContacts = dateRange[0].total_contacts
 
-    // Generate months to sync
-    const monthsToSync = generateMonthsToSync(dateRange.earliest, dateRange.latest)
-    console.log(`📊 Total months to process: ${monthsToSync.length}`)
+    console.log(`📅 Data range: ${earliest.toISOString().split("T")[0]} to ${latest.toISOString().split("T")[0]}`)
+    console.log(`📈 Total contacts: ${totalContacts}\n`)
 
-    if (dryRun) {
-      console.log("\n📋 Months that would be processed:")
-      monthsToSync.forEach((month, index) => {
-        console.log(`   ${index + 1}. ${formatMonth(month.month, month.year)}`)
+    // Generate list of all months to process
+    const monthsToProcess: Array<{ month: number; year: number }> = []
+    const current = new Date(earliest.getFullYear(), earliest.getMonth(), 1)
+    const end = new Date(latest.getFullYear(), latest.getMonth(), 1)
+
+    while (current <= end) {
+      monthsToProcess.push({
+        month: current.getMonth() + 1,
+        year: current.getFullYear(),
       })
-      console.log("\n✅ Dry run complete - no data was modified")
+      current.setMonth(current.getMonth() + 1)
+    }
+
+    console.log(`📋 Found ${monthsToProcess.length} months to process`)
+
+    if (isDryRun) {
+      console.log("\n🔍 DRY RUN - Would process these months:")
+      monthsToProcess.forEach((item, index) => {
+        console.log(`   ${index + 1}. ${item.year}-${item.month.toString().padStart(2, "0")}`)
+      })
+      console.log("\n✅ Dry run complete. Use without --dry-run to execute.")
       return
     }
 
-    // Initialize summary
-    const summary: SyncSummary = {
-      totalMonths: monthsToSync.length,
-      successfulMonths: 0,
-      failedMonths: 0,
-      totalRecordsProcessed: 0,
-      dateRange: {
-        earliest: dateRange.earliest.toISOString().split("T")[0],
-        latest: dateRange.latest.toISOString().split("T")[0],
-      },
-      duration: 0,
-      failedMonthDetails: [],
-    }
-
-    console.log("\n🔄 Starting synchronization...\n")
-
     // Process each month chronologically
-    for (let i = 0; i < monthsToSync.length; i++) {
-      const { month, year } = monthsToSync[i]
-      const monthStr = formatMonth(month, year)
-      const progress = `${i + 1} of ${monthsToSync.length}`
+    let successCount = 0
+    let failureCount = 0
+    let totalRecordsProcessed = 0
 
-      console.log(`⏳ Processing ${monthStr} (${progress})...`)
+    for (let i = 0; i < monthsToProcess.length; i++) {
+      const { month, year } = monthsToProcess[i]
+      const progress = `(${i + 1} of ${monthsToProcess.length})`
+
+      console.log(`🔄 Processing ${year}-${month.toString().padStart(2, "0")} ${progress}...`)
 
       try {
         const result = await syncMonthlyServiceSummary(month, year)
 
         if (result.success) {
-          summary.successfulMonths++
-          summary.totalRecordsProcessed += result.recordsProcessed
-          console.log(`✅ ${monthStr}: ${result.recordsProcessed} records processed (${result.duration}ms)`)
+          successCount++
+          totalRecordsProcessed += result.recordsProcessed
+          console.log(`   ✅ ${result.message}`)
         } else {
-          summary.failedMonths++
-          summary.failedMonthDetails.push({
-            month,
-            year,
-            error: result.error || result.message,
-          })
-          console.log(`❌ ${monthStr}: ${result.message}`)
-        }
-
-        // Small delay to prevent overwhelming the database
-        if (i < monthsToSync.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 50))
+          failureCount++
+          console.log(`   ❌ ${result.message}`)
         }
       } catch (error) {
-        summary.failedMonths++
-        const errorMessage = error instanceof Error ? error.message : "Unknown error"
-        summary.failedMonthDetails.push({
-          month,
-          year,
-          error: errorMessage,
-        })
-        console.log(`❌ ${monthStr}: ${errorMessage}`)
+        failureCount++
+        console.log(
+          `   ❌ Error processing ${year}-${month.toString().padStart(2, "0")}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        )
       }
     }
 
-    // Calculate final duration
-    summary.duration = Date.now() - startTime
+    // Summary report
+    console.log("\n📊 SYNC SUMMARY REPORT")
+    console.log("========================")
+    console.log(
+      `📅 Date range covered: ${earliest.toISOString().split("T")[0]} to ${latest.toISOString().split("T")[0]}`,
+    )
+    console.log(`📈 Total months processed: ${monthsToProcess.length}`)
+    console.log(`✅ Successful months: ${successCount}`)
+    console.log(`❌ Failed months: ${failureCount}`)
+    console.log(`📊 Total records processed: ${totalRecordsProcessed}`)
+    console.log(`⏰ Completed at: ${new Date().toISOString()}`)
 
-    // Print summary report
-    console.log("\n" + "=".repeat(60))
-    console.log("📊 HISTORICAL SYNC SUMMARY REPORT")
-    console.log("=".repeat(60))
-    console.log(`📅 Date Range: ${summary.dateRange.earliest} to ${summary.dateRange.latest}`)
-    console.log(`📈 Total Months: ${summary.totalMonths}`)
-    console.log(`✅ Successful: ${summary.successfulMonths}`)
-    console.log(`❌ Failed: ${summary.failedMonths}`)
-    console.log(`📊 Total Records Processed: ${summary.totalRecordsProcessed}`)
-    console.log(`⏱️  Total Duration: ${(summary.duration / 1000).toFixed(2)} seconds`)
-
-    if (summary.failedMonthDetails.length > 0) {
-      console.log("\n❌ Failed Months:")
-      summary.failedMonthDetails.forEach((failure) => {
-        console.log(`   ${formatMonth(failure.month, failure.year)}: ${failure.error}`)
-      })
-    }
-
-    console.log("\n🎉 Historical sync process completed!")
-
-    if (summary.failedMonths > 0) {
-      process.exit(1) // Exit with error code if there were failures
+    if (failureCount > 0) {
+      console.log("\n⚠️  Some months failed to process. Check the logs above for details.")
+      process.exit(1)
+    } else {
+      console.log("\n🎉 All historical data synced successfully!")
     }
   } catch (error) {
-    console.error("💥 Fatal error during historical sync:", error)
+    console.error("\n💥 Fatal error during historical sync:", error)
     process.exit(1)
   }
 }
 
-// Check for command line arguments
-const args = process.argv.slice(2)
-const dryRun = args.includes("--dry-run")
-
-// Run the sync
-syncAllHistorical(dryRun).catch((error) => {
-  console.error("💥 Unhandled error:", error)
-  process.exit(1)
-})
+// Execute the script
+syncAllHistorical().catch(console.error)
