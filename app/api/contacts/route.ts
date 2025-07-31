@@ -47,16 +47,57 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Add service filter if specified
+    // Add service filter using JSONB queries
     if (serviceFilter === "cm") {
       whereConditions.push(`(
-    (c.services_requested IS NOT NULL AND c.services_requested::text ILIKE '%Case Management%') OR
-    (c.services_provided IS NOT NULL AND c.services_provided::text ILIKE '%Case Management%')
-  )`)
+        c.services_requested @> '["Case Management"]' OR
+        c.services_provided::text ILIKE '%"service":"Case Management"%'
+      )`)
     } else if (serviceFilter === "ot") {
       whereConditions.push(`(
-    c.occupational_therapy_requested = 1 OR c.occupational_therapy_provided = 1
-  )`)
+        c.services_requested @> '["Occupational"]' OR
+        c.services_provided::text ILIKE '%"service":"Occupational"%'
+      )`)
+    } else if (serviceFilter === "food") {
+      whereConditions.push(`(
+        c.services_requested @> '["Food"]' OR
+        c.services_provided::text ILIKE '%"service":"Food"%'
+      )`)
+    } else if (serviceFilter === "healthcare") {
+      whereConditions.push(`(
+        c.services_requested @> '["Healthcare"]' OR
+        c.services_provided::text ILIKE '%"service":"Healthcare"%'
+      )`)
+    } else if (serviceFilter === "housing") {
+      whereConditions.push(`(
+        c.services_requested @> '["Housing"]' OR
+        c.services_provided::text ILIKE '%"service":"Housing"%'
+      )`)
+    } else if (serviceFilter === "employment") {
+      whereConditions.push(`(
+        c.services_requested @> '["Employment"]' OR
+        c.services_provided::text ILIKE '%"service":"Employment"%'
+      )`)
+    } else if (serviceFilter === "id") {
+      whereConditions.push(`(
+        c.services_requested @> '["ID"]' OR
+        c.services_provided::text ILIKE '%"service":"ID"%'
+      )`)
+    } else if (serviceFilter === "laundry") {
+      whereConditions.push(`(
+        c.services_requested @> '["Laundry"]' OR
+        c.services_provided::text ILIKE '%"service":"Laundry"%'
+      )`)
+    } else if (serviceFilter === "recreation") {
+      whereConditions.push(`(
+        c.services_requested @> '["Recreation"]' OR
+        c.services_provided::text ILIKE '%"service":"Recreation"%'
+      )`)
+    } else if (serviceFilter === "other") {
+      whereConditions.push(`(
+        c.services_requested @> '["Other"]' OR
+        c.services_provided::text ILIKE '%"service":"Other"%'
+      )`)
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : ""
@@ -241,7 +282,7 @@ export async function GET(request: NextRequest) {
     // Get rows (auto-fallback if necessary)
     const dbRows = await fetchRows()
 
-    console.log(`Fetched ${dbRows.length} rows for tab: ${tab}`) // Debug log
+    console.log(`Fetched ${dbRows.length} rows for tab: ${tab}, serviceFilter: ${serviceFilter}`) // Debug log
 
     // Transform rows for UI – default empty arrays/strings when columns absent
     const contacts = dbRows.map((row: any) => {

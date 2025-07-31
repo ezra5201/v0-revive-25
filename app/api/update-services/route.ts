@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { syncServicesToIntegerColumns } from "@/lib/service-sync"
 
 // Helper function to safely parse JSON
 function safeJson(value: unknown, fallback: any = []) {
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
 
     // Get current contact data
     const currentContact = await sql`
-      SELECT id, services_provided, client_name, contact_date
+      SELECT id, services_requested, services_provided, client_name, contact_date
       FROM contacts 
       WHERE id = ${contactId}
     `
@@ -70,6 +71,7 @@ export async function POST(request: Request) {
     }
 
     const contact = currentContact[0]
+    const currentServicesRequested = safeJson(contact.services_requested, [])
     const currentServicesProvided = safeJson(contact.services_provided, [])
 
     // Calculate what services are being added and removed
@@ -93,8 +95,46 @@ export async function POST(request: Request) {
         services_provided = ${JSON.stringify(servicesProvided)},
         updated_at = NOW()
       WHERE id = ${contactId}
-      RETURNING id, client_name, contact_date, services_provided
+      RETURNING id, client_name, contact_date, services_requested, services_provided
     `
+
+    // Sync JSONB services to integer columns
+    const integerColumnUpdates = syncServicesToIntegerColumns(currentServicesRequested, servicesProvided)
+
+    // Update the integer columns
+    await sql`
+      UPDATE contacts 
+      SET 
+        case_management_requested = ${integerColumnUpdates.case_management_requested},
+        case_management_provided = ${integerColumnUpdates.case_management_provided},
+        occupational_therapy_requested = ${integerColumnUpdates.occupational_therapy_requested},
+        occupational_therapy_provided = ${integerColumnUpdates.occupational_therapy_provided},
+        food_requested = ${integerColumnUpdates.food_requested},
+        food_provided = ${integerColumnUpdates.food_provided},
+        healthcare_requested = ${integerColumnUpdates.healthcare_requested},
+        healthcare_provided = ${integerColumnUpdates.healthcare_provided},
+        housing_requested = ${integerColumnUpdates.housing_requested},
+        housing_provided = ${integerColumnUpdates.housing_provided},
+        employment_requested = ${integerColumnUpdates.employment_requested},
+        employment_provided = ${integerColumnUpdates.employment_provided},
+        benefits_requested = ${integerColumnUpdates.benefits_requested},
+        benefits_provided = ${integerColumnUpdates.benefits_provided},
+        legal_requested = ${integerColumnUpdates.legal_requested},
+        legal_provided = ${integerColumnUpdates.legal_provided},
+        transportation_requested = ${integerColumnUpdates.transportation_requested},
+        transportation_provided = ${integerColumnUpdates.transportation_provided},
+        childcare_requested = ${integerColumnUpdates.childcare_requested},
+        childcare_provided = ${integerColumnUpdates.childcare_provided},
+        mental_health_requested = ${integerColumnUpdates.mental_health_requested},
+        mental_health_provided = ${integerColumnUpdates.mental_health_provided},
+        substance_abuse_requested = ${integerColumnUpdates.substance_abuse_requested},
+        substance_abuse_provided = ${integerColumnUpdates.substance_abuse_provided},
+        education_requested = ${integerColumnUpdates.education_requested},
+        education_provided = ${integerColumnUpdates.education_provided}
+      WHERE id = ${contactId}
+    `
+
+    console.log("Integer columns synced successfully")
 
     // Log the services update
     await sql`
@@ -116,6 +156,7 @@ export async function POST(request: Request) {
         id: result[0].id,
         clientName: result[0].client_name,
         contactDate: result[0].contact_date,
+        servicesRequested: safeJson(result[0].services_requested, []),
         servicesProvided: safeJson(result[0].services_provided, []),
       },
       changes: {
