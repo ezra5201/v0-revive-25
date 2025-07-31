@@ -153,6 +153,7 @@ export async function GET(request: NextRequest) {
               c.alert_id,
               c.services_requested,
               c.services_provided,
+              c.created_at,
               -- Calculate actual days from current Chicago today to the contact date
               (DATE '${todayString}' - c.contact_date)::INTEGER AS days_ago,
               ROW_NUMBER() OVER (
