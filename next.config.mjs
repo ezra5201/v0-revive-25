@@ -9,15 +9,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  async redirects() {
-    return [
-      {
-        source: '/',
-        destination: '/contact-log',
-        permanent: false,
-      },
-    ]
-  },
+  // Removed the redirects - we're handling this in app/page.tsx now
 }
 
 export default nextConfig
