@@ -1,6 +1,5 @@
 "use client"
-
-import { useState, useEffect, useCallback } from "react"
+import { useContacts } from "./use-contacts"
 
 interface Contact {
   id: number
@@ -32,75 +31,6 @@ interface Filters {
   providers: string[]
 }
 
-export function useCMContacts(activeTab: "today" | "all", filters: Filters) {
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [filterData, setFilterData] = useState<FilterData>({
-    providers: [],
-    categories: [],
-    clients: [],
-  })
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchContacts = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const params = new URLSearchParams()
-      params.set("tab", activeTab)
-      params.set("serviceFilter", "cm") // Always add CM filter
-
-      if (activeTab === "all") {
-        if (filters.categories.length) {
-          params.set("categories", filters.categories.join(","))
-        }
-        if (filters.providers.length) {
-          params.set("providers", filters.providers.join(","))
-        }
-      }
-
-      const response = await fetch(`/api/contacts?${params.toString()}`)
-      const data = await response.json()
-
-      if (response.ok) {
-        setContacts(data.contacts || [])
-      } else {
-        setError(data.error || "Failed to fetch contacts")
-      }
-    } catch (err) {
-      setError("Failed to connect to server")
-    } finally {
-      setIsLoading(false)
-    }
-  }, [activeTab, filters])
-
-  const fetchFilterData = useCallback(async () => {
-    try {
-      const response = await fetch("/api/filters")
-      if (response.ok) {
-        const data = await response.json()
-        setFilterData(data)
-      }
-    } catch (error) {
-      console.error("Failed to fetch filter data:", error)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchContacts()
-  }, [fetchContacts])
-
-  useEffect(() => {
-    fetchFilterData()
-  }, [fetchFilterData])
-
-  return {
-    contacts,
-    filterData,
-    isLoading,
-    error,
-    refetch: fetchContacts,
-    refetchFilters: fetchFilterData,
-  }
+export function useCMContacts(tab: "today" | "all", filters: { categories: string[]; providers: string[] }) {
+  return useContacts(tab, filters, "cm")
 }

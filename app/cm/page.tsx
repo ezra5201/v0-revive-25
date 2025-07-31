@@ -11,7 +11,7 @@ import { ClientMasterRecord } from "@/components/client-master-record"
 import { Header } from "@/components/header"
 import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
-import { useContacts } from "@/hooks/use-contacts"
+import { useCMContacts } from "@/hooks/use-cm-contacts"
 import { useDatabase } from "@/hooks/use-database"
 import { X } from "lucide-react"
 
@@ -58,7 +58,7 @@ export default function CmPage() {
     }
   }, [searchParams])
 
-  // Custom hooks for data management (PRESERVED)
+  // Custom hooks for data management (UPDATED to use CM-specific hook)
   const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
   const {
     contacts,
@@ -66,7 +66,7 @@ export default function CmPage() {
     isLoading: contactsLoading,
     error: contactsError,
     refetch: refetchContacts,
-  } = useContacts(activeTab === "client" ? "all" : activeTab, filters)
+  } = useCMContacts(activeTab === "client" ? "all" : activeTab, filters)
 
   // URL update helper
   const updateURL = useCallback(
@@ -201,11 +201,31 @@ export default function CmPage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
+      {/* Page Title and Breadcrumb */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-4 sm:px-6 py-4">
+          <div className="flex items-center space-x-2 text-sm text-gray-500 mb-2">
+            <span>Case Management</span>
+            <span>/</span>
+            <span className="text-gray-900 font-medium">
+              {activeTab === "today" && "Today's CM Check-ins"}
+              {activeTab === "all" && "All CM Clients"}
+              {activeTab === "client" && selectedClient && `${selectedClient} - CM Record`}
+            </span>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {activeTab === "today" && "Today's CM Check-ins"}
+            {activeTab === "all" && "All CM Clients"}
+            {activeTab === "client" && selectedClient && `${selectedClient} - Case Management`}
+          </h1>
+        </div>
+      </div>
+
       {/* Enhanced Tab Navigation */}
       <div className="bg-white border-b border-gray-200">
         <div className="px-4 sm:px-6">
           <nav className="flex space-x-8" aria-label="Tabs">
-            {/* PRESERVED: Existing tabs */}
+            {/* PRESERVED: Existing tabs with CM context */}
             <button
               onClick={() => handleTabChange("today")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -214,7 +234,7 @@ export default function CmPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
-              Today's Check-ins
+              Today's CM Check-ins
             </button>
             <button
               onClick={() => handleTabChange("all")}
@@ -224,7 +244,7 @@ export default function CmPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
-              All Clients
+              All CM Clients
             </button>
 
             {/* NEW: Dynamic client tab */}
