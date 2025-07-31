@@ -1,6 +1,5 @@
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
 
 // Service options
 const services = [
@@ -25,11 +24,6 @@ const providers = [
   "Sonia Singh",
   "Leila Garcia",
   "Andrea Leflore",
-  "ReVive Center",
-  "Community Health",
-  "Social Services",
-  "Legal Aid",
-  "Job Center",
 ]
 
 // Holiday periods for seasonal clustering (month-day format)
@@ -63,32 +57,6 @@ const sampleComments = [
   "Provided encouragement and motivation.",
   "Client shared recent accomplishments.",
   "Discussed conflict resolution strategies.",
-]
-
-const sampleNames = [
-  "John Smith",
-  "Maria Garcia",
-  "David Johnson",
-  "Sarah Wilson",
-  "Michael Brown",
-  "Lisa Davis",
-  "Robert Miller",
-  "Jennifer Taylor",
-  "William Anderson",
-  "Jessica Thomas",
-]
-
-const serviceTypes = [
-  "Case Management",
-  "Occupational Therapy",
-  "Food",
-  "Healthcare",
-  "Housing",
-  "Employment",
-  "Benefits",
-  "Legal",
-  "Transportation",
-  "Mental Health",
 ]
 
 function getRandomElement<T>(array: T[]): T {
@@ -254,16 +222,13 @@ function buildBulkInsert(batch: any[]) {
   return { query, values }
 }
 
-export async function POST(request: Request) {
+export async function POST() {
   if (!sql) {
     return NextResponse.json({ error: "Database not available" }, { status: 500 })
   }
 
   try {
-    const { count = 1000 } = await request.json()
-    const neonSql = neon(process.env.DATABASE_URL!)
-
-    console.log(`Starting generation of ${count} contact records...`)
+    console.log("Starting generation of 1000 contact records...")
 
     // Get existing clients (not prospects)
     const existingClients = await sql`
@@ -348,28 +313,6 @@ export async function POST(request: Request) {
       })
     }
 
-    // Generate additional contacts based on the count parameter
-    console.log(`Generating ${count - 1000} additional contacts...`)
-    for (let i = 0; i < count - 1000; i++) {
-      const client = getRandomElement(sampleNames)
-      const provider = getRandomElement(providers)
-      const serviceType = getRandomElement(serviceTypes)
-      const randomDate = new Date()
-      randomDate.setDate(randomDate.getDate() - Math.floor(Math.random() * 90))
-      const hasComment = Math.random() < 0.3
-
-      contactsToCreate.push({
-        contact_date: randomDate.toISOString().split("T")[0],
-        days_ago: Math.floor((today.getTime() - randomDate.getTime()) / (1000 * 60 * 60 * 24)),
-        client_name: client,
-        category: "Client",
-        services_requested: JSON.stringify([serviceType]),
-        services_provided: JSON.stringify([{ service: serviceType, completedAt: new Date().toISOString() }]),
-        comments: hasComment ? getRandomElement(sampleComments) : "",
-        food_accessed: serviceType === "Food",
-      })
-    }
-
     console.log(`Generated ${contactsToCreate.length} contact records. Inserting into database...`)
 
     // Insert contacts using sql.query() for parameterized queries
@@ -406,7 +349,7 @@ export async function POST(request: Request) {
     `
 
     return NextResponse.json({
-      message: `Successfully generated ${count} contact records!`,
+      message: "Successfully generated 1000 contact records!",
       statistics: {
         totalContacts: stats[0].total_contacts,
         uniqueClients: stats[0].unique_clients,

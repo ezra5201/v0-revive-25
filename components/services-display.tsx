@@ -1,113 +1,149 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import { ServiceTooltip } from "./service-tooltip"
-import { CheckCircle, Clock, AlertCircle, TrendingUp, Users } from "lucide-react"
-
-interface ServiceData {
-  name: string
-  requested: number
-  provided: number
-  completion_rate: number
-  last_updated?: string
-}
+import type { Service } from "./service" // Declare the Service variable
 
 interface ServicesDisplayProps {
-  services: ServiceData[]
-  title?: string
-  showProgress?: boolean
+  servicesRequested?: string[]
+  servicesProvided?: Array<{
+    service: string
+    provider: string
+    completedAt: string
+  }>
+  className?: string
 }
 
-export function ServicesDisplay({ services, title = "Services Overview", showProgress = true }: ServicesDisplayProps) {
-  const getCompletionStatus = (rate: number) => {
-    if (rate >= 90) return { status: "excellent", color: "text-green-600", icon: CheckCircle }
-    if (rate >= 70) return { status: "good", color: "text-blue-600", icon: TrendingUp }
-    if (rate >= 50) return { status: "fair", color: "text-yellow-600", icon: Clock }
-    return { status: "poor", color: "text-red-600", icon: AlertCircle }
+const SERVICE_LABELS: { [key: string]: string } = {
+  "Case Management": "CM",
+  Employment: "Employment",
+  Food: "Food",
+  Healthcare: "Healthcare",
+  Housing: "Housing",
+  ID: "ID",
+  Laundry: "Laundry",
+  Occupational: "OT",
+  Recreation: "Recreation",
+  Other: "Other",
+}
+
+export function ServicesDisplay({
+  servicesRequested = [],
+  servicesProvided = [],
+  className = "",
+}: ServicesDisplayProps) {
+  // Now always safe:
+  const requested = Array.isArray(servicesRequested) ? servicesRequested : []
+  const provided = Array.isArray(servicesProvided) ? servicesProvided : []
+  // All possible services
+  const allServices = Object.keys(SERVICE_LABELS)
+
+  // Create service status map
+  const serviceStatuses: { [key: string]: Service } = {}
+
+  allServices.forEach((service) => {
+    const isRequested = requested.includes(service)
+    const providedService = provided.find((p) => p.service === service)
+
+    if (providedService) {
+      serviceStatuses[service] = {
+        name: service,
+        status: "provided",
+        provider: providedService.provider,
+        completedAt: providedService.completedAt,
+      }
+    } else if (isRequested) {
+      serviceStatuses[service] = {
+        name: service,
+        status: "requested",
+      }
+    } else {
+      serviceStatuses[service] = {
+        name: service,
+        status: "not_requested",
+      }
+    }
+  })
+
+  const getStatusIcon = (service: Service) => {
+    switch (service.status) {
+      case "provided":
+        return "✓"
+      case "requested":
+        return "○"
+      case "available_unused":
+        return "⊘"
+      case "not_requested":
+      default:
+        return "—"
+    }
   }
 
-  const totalRequested = services.reduce((sum, service) => sum + service.requested, 0)
-  const totalProvided = services.reduce((sum, service) => sum + service.provided, 0)
-  const overallRate = totalRequested > 0 ? (totalProvided / totalRequested) * 100 : 0
+  const getTooltipContent = (service: Service) => {
+    switch (service.status) {
+      case "provided":
+        let tooltip = "Service provided"
+        if (service.provider) {
+          tooltip += ` by ${service.provider}`
+        }
+        if (service.completedAt) {
+          tooltip += ` at ${new Date(service.completedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+        }
+        return tooltip
+      case "requested":
+        return "Service requested but not yet provided"
+      case "available_unused":
+        return "Service was available but not used"
+      case "not_requested":
+      default:
+        return "Service not requested"
+    }
+  }
+
+  const getIconColor = (service: Service) => {
+    switch (service.status) {
+      case "provided":
+        return "text-green-600"
+      case "requested":
+        return "text-blue-600"
+      case "available_unused":
+        return "text-orange-600"
+      case "not_requested":
+      default:
+        return "text-gray-400"
+    }
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>{title}</span>
-          <Badge variant="secondary">{Math.round(overallRate)}% completion rate</Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {/* Overall Stats */}
-          <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{totalRequested}</div>
-              <div className="text-sm text-muted-foreground">Requested</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{totalProvided}</div>
-              <div className="text-sm text-muted-foreground">Provided</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{Math.round(overallRate)}%</div>
-              <div className="text-sm text-muted-foreground">Completion</div>
-            </div>
-          </div>
+    <div className={`flex flex-wrap gap-1 sm:gap-2 ${className}`}>
+      {allServices.map((serviceName) => {
+        const service = serviceStatuses[serviceName]
+        const label = SERVICE_LABELS[serviceName]
 
-          {/* Individual Services */}
-          <div className="space-y-3">
-            {services.map((service) => {
-              const completion = getCompletionStatus(service.completion_rate)
-              const IconComponent = completion.icon
+        // Show provider in parentheses for CM and OT services when provided
+        const displayLabel =
+          service.status === "provided" &&
+          service.provider &&
+          (serviceName === "Case Management" || serviceName === "Occupational")
+            ? `${label} (${service.provider
+                .split(" ")
+                .map((n) => n[0])
+                .join("")})`
+            : label
 
-              return (
-                <ServiceTooltip
-                  key={service.name}
-                  serviceName={service.name}
-                  status={service.completion_rate >= 70 ? "completed" : "pending"}
-                  lastUpdate={service.last_updated}
-                  notes={`${service.provided} of ${service.requested} services completed`}
-                >
-                  <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <div className="flex items-center space-x-3">
-                      <IconComponent className={`h-5 w-5 ${completion.color}`} />
-                      <div>
-                        <h4 className="font-medium">{service.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {service.provided} / {service.requested} completed
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="text-right space-y-1">
-                      <Badge variant="outline" className={completion.color}>
-                        {Math.round(service.completion_rate)}%
-                      </Badge>
-
-                      {showProgress && (
-                        <div className="w-24">
-                          <Progress value={service.completion_rate} className="h-2" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </ServiceTooltip>
-              )
-            })}
-          </div>
-
-          {services.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No service data available</p>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+        return (
+          <ServiceTooltip key={serviceName} content={getTooltipContent(service)}>
+            <span
+              className={`inline-flex items-center text-xs font-mono px-1 py-0.5 rounded ${getIconColor(service)} 
+                         hover:bg-gray-100 cursor-help transition-colors min-h-[28px] min-w-[28px] justify-center
+                         sm:min-h-[24px] sm:min-w-[auto] sm:px-2`}
+            >
+              <span className="mr-1 text-sm">{getStatusIcon(service)}</span>
+              <span className="hidden sm:inline text-xs">{displayLabel}</span>
+              <span className="sm:hidden text-xs font-bold">{label.substring(0, 2)}</span>
+            </span>
+          </ServiceTooltip>
+        )
+      })}
+    </div>
   )
 }

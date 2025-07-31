@@ -1,10 +1,10 @@
-import { neon } from "@neondatabase/serverless"
+import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 
 /* ------------------------------------------------------------------ */
 /* Ensure the alerts table & required indexes exist  (idempotent)     */
 /* ------------------------------------------------------------------ */
-async function ensureAlertsTable(sql: any) {
+async function ensureAlertsTable() {
   if (!sql) return
 
   /* 1 – table ------------------------------------------------------- */
@@ -45,10 +45,12 @@ async function ensureAlertsTable(sql: any) {
 /* GET /api/alerts - return all active alerts                         */
 /* ------------------------------------------------------------------ */
 export async function GET() {
-  try {
-    const sql = neon(process.env.DATABASE_URL!)
+  if (!sql) {
+    return NextResponse.json({ alerts: [] })
+  }
 
-    await ensureAlertsTable(sql)
+  try {
+    await ensureAlertsTable()
 
     /* auto-expire at the start of each request */
     await sql`
@@ -59,16 +61,19 @@ export async function GET() {
          AND expires_at <= CURRENT_DATE;
     `
 
-    const alerts = await sql`
-      SELECT * FROM alerts 
-      ORDER BY created_at DESC
-      LIMIT 50
+    const rows = await sql`
+      SELECT id, contact_id, client_name, provider_name,
+             alert_type, alert_details, severity,
+             status, expires_at, created_at, updated_at
+        FROM alerts
+       WHERE status = 'active'
+       ORDER BY created_at DESC
     `
 
-    return NextResponse.json({ alerts })
-  } catch (error) {
-    console.error("Fetch alerts error:", error)
-    return NextResponse.json({ alerts: [] }, { status: 500 })
+    return NextResponse.json({ alerts: rows })
+  } catch (err: any) {
+    console.error("alerts GET failed:", err)
+    return NextResponse.json({ alerts: [] })
   }
 }
 
@@ -76,19 +81,22 @@ export async function GET() {
 /* POST /api/alerts - create a new alert                              */
 /* ------------------------------------------------------------------ */
 export async function POST(request: Request) {
+  if (!sql) {
+    return NextResponse.json({ error: "Database not available" }, { status: 500 })
+  }
+
   try {
-    const { type, message, clientName, severity } = await request.json()
-    const sql = neon(process.env.DATABASE_URL!)
+    await ensureAlertsTable()
 
-    await ensureAlertsTable(sql)
+    const body = await request.json()
+    const contactId = body.contactId ?? null
+    const clientName = (body.clientName || "").trim()
+    const provider = (body.providerName || "").trim()
+    const details = (body.alertDetails || "Alert flagged - no details provided").trim()
+    const alertType = body.alertType ?? "behavioral"
+    const severity = body.severity ?? "medium"
 
-    const contactId = null // Assuming contactId is not provided in the new update
-    const providerName = "" // Assuming providerName is not provided in the new update
-    const alertDetails = message || "Alert flagged - no details provided"
-    const alertType = type || "behavioral"
-    const alertSeverity = severity || "medium"
-
-    if (!clientName || !providerName) {
+    if (!clientName || !provider) {
       return NextResponse.json({ error: "clientName and providerName are required" }, { status: 400 })
     }
 
@@ -104,22 +112,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "An active alert already exists for this client today" }, { status: 400 })
     }
 
-    await sql`
+    const [alert] = await sql`
       INSERT INTO alerts (
         contact_id, client_name, provider_name,
         alert_type, alert_details, severity,
         status, expires_at, created_at, updated_at
       )
       VALUES (
-        ${contactId}, ${clientName}, ${providerName},
-        ${alertType}, ${alertDetails}, ${alertSeverity},
+        ${contactId}, ${clientName}, ${provider},
+        ${alertType}, ${details},   ${severity},
         'active', CURRENT_DATE + INTERVAL '1 day', NOW(), NOW()
       )
+      RETURNING *
     `
 
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error("Create alert error:", error)
-    return NextResponse.json({ success: false, error: "Failed to create alert" }, { status: 500 })
+    /* link alert to contacts row if provided */
+    if (contactId) {
+      await sql`
+        UPDATE contacts
+           SET alert_id   = ${alert.id},
+               updated_at = NOW()
+         WHERE id = ${contactId}
+      `
+    }
+
+    return NextResponse.json({ alert })
+  } catch (err: any) {
+    console.error("alerts POST failed:", err)
+    return NextResponse.json({ error: "Failed to create alert" }, { status: 500 })
   }
 }

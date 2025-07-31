@@ -1,229 +1,201 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { Users, Building, FileText, Calendar } from "lucide-react"
+import { Header } from "@/components/header"
+import { DatabaseSetup } from "@/components/database-setup"
+import { ServicesPanel } from "@/components/services-panel"
+import { useDatabase } from "@/hooks/use-database"
+import { Card, CardContent } from "@/components/ui/card"
+import { Users, UserPlus, Activity, AlertTriangle } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-interface AnalyticsData {
-  overview: {
-    total_contacts: number
-    unique_clients: number
-    active_providers: number
-    recent_contacts: number
-  }
-  services: Array<{
-    service_type: string
-    usage_count: number
-    unique_clients: number
-  }>
-  providers: Array<{
-    provider_name: string
-    contact_count: number
-    unique_clients: number
-  }>
-  growth: Array<{
-    month: string
-    unique_clients: number
-  }>
+interface OverviewData {
+  totalClients: number
+  totalContacts: number
+  newClientsThisMonth: number
 }
 
 export default function DashboardPage() {
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+  const { isInitialized, isLoading: dbLoading } = useDatabase()
+  const [overview, setOverview] = useState<OverviewData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("This Month")
 
   useEffect(() => {
-    fetchAnalytics()
-  }, [])
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true)
+        setError(null)
 
-  const fetchAnalytics = async () => {
-    try {
-      const [overviewRes, servicesRes, providersRes, growthRes] = await Promise.all([
-        fetch("/api/analytics/overview"),
-        fetch("/api/analytics/services"),
-        fetch("/api/analytics/providers"),
-        fetch("/api/analytics/client-growth"),
-      ])
+        const overviewRes = await fetch(`/api/analytics/overview?period=${encodeURIComponent(selectedPeriod)}`)
 
-      const [overview, services, providers, growth] = await Promise.all([
-        overviewRes.json(),
-        servicesRes.json(),
-        providersRes.json(),
-        growthRes.json(),
-      ])
+        if (!overviewRes.ok) {
+          throw new Error("Failed to fetch overview data")
+        }
 
-      setAnalytics({
-        overview: overview.overview || {},
-        services: services.services || [],
-        providers: providers.providers || [],
-        growth: growth.growth || [],
-      })
-    } catch (error) {
-      console.error("Failed to fetch analytics:", error)
-    } finally {
-      setLoading(false)
+        const overviewData = await overviewRes.json()
+        setOverview(overviewData)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load analytics")
+      } finally {
+        setLoading(false)
+      }
     }
+
+    if (isInitialized) {
+      fetchAnalytics()
+    }
+  }, [isInitialized, selectedPeriod])
+
+  // Show database setup if not initialized
+  if (!isInitialized && !dbLoading) {
+    return <DatabaseSetup />
+  }
+
+  // Show loading state
+  if (dbLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mx-auto mb-4" />
+          <p className="text-gray-600">Loading application...</p>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center">Loading dashboard...</div>
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="bg-white">
+          <div className="px-4 sm:px-6 py-8">
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mx-auto mb-4" />
+                <p className="text-gray-600">Loading analytics...</p>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }
 
-  if (!analytics) {
+  if (error) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center text-red-600">Failed to load dashboard data</div>
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="bg-white">
+          <div className="px-4 sm:px-6 py-8">
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center">
+                <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Dashboard</h2>
+                <p className="text-gray-600">{error}</p>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }
 
-  const topServices = analytics.services.slice(0, 5)
-  const topProviders = analytics.providers.slice(0, 5)
+  // Helper function to get the correct label for new clients based on period
+  const getNewClientsLabel = () => {
+    switch (selectedPeriod) {
+      case "This Month":
+        return "New Clients This Month"
+      case "Last Month":
+        return "New Clients Last Month"
+      case "This Year":
+        return "New Clients This Year"
+      default:
+        return "New Clients"
+    }
+  }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <Button onClick={fetchAnalytics} variant="outline">
-            Refresh Data
-          </Button>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <Header />
 
-        {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Contacts</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{analytics.overview.total_contacts || 0}</div>
-              <p className="text-xs text-muted-foreground">All time contacts</p>
-            </CardContent>
-          </Card>
+      <main className="bg-white">
+        <div className="px-4 sm:px-6 py-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">Impact Dashboard</h1>
+            </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Unique Clients</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{analytics.overview.unique_clients || 0}</div>
-              <p className="text-xs text-muted-foreground">Individual clients served</p>
-            </CardContent>
-          </Card>
+            {/* Summary Section */}
+            <Card className="mb-8">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900">Summary</h2>
+                  <div className="mt-4 sm:mt-0">
+                    <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="This Month">This Month</SelectItem>
+                        <SelectItem value="Last Month">Last Month</SelectItem>
+                        <SelectItem value="This Year">This Year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Providers</CardTitle>
-              <Building className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{analytics.overview.active_providers || 0}</div>
-              <p className="text-xs text-muted-foreground">Service providers</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{analytics.overview.recent_contacts || 0}</div>
-              <p className="text-xs text-muted-foreground">Last 30 days</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Charts and Lists */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top Services */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Services</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {topServices.map((service, index) => (
-                  <div key={service.service_type} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="outline">{index + 1}</Badge>
-                      <span className="font-medium">{service.service_type}</span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Users className="h-6 w-6 text-blue-600" />
                     </div>
-                    <div className="text-right">
-                      <div className="font-bold">{service.usage_count}</div>
-                      <div className="text-xs text-muted-foreground">{service.unique_clients} clients</div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Active Clients</p>
+                      <p className="text-2xl font-bold text-gray-900">{overview?.totalClients || 0}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Top Providers */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Providers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {topProviders.map((provider, index) => (
-                  <div key={provider.provider_name} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="outline">{index + 1}</Badge>
-                      <span className="font-medium">{provider.provider_name}</span>
+                  <div className="flex items-center">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <Activity className="h-6 w-6 text-green-600" />
                     </div>
-                    <div className="text-right">
-                      <div className="font-bold">{provider.contact_count}</div>
-                      <div className="text-xs text-muted-foreground">{provider.unique_clients} clients</div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Total Contacts</p>
+                      <p className="text-2xl font-bold text-gray-900">{overview?.totalContacts || 0}</p>
                     </div>
                   </div>
-                ))}
+
+                  <div className="flex items-center">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <UserPlus className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">{getNewClientsLabel()}</p>
+                      <p className="text-2xl font-bold text-gray-900">{overview?.newClientsThisMonth || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Services Panel */}
+            <ServicesPanel />
+
+            <div className="bg-gray-50 rounded-lg p-8 border border-gray-200 text-center">
+              <div className="text-gray-500 mb-4">
+                <Activity className="mx-auto h-12 w-12 text-gray-400" />
               </div>
-            </CardContent>
-          </Card>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Detailed Analytics Coming Soon</h2>
+              <p className="text-gray-600">
+                Charts and detailed analytics are being added progressively. The KPI metrics above show your current
+                performance for {selectedPeriod.toLowerCase()}.
+              </p>
+            </div>
+          </div>
         </div>
-
-        {/* Client Growth */}
-        {analytics.growth.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Client Growth (Last 12 Months)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {analytics.growth.map((month) => (
-                  <div key={month.month} className="flex items-center justify-between">
-                    <span className="text-sm">
-                      {new Date(month.month).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                      })}
-                    </span>
-                    <div className="flex items-center space-x-2">
-                      <Progress
-                        value={
-                          (month.unique_clients / Math.max(...analytics.growth.map((g) => g.unique_clients))) * 100
-                        }
-                        className="w-24"
-                      />
-                      <span className="text-sm font-medium w-8 text-right">{month.unique_clients}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      </main>
     </div>
   )
 }

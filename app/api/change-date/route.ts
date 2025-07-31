@@ -1,9 +1,9 @@
+import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { getTodayString, calculateDaysAgo } from "@/lib/date-utils"
-import { neon } from "@neondatabase/serverless"
 
 export async function POST(request: Request) {
-  if (!process.env.DATABASE_URL) {
+  if (!sql) {
     return NextResponse.json({ error: "Database not available" }, { status: 500 })
   }
 
@@ -39,13 +39,12 @@ export async function POST(request: Request) {
     const daysAgo = calculateDaysAgo(newDate)
 
     const updatedContacts = []
-    const clientSql = neon(process.env.DATABASE_URL!)
 
     // Process each contact
     for (const contactId of contactIds) {
       try {
         // Update the contact record
-        const result = await clientSql.query(
+        const result = await sql.query(
           `UPDATE contacts 
            SET contact_date = $1, days_ago = $2, updated_at = NOW() 
            WHERE id = $3

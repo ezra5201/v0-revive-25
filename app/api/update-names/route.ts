@@ -1,6 +1,5 @@
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
 
 // Name pools for generating realistic names
 const maleFirstNames = [
@@ -267,26 +266,7 @@ function generateUniqueName(existingNames: Set<string>, isMale: boolean): string
   return fullName
 }
 
-export async function POST(request: Request) {
-  try {
-    const { oldName, newName } = await request.json()
-    const sqlClient = neon(process.env.DATABASE_URL!)
-
-    const result = await sqlClient`
-      UPDATE contacts 
-      SET client_name = ${newName}
-      WHERE client_name = ${oldName}
-    `
-
-    return NextResponse.json({
-      success: true,
-      recordsUpdated: result.length,
-    })
-  } catch (error) {
-    console.error("Update names error:", error)
-    return NextResponse.json({ success: false, error: "Failed to update names" }, { status: 500 })
-  }
-
+export async function POST() {
   if (!sql) {
     return NextResponse.json({ error: "Database not available" }, { status: 500 })
   }

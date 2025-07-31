@@ -79,22 +79,7 @@ export async function GET(request: Request): Promise<NextResponse<ServicesRespon
       }
     })
 
-    /* -------------------------------------------------- */
-    /* 4. Query contacts table for service analytics      */
-    /* -------------------------------------------------- */
-    const sql = neon(process.env.DATABASE_URL!)
-    const services = await sql`
-      SELECT 
-        service_type,
-        COUNT(*) as usage_count,
-        COUNT(DISTINCT client_name) as unique_clients
-      FROM contacts
-      WHERE service_type IS NOT NULL
-      GROUP BY service_type
-      ORDER BY usage_count DESC
-    `
-
-    return NextResponse.json({ ...result, services })
+    return NextResponse.json(result)
   } catch (err) {
     console.error("Failed to fetch services data:", err)
     return NextResponse.json({ error: "Failed to fetch services data" }, { status: 500 })

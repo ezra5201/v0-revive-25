@@ -1,32 +1,34 @@
+import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { getTodayString } from "@/lib/date-utils"
 
 export async function GET() {
-  try {
-    const sql = neon(process.env.DATABASE_URL!)
+  if (!sql) {
+    return NextResponse.json({ hasDuplicates: false })
+  }
 
-    const duplicates = await sql`
-      SELECT 
-        client_name,
-        COUNT(*) as duplicate_count
-      FROM contacts
-      WHERE contact_date = CURRENT_DATE
-      GROUP BY client_name
-      HAVING COUNT(*) > 1
+  try {
+    const todayString = getTodayString()
+
+    // Check for unique clients with today's date
+    const todayClients = await sql`
+      SELECT COUNT(DISTINCT client_name) as unique_clients
+      FROM contacts 
+      WHERE contact_date = (${todayString})::DATE
     `
 
+    const uniqueClientsToday = todayClients[0].unique_clients
+    const hasDuplicates = uniqueClientsToday > 40
+
+    console.log(`Duplicate today dates check: ${uniqueClientsToday} unique clients for ${todayString}`)
+
     return NextResponse.json({
-      hasDuplicates: duplicates.length > 0,
-      duplicates,
+      hasDuplicates,
+      uniqueClientsToday,
+      todayInChicago: todayString,
     })
   } catch (error) {
-    console.error("Check duplicate today dates error:", error)
-    return NextResponse.json(
-      {
-        hasDuplicates: false,
-        duplicates: [],
-      },
-      { status: 500 },
-    )
+    console.error("Failed to check for duplicate today dates:", error)
+    return NextResponse.json({ hasDuplicates: false })
   }
 }

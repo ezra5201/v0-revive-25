@@ -1,442 +1,361 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Progress } from "@/components/ui/progress"
-import {
-  FolderSyncIcon as Sync,
-  Calendar,
-  Database,
-  CheckCircle,
-  AlertTriangle,
-  Loader2,
-  Clock,
-  BarChart3,
-  Info,
-} from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { Loader2, Calendar, Database, CheckCircle, XCircle } from "lucide-react"
 
 interface SyncResult {
   success: boolean
   message: string
   recordsProcessed: number
-  executionTime: number
-  timestamp: string
-  month?: number
-  year?: number
+  timestamp?: string
 }
 
 interface DateRange {
-  earliest: string | null
-  latest: string | null
+  minDate: string
+  maxDate: string
 }
 
 export default function SyncPage() {
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1)
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
-  const [syncResults, setSyncResults] = useState<SyncResult[]>([])
+  const [selectedMonth, setSelectedMonth] = useState<string>("")
+  const [selectedYear, setSelectedYear] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isBulkSyncing, setIsBulkSyncing] = useState(false)
-  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 })
-  const [dateRange, setDateRange] = useState<DateRange>({ earliest: null, latest: null })
   const [isDetectingRange, setIsDetectingRange] = useState(false)
-  const { toast } = useToast()
+  const [isSyncingAll, setIsSyncingAll] = useState(false)
+  const [syncResults, setSyncResults] = useState<SyncResult[]>([])
+  const [dateRange, setDateRange] = useState<DateRange | null>(null)
+  const [error, setError] = useState<string>("")
 
   // Generate year options from 1900 to current year + 1
   const currentYear = new Date().getFullYear()
-  const yearOptions = Array.from({ length: currentYear - 1899 }, (_, i) => currentYear + 1 - i)
+  const years = Array.from({ length: currentYear - 1900 + 2 }, (_, i) => 1900 + i)
 
-  const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+  const months = [
+    { value: "1", label: "January" },
+    { value: "2", label: "February" },
+    { value: "3", label: "March" },
+    { value: "4", label: "April" },
+    { value: "5", label: "May" },
+    { value: "6", label: "June" },
+    { value: "7", label: "July" },
+    { value: "8", label: "August" },
+    { value: "9", label: "September" },
+    { value: "10", label: "October" },
+    { value: "11", label: "November" },
+    { value: "12", label: "December" },
   ]
 
+  // Set default to current month/year
   useEffect(() => {
-    // Auto-detect data range on component mount
-    detectDataRange()
+    const now = new Date()
+    setSelectedMonth((now.getMonth() + 1).toString())
+    setSelectedYear(now.getFullYear().toString())
   }, [])
 
   const detectDataRange = async () => {
     setIsDetectingRange(true)
+    setError("")
+
     try {
       const response = await fetch("/api/contacts")
+      if (!response.ok) throw new Error("Failed to fetch contact data")
+
       const data = await response.json()
 
       if (data.contacts && data.contacts.length > 0) {
         const dates = data.contacts
-          .map((c: any) => c.contact_date)
-          .filter(Boolean)
-          .sort()
+          .map((contact: any) => new Date(contact.contact_date))
+          .filter((date: Date) => !isNaN(date.getTime()))
 
-        setDateRange({
-          earliest: dates[0] || null,
-          latest: dates[dates.length - 1] || null,
-        })
+        if (dates.length > 0) {
+          const minDate = new Date(Math.min(...dates.map((d) => d.getTime())))
+          const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())))
+
+          setDateRange({
+            minDate: minDate.toISOString().slice(0, 10),
+            maxDate: maxDate.toISOString().slice(0, 10),
+          })
+        } else {
+          setError("No valid contact dates found")
+        }
+      } else {
+        setError("No contacts found in database")
       }
-    } catch (error) {
-      console.error("Failed to detect data range:", error)
+    } catch (err) {
+      setError(`Failed to detect data range: ${err instanceof Error ? err.message : "Unknown error"}`)
     } finally {
       setIsDetectingRange(false)
     }
   }
 
   const syncSingleMonth = async () => {
+    if (!selectedMonth || !selectedYear) {
+      setError("Please select both month and year")
+      return
+    }
+
     setIsLoading(true)
+    setError("")
+
     try {
       const response = await fetch("/api/sync-services", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month: selectedMonth, year: selectedYear }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          month: Number.parseInt(selectedMonth),
+          year: Number.parseInt(selectedYear),
+        }),
       })
 
-      const result: SyncResult = await response.json()
+      const result = await response.json()
 
-      setSyncResults((prev) => [result, ...prev.slice(0, 9)]) // Keep last 10 results
-
-      if (result.success) {
-        toast({
-          title: "Sync Completed",
-          description: `Successfully synced ${result.recordsProcessed} records for ${monthNames[selectedMonth - 1]} ${selectedYear}`,
-        })
-      } else {
-        toast({
-          title: "Sync Failed",
-          description: result.message,
-          variant: "destructive",
-        })
+      const syncResult: SyncResult = {
+        ...result,
+        timestamp: new Date().toLocaleString(),
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to sync data",
-        variant: "destructive",
-      })
+
+      setSyncResults((prev) => [syncResult, ...prev])
+
+      if (!result.success) {
+        setError(result.message)
+      }
+    } catch (err) {
+      const errorMessage = `Sync failed: ${err instanceof Error ? err.message : "Unknown error"}`
+      setError(errorMessage)
+      setSyncResults((prev) => [
+        {
+          success: false,
+          message: errorMessage,
+          recordsProcessed: 0,
+          timestamp: new Date().toLocaleString(),
+        },
+        ...prev,
+      ])
     } finally {
       setIsLoading(false)
     }
   }
 
-  const syncAllHistoricalData = async () => {
-    if (!dateRange.earliest || !dateRange.latest) {
-      toast({
-        title: "No Data Range",
-        description: "Please detect data range first",
-        variant: "destructive",
-      })
+  const syncAllHistorical = async () => {
+    if (!dateRange) {
+      setError("Please detect data range first")
       return
     }
 
-    setIsBulkSyncing(true)
+    setIsSyncingAll(true)
+    setError("")
     setSyncResults([])
 
     try {
-      const startDate = new Date(dateRange.earliest)
-      const endDate = new Date(dateRange.latest)
+      const minDate = new Date(dateRange.minDate)
+      const maxDate = new Date(dateRange.maxDate)
 
-      const months: { month: number; year: number }[] = []
-      const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1)
+      const startMonth = minDate.getMonth() + 1
+      const startYear = minDate.getFullYear()
+      const endMonth = maxDate.getMonth() + 1
+      const endYear = maxDate.getFullYear()
 
-      while (current <= endDate) {
-        months.push({
-          month: current.getMonth() + 1,
-          year: current.getFullYear(),
-        })
-        current.setMonth(current.getMonth() + 1)
-      }
+      // Process each month chronologically
+      const currentDate = new Date(startYear, startMonth - 1, 1)
+      const endDate = new Date(endYear, endMonth - 1, 1)
 
-      setBulkProgress({ current: 0, total: months.length })
-
-      const results: SyncResult[] = []
-
-      for (let i = 0; i < months.length; i++) {
-        const { month, year } = months[i]
-        setBulkProgress({ current: i + 1, total: months.length })
+      while (currentDate <= endDate) {
+        const month = currentDate.getMonth() + 1
+        const year = currentDate.getFullYear()
 
         try {
           const response = await fetch("/api/sync-services", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+            },
             body: JSON.stringify({ month, year }),
           })
 
-          const result: SyncResult = await response.json()
-          result.month = month
-          result.year = year
-          results.push(result)
+          const result = await response.json()
 
-          // Small delay between requests
+          setSyncResults((prev) => [
+            {
+              ...result,
+              timestamp: new Date().toLocaleString(),
+            },
+            ...prev,
+          ])
+
+          // Small delay to prevent overwhelming the server
           await new Promise((resolve) => setTimeout(resolve, 100))
-        } catch (error) {
-          results.push({
-            success: false,
-            message: `Failed to sync ${monthNames[month - 1]} ${year}`,
-            recordsProcessed: 0,
-            executionTime: 0,
-            timestamp: new Date().toISOString(),
-            month,
-            year,
-          })
+        } catch (err) {
+          setSyncResults((prev) => [
+            {
+              success: false,
+              message: `Failed to sync ${month}/${year}: ${err instanceof Error ? err.message : "Unknown error"}`,
+              recordsProcessed: 0,
+              timestamp: new Date().toLocaleString(),
+            },
+            ...prev,
+          ])
         }
+
+        currentDate.setMonth(currentDate.getMonth() + 1)
       }
-
-      setSyncResults(results.reverse()) // Show most recent first
-
-      const successful = results.filter((r) => r.success).length
-      const totalRecords = results.reduce((sum, r) => sum + r.recordsProcessed, 0)
-
-      toast({
-        title: "Bulk Sync Completed",
-        description: `Processed ${successful}/${months.length} months successfully. ${totalRecords} total records processed.`,
-      })
-    } catch (error) {
-      toast({
-        title: "Bulk Sync Failed",
-        description: "An error occurred during bulk synchronization",
-        variant: "destructive",
-      })
+    } catch (err) {
+      setError(`Historical sync failed: ${err instanceof Error ? err.message : "Unknown error"}`)
     } finally {
-      setIsBulkSyncing(false)
-      setBulkProgress({ current: 0, total: 0 })
+      setIsSyncingAll(false)
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString()
-  }
-
-  const formatExecutionTime = (ms: number) => {
-    if (ms < 1000) return `${ms}ms`
-    return `${(ms / 1000).toFixed(1)}s`
-  }
-
   return (
-    <div className="container mx-auto p-6">
-      <div className="space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold">Monthly Service Summary Sync</h1>
-          <p className="text-muted-foreground">Synchronize monthly service summary data from contact records</p>
-        </div>
-
-        {/* Data Range Detection */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <BarChart3 className="h-5 w-5" />
-              <span>Data Range Detection</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                {isDetectingRange ? (
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm">Detecting data range...</span>
-                  </div>
-                ) : dateRange.earliest && dateRange.latest ? (
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">
-                      Data available from {formatDate(dateRange.earliest)} to {formatDate(dateRange.latest)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {Math.ceil(
-                        (new Date(dateRange.latest).getTime() - new Date(dateRange.earliest).getTime()) /
-                          (1000 * 60 * 60 * 24 * 30),
-                      )}{" "}
-                      months of data detected
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No contact data found</p>
-                )}
-              </div>
-              <Button variant="outline" size="sm" onClick={detectDataRange} disabled={isDetectingRange}>
-                {isDetectingRange ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-                Detect Range
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Manual Sync Controls */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Calendar className="h-5 w-5" />
-              <span>Manual Sync</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Month</label>
-                  <Select
-                    value={selectedMonth.toString()}
-                    onValueChange={(value) => setSelectedMonth(Number.parseInt(value))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {monthNames.map((month, index) => (
-                        <SelectItem key={index} value={(index + 1).toString()}>
-                          {month}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Year</label>
-                  <Select
-                    value={selectedYear.toString()}
-                    onValueChange={(value) => setSelectedYear(Number.parseInt(value))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {yearOptions.map((year) => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-end">
-                  <Button onClick={syncSingleMonth} disabled={isLoading || isBulkSyncing} className="w-full">
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Syncing...
-                      </>
-                    ) : (
-                      <>
-                        <Sync className="h-4 w-4 mr-2" />
-                        Sync Month
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <Button
-                  onClick={syncAllHistoricalData}
-                  disabled={isLoading || isBulkSyncing || !dateRange.earliest}
-                  variant="outline"
-                  className="w-full bg-transparent"
-                >
-                  {isBulkSyncing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Syncing All Historical Data...
-                    </>
-                  ) : (
-                    <>
-                      <Database className="h-4 w-4 mr-2" />
-                      Sync All Historical Data
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Bulk Sync Progress */}
-        {isBulkSyncing && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Clock className="h-5 w-5" />
-                <span>Bulk Sync Progress</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">
-                    Processing month {bulkProgress.current} of {bulkProgress.total}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {Math.round((bulkProgress.current / bulkProgress.total) * 100)}%
-                  </span>
-                </div>
-                <Progress value={(bulkProgress.current / bulkProgress.total) * 100} className="w-full" />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Sync Results */}
-        {syncResults.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <BarChart3 className="h-5 w-5" />
-                <span>Sync Results</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {syncResults.map((result, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      {result.success ? (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <AlertTriangle className="h-5 w-5 text-red-600" />
-                      )}
-                      <div>
-                        <div className="font-medium">
-                          {result.month && result.year
-                            ? `${monthNames[result.month - 1]} ${result.year}`
-                            : `${monthNames[selectedMonth - 1]} ${selectedYear}`}
-                        </div>
-                        <div className="text-sm text-muted-foreground truncate max-w-md" title={result.message}>
-                          {result.message}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right space-y-1">
-                      <Badge variant={result.success ? "default" : "destructive"}>
-                        {result.recordsProcessed} records
-                      </Badge>
-                      <div className="text-xs text-muted-foreground">{formatExecutionTime(result.executionTime)}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Info Alert */}
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            The sync process aggregates contact data into monthly service summaries. Use "Detect Data Range" to see
-            available data, then sync individual months or all historical data at once.
-          </AlertDescription>
-        </Alert>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center gap-2 mb-6">
+        <Database className="h-6 w-6" />
+        <h1 className="text-2xl font-bold">Manual Service Data Sync</h1>
       </div>
+
+      {/* Data Range Detection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Data Range Detection
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button onClick={detectDataRange} disabled={isDetectingRange} variant="outline">
+            {isDetectingRange && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Detect Data Range
+          </Button>
+
+          {dateRange && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-sm text-green-800">
+                <strong>Data Range:</strong> {dateRange.minDate} to {dateRange.maxDate}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Single Month Sync */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Sync Single Month</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium mb-2">Month</label>
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month) => (
+                    <SelectItem key={month.value} value={month.value}>
+                      {month.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex-1">
+              <label className="block text-sm font-medium mb-2">Year</label>
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.reverse().map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Button onClick={syncSingleMonth} disabled={isLoading || !selectedMonth || !selectedYear} className="w-full">
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Sync Selected Month
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Sync All Historical */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Sync All Historical Data</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Button
+            onClick={syncAllHistorical}
+            disabled={isSyncingAll || !dateRange}
+            variant="destructive"
+            className="w-full"
+          >
+            {isSyncingAll && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Sync All Historical Data
+          </Button>
+          <p className="text-sm text-gray-600 mt-2">
+            This will sync all months from the detected data range. Use with caution.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Error Display */}
+      {error && (
+        <Alert variant="destructive">
+          <XCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Results Table */}
+      {syncResults.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Sync Results</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Message</TableHead>
+                  <TableHead>Records</TableHead>
+                  <TableHead>Timestamp</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {syncResults.map((result, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      {result.success ? (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-600" />
+                      )}
+                    </TableCell>
+                    <TableCell className={result.success ? "text-green-800" : "text-red-800"}>
+                      {result.message}
+                    </TableCell>
+                    <TableCell>{result.recordsProcessed}</TableCell>
+                    <TableCell className="text-sm text-gray-600">{result.timestamp}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
