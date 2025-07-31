@@ -2,6 +2,7 @@ import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { getTodayString } from "@/lib/date-utils"
 import { syncServicesToIntegerColumns } from "@/lib/service-sync"
+import { syncMonthlyServiceSummary } from "@/lib/sync-monthly-summary"
 
 // Helper function to safely parse JSON
 function safeJson(value: unknown, fallback: any = []) {
@@ -191,6 +192,13 @@ export async function POST(request: Request) {
     }
 
     console.log("Returning formatted contact:", formattedContact)
+
+    // Auto-sync current month after new contact
+    try {
+      await syncMonthlyServiceSummary()
+    } catch (error) {
+      console.log("Auto-sync failed (non-critical):", error)
+    }
 
     return NextResponse.json({
       message: "Check-in successful",
