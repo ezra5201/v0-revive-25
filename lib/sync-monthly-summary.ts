@@ -1,184 +1,106 @@
 import { neon } from "@neondatabase/serverless"
 
 /**
- * Service mapping configuration for monthly summary synchronization
+ * Synchronizes monthly service summary data for a specific month and year
+ * @param targetMonth - Month to sync (1-12), defaults to current month
+ * @param targetYear - Year to sync (1900-2099), defaults to current year
+ * @returns Promise with sync results
  */
-const SERVICE_MAPPINGS = [
-  { requested: "case_management_requested", provided: "case_management_provided", name: "Case Management" },
-  {
-    requested: "occupational_therapy_requested",
-    provided: "occupational_therapy_provided",
-    name: "Occupational Therapy",
-  },
-  { requested: "food_requested", provided: "food_provided", name: "Food" },
-  { requested: "healthcare_requested", provided: "healthcare_provided", name: "Healthcare" },
-  { requested: "housing_requested", provided: "housing_provided", name: "Housing" },
-  { requested: "employment_requested", provided: "employment_provided", name: "Employment" },
-  { requested: "benefits_requested", provided: "benefits_provided", name: "Benefits" },
-  { requested: "legal_requested", provided: "legal_provided", name: "Legal" },
-  { requested: "transportation_requested", provided: "transportation_provided", name: "Transportation" },
-  { requested: "childcare_requested", provided: "childcare_provided", name: "Childcare" },
-  { requested: "mental_health_requested", provided: "mental_health_provided", name: "Mental Health" },
-  { requested: "substance_abuse_requested", provided: "substance_abuse_provided", name: "Substance Abuse" },
-  { requested: "education_requested", provided: "education_provided", name: "Education" },
-]
-
-export interface SyncResult {
-  success: boolean
-  processedRecords: number
-  targetMonth: number
-  targetYear: number
-  duration: number
-  errors: string[]
-  details: {
-    serviceName: string
-    requested: number
-    provided: number
-    completionRate: number
-  }[]
-}
-
-/**
- * Validates month and year parameters
- */
-function validateParameters(month: number, year: number): string[] {
-  const errors: string[] = []
-
-  if (month < 1 || month > 12) {
-    errors.push(`Invalid month: ${month}. Must be between 1 and 12.`)
-  }
-
-  if (year < 2020 || year > 2030) {
-    errors.push(`Invalid year: ${year}. Must be between 2020 and 2030.`)
-  }
-
-  return errors
-}
-
-/**
- * Logs message with timestamp
- */
-function logWithTimestamp(message: string): void {
-  console.log(`[${new Date().toISOString()}] ${message}`)
-}
-
-/**
- * Synchronizes monthly service summary data for a specific month/year
- * @param targetMonth - Target month (1-12), defaults to current month
- * @param targetYear - Target year (2020-2030), defaults to current year
- * @returns Promise<SyncResult> - Sync operation results
- */
-export async function syncMonthlyServiceSummary(targetMonth?: string, targetYear?: number): Promise<SyncResult> {
-  const startTime = Date.now()
-  const now = new Date()
+export async function syncMonthlyServiceSummary(
+  targetMonth?: number,
+  targetYear?: number,
+): Promise<{ success: boolean; message: string; recordsProcessed: number }> {
+  const sql = neon(process.env.DATABASE_URL!)
 
   // Default to current month/year if not provided
-  const month = targetMonth ? Number.parseInt(targetMonth, 10) : now.getMonth() + 1
-  const year = targetYear || now.getFullYear()
-
-  logWithTimestamp(`Starting sync for ${year}-${month.toString().padStart(2, "0")}`)
+  const now = new Date()
+  const month = targetMonth ?? now.getMonth() + 1
+  const year = targetYear ?? now.getFullYear()
 
   // Validate parameters
-  const validationErrors = validateParameters(month, year)
-  if (validationErrors.length > 0) {
+  if (month < 1 || month > 12) {
     return {
       success: false,
-      processedRecords: 0,
-      targetMonth: month,
-      targetYear: year,
-      duration: Date.now() - startTime,
-      errors: validationErrors,
-      details: [],
+      message: `Invalid month: ${month}. Must be between 1 and 12.`,
+      recordsProcessed: 0,
     }
   }
 
-  const sql = neon(process.env.DATABASE_URL!)
-  const errors: string[] = []
-  const details: SyncResult["details"] = []
-  let totalProcessed = 0
+  if (year < 1900 || year > 2099) {
+    return {
+      success: false,
+      message: `Invalid year: ${year}. Must be between 1900 and 2099.`,
+      recordsProcessed: 0,
+    }
+  }
+
+  const timestamp = new Date().toISOString()
+  console.log(`[${timestamp}] Starting sync for ${year}-${month.toString().padStart(2, "0")}`)
 
   try {
-    logWithTimestamp(`Processing ${SERVICE_MAPPINGS.length} service types`)
+    // Create monthly_service_summary table if it doesn't exist
+    await sql`
+      CREATE TABLE IF NOT EXISTS monthly_service_summary (
+        id SERIAL PRIMARY KEY,
+        month INTEGER NOT NULL,
+        year INTEGER NOT NULL,
+        service_type VARCHAR(50) NOT NULL,
+        total_contacts INTEGER NOT NULL DEFAULT 0,
+        unique_clients INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(month, year, service_type)
+      )
+    `
 
-    for (const service of SERVICE_MAPPINGS) {
-      try {
-        logWithTimestamp(`Processing ${service.name}...`)
+    // Delete existing data for this month/year
+    await sql`
+      DELETE FROM monthly_service_summary 
+      WHERE month = ${month} AND year = ${year}
+    `
 
-        // Query to aggregate service data for the target month/year
-        const aggregateQuery = `
-          SELECT 
-            COALESCE(SUM(${service.requested}), 0) as total_requested,
-            COALESCE(SUM(${service.provided}), 0) as total_provided,
-            ROUND((COALESCE(SUM(${service.provided}), 0) * 100.0 / NULLIF(COALESCE(SUM(${service.requested}), 0), 0)), 2) as completion_rate
-          FROM contacts 
-          WHERE EXTRACT(YEAR FROM contact_date) = $1 
-            AND EXTRACT(MONTH FROM contact_date) = $2
-        `
+    // Get aggregated data for the target month/year
+    const results = await sql`
+      SELECT 
+        service_type,
+        COUNT(*) as total_contacts,
+        COUNT(DISTINCT client_name) as unique_clients
+      FROM contacts 
+      WHERE EXTRACT(MONTH FROM contact_date) = ${month}
+        AND EXTRACT(YEAR FROM contact_date) = ${year}
+      GROUP BY service_type
+      ORDER BY service_type
+    `
 
-        const result = await sql(aggregateQuery, [year, month])
-        const data = result[0]
+    let recordsProcessed = 0
 
-        const totalRequested = Number.parseInt(data.total_requested) || 0
-        const totalProvided = Number.parseInt(data.total_provided) || 0
-        const completionRate = Number.parseFloat(data.completion_rate) || 0
-
-        // Upsert into monthly_service_summary
-        const upsertQuery = `
-          INSERT INTO monthly_service_summary (year, month, service_name, total_requested, total_provided, completion_rate)
-          VALUES ($1, $2, $3, $4, $5, $6)
-          ON CONFLICT (year, month, service_name) 
-          DO UPDATE SET 
-            total_requested = EXCLUDED.total_requested,
-            total_provided = EXCLUDED.total_provided,
-            completion_rate = EXCLUDED.completion_rate,
-            updated_at = CURRENT_TIMESTAMP
-        `
-
-        await sql(upsertQuery, [year, month, service.name, totalRequested, totalProvided, completionRate])
-
-        details.push({
-          serviceName: service.name,
-          requested: totalRequested,
-          provided: totalProvided,
-          completionRate,
-        })
-
-        totalProcessed++
-        logWithTimestamp(
-          `✓ ${service.name}: ${totalRequested} requested, ${totalProvided} provided (${completionRate}%)`,
-        )
-      } catch (serviceError) {
-        const errorMsg = `Failed to process ${service.name}: ${serviceError}`
-        errors.push(errorMsg)
-        logWithTimestamp(`✗ ${errorMsg}`)
-      }
+    // Insert aggregated data
+    for (const row of results) {
+      await sql`
+        INSERT INTO monthly_service_summary (month, year, service_type, total_contacts, unique_clients)
+        VALUES (${month}, ${year}, ${row.service_type}, ${row.total_contacts}, ${row.unique_clients})
+      `
+      recordsProcessed++
     }
 
-    const duration = Date.now() - startTime
-    logWithTimestamp(`Sync completed in ${duration}ms. Processed ${totalProcessed} services.`)
+    const endTimestamp = new Date().toISOString()
+    console.log(
+      `[${endTimestamp}] Completed sync for ${year}-${month.toString().padStart(2, "0")}: ${recordsProcessed} records processed`,
+    )
 
     return {
-      success: errors.length === 0,
-      processedRecords: totalProcessed,
-      targetMonth: month,
-      targetYear: year,
-      duration,
-      errors,
-      details,
+      success: true,
+      message: `Successfully synced ${year}-${month.toString().padStart(2, "0")}: ${recordsProcessed} service types processed`,
+      recordsProcessed,
     }
   } catch (error) {
-    const errorMsg = `Sync failed: ${error}`
-    errors.push(errorMsg)
-    logWithTimestamp(`✗ ${errorMsg}`)
+    const errorTimestamp = new Date().toISOString()
+    console.error(`[${errorTimestamp}] Error syncing ${year}-${month.toString().padStart(2, "0")}:`, error)
 
     return {
       success: false,
-      processedRecords: totalProcessed,
-      targetMonth: month,
-      targetYear: year,
-      duration: Date.now() - startTime,
-      errors,
-      details,
+      message: `Failed to sync ${year}-${month.toString().padStart(2, "0")}: ${error instanceof Error ? error.message : "Unknown error"}`,
+      recordsProcessed: 0,
     }
   }
 }
