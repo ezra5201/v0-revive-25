@@ -7,43 +7,75 @@ export async function GET(request: Request, { params }: { params: { name: string
   try {
     const clientName = decodeURIComponent(params.name)
 
-    // Get client details
-    const client = await sql`
+    // Get client basic info
+    const clientInfo = await sql`
       SELECT 
-        c.*,
-        p.name as provider_name,
-        p.location as provider_location
-      FROM clients c
-      JOIN providers p ON c.provider_id = p.id
-      WHERE c.name = ${clientName}
+        name,
+        first_contact_date,
+        last_contact_date,
+        total_contacts,
+        created_at
+      FROM clients
+      WHERE name = ${clientName}
     `
 
-    if (client.length === 0) {
-      return NextResponse.json({ success: false, error: "Client not found" }, { status: 404 })
+    if (clientInfo.length === 0) {
+      return NextResponse.json({ error: "Client not found" }, { status: 404 })
     }
 
     // Get contact history
-    const contacts = await sql`
-      SELECT *
+    const contactHistory = await sql`
+      SELECT 
+        id,
+        contact_date,
+        provider_name,
+        location,
+        services_requested,
+        services_provided,
+        created_at
       FROM contacts
-      WHERE client_id = ${client[0].id}
-      ORDER BY contact_date DESC
+      WHERE client_name = ${clientName}
+      ORDER BY contact_date DESC, created_at DESC
+    `
+
+    // Get service summary
+    const serviceSummary = await sql`
+      WITH service_stats AS (
+        SELECT 
+          TRIM(UNNEST(STRING_TO_ARRAY(services_requested, ','))) as service_name,
+          'requested' as type
+        FROM contacts
+        WHERE client_name = ${clientName}
+        AND services_requested IS NOT NULL 
+        AND services_requested != ''
+        
+        UNION ALL
+        
+        SELECT 
+          TRIM(UNNEST(STRING_TO_ARRAY(services_provided, ','))) as service_name,
+          'provided' as type
+        FROM contacts
+        WHERE client_name = ${clientName}
+        AND services_provided IS NOT NULL 
+        AND services_provided != ''
+      )
+      SELECT 
+        service_name,
+        COUNT(CASE WHEN type = 'requested' THEN 1 END) as requested_count,
+        COUNT(CASE WHEN type = 'provided' THEN 1 END) as provided_count
+      FROM service_stats
+      WHERE service_name != ''
+      GROUP BY service_name
+      ORDER BY requested_count DESC
     `
 
     return NextResponse.json({
-      success: true,
-      client: client[0],
-      contacts,
+      client: clientInfo[0],
+      contactHistory,
+      serviceSummary,
     })
   } catch (error) {
-    console.error("Get client error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to fetch client details",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Client details error:", error)
+    return NextResponse.json({ error: "Failed to fetch client details" }, { status: 500 })
   }
 }

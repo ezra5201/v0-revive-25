@@ -184,6 +184,13 @@ export async function POST() {
     // Start transaction
     await sqlClient`BEGIN`
 
+    // Update client names that contain "70%" to remove it
+    await sqlClient`
+      UPDATE contacts 
+      SET client_name = REPLACE(client_name, '70%', '')
+      WHERE client_name LIKE '%70%%'
+    `
+
     // Create app_settings table if it doesn't exist
     await sqlClient`
       CREATE TABLE IF NOT EXISTS app_settings (

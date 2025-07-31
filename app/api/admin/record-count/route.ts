@@ -5,28 +5,15 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
-    const result = await sql`
-      SELECT 
-        (SELECT COUNT(*) FROM providers) as providers,
-        (SELECT COUNT(*) FROM clients) as clients,
-        (SELECT COUNT(*) FROM contacts) as contacts,
-        (SELECT COUNT(*) FROM monthly_service_summary) as monthly_summaries
-    `
+    const result = await sql`SELECT COUNT(*) as total FROM contacts`
+    const count = Number.parseInt(result[0]?.total || "0")
 
     return NextResponse.json({
-      success: true,
-      counts: result[0],
+      count,
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
     console.error("Record count error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to fetch record counts",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: "Failed to get record count" }, { status: 500 })
   }
 }

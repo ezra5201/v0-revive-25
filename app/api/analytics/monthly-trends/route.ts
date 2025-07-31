@@ -3,37 +3,54 @@ import { neon } from "@neondatabase/serverless"
 
 const sql = neon(process.env.DATABASE_URL!)
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const trends = await sql`
+    const { searchParams } = new URL(request.url)
+    const period = searchParams.get("period") || "90"
+
+    const result = await sql`
+      WITH monthly_data AS (
+        SELECT 
+          DATE_TRUNC('month', contact_date) as month,
+          TRIM(UNNEST(STRING_TO_ARRAY(services_requested, ','))) as service_name,
+          'requested' as type
+        FROM contacts
+        WHERE services_requested IS NOT NULL 
+        AND services_requested != ''
+        AND contact_date >= CURRENT_DATE - INTERVAL '${period} days'
+        
+        UNION ALL
+        
+        SELECT 
+          DATE_TRUNC('month', contact_date) as month,
+          TRIM(UNNEST(STRING_TO_ARRAY(services_provided, ','))) as service_name,
+          'provided' as type
+        FROM contacts
+        WHERE services_provided IS NOT NULL 
+        AND services_provided != ''
+        AND contact_date >= CURRENT_DATE - INTERVAL '${period} days'
+      )
       SELECT 
-        month_year as month,
-        SUM(total_requested) as total_requested,
-        SUM(total_provided) as total_provided,
+        TO_CHAR(month, 'YYYY-MM') as month_year,
+        service_name,
+        COUNT(CASE WHEN type = 'requested' THEN 1 END) as total_requested,
+        COUNT(CASE WHEN type = 'provided' THEN 1 END) as total_provided,
         ROUND(
-          (SUM(total_provided)::numeric / NULLIF(SUM(total_requested), 0)) * 100, 
-          2
-        ) as completion_rate,
-        COUNT(DISTINCT service_name) as services_count
-      FROM monthly_service_summary
-      GROUP BY month_year
-      ORDER BY month_year DESC
-      LIMIT 12
+          CASE 
+            WHEN COUNT(CASE WHEN type = 'requested' THEN 1 END) > 0 
+            THEN (COUNT(CASE WHEN type = 'provided' THEN 1 END)::float / COUNT(CASE WHEN type = 'requested' THEN 1 END)::float) * 100
+            ELSE 0 
+          END, 2
+        ) as completion_rate
+      FROM monthly_data
+      WHERE service_name != ''
+      GROUP BY month, service_name
+      ORDER BY month DESC, total_requested DESC
     `
 
-    return NextResponse.json({
-      success: true,
-      trends,
-    })
+    return NextResponse.json(result)
   } catch (error) {
-    console.error("Monthly trends error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to fetch monthly trends",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Monthly trends analytics error:", error)
+    return NextResponse.json({ error: "Failed to fetch monthly trends data" }, { status: 500 })
   }
 }

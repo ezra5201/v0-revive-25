@@ -5,31 +5,21 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function POST(request: Request) {
   try {
-    const { clientId } = await request.json()
+    const { clientName } = await request.json()
 
-    if (!clientId) {
-      return NextResponse.json({ success: false, error: "Client ID is required" }, { status: 400 })
+    if (!clientName) {
+      return NextResponse.json({ error: "Client name is required" }, { status: 400 })
     }
 
-    // Clear all alerts for the client
-    const result = await sql`
-      DELETE FROM alerts 
-      WHERE client_id = ${clientId}
+    await sql`
+      UPDATE alerts 
+      SET resolved_at = CURRENT_TIMESTAMP 
+      WHERE client_name = ${clientName} AND resolved_at IS NULL
     `
 
-    return NextResponse.json({
-      success: true,
-      message: "Client alerts cleared successfully",
-    })
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Clear client alerts error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to clear client alerts",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Error clearing client alerts:", error)
+    return NextResponse.json({ error: "Failed to clear client alerts" }, { status: 500 })
   }
 }

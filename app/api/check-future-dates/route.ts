@@ -5,33 +5,27 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
-    // Find contacts with future dates
-    const futureDates = await sql`
+    const today = new Date().toISOString().split("T")[0]
+
+    const result = await sql`
       SELECT 
         id,
-        client_id,
+        client_name,
         contact_date,
-        contact_type
-      FROM contacts 
-      WHERE contact_date > CURRENT_DATE
-      ORDER BY contact_date ASC
+        provider_name,
+        location
+      FROM contacts
+      WHERE contact_date > ${today}
+      ORDER BY contact_date DESC
     `
 
     return NextResponse.json({
-      success: true,
-      futureDates,
-      hasFutureDates: futureDates.length > 0,
-      count: futureDates.length,
+      hasFutureDates: result.length > 0,
+      futureContacts: result,
+      count: result.length,
     })
   } catch (error) {
-    console.error("Check future dates error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to check future dates",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Future dates check error:", error)
+    return NextResponse.json({ error: "Failed to check for future dates" }, { status: 500 })
   }
 }

@@ -6,60 +6,45 @@ const sql = neon(process.env.DATABASE_URL!)
 export async function GET() {
   try {
     const alerts = await sql`
-      SELECT 
-        a.*,
-        c.name as client_name,
-        c.location
-      FROM alerts a
-      JOIN clients c ON a.client_id = c.id
-      ORDER BY a.created_at DESC
-      LIMIT 50
+      SELECT id, client_name, alert_type, message, severity, created_at
+      FROM alerts 
+      WHERE resolved_at IS NULL
+      ORDER BY 
+        CASE severity 
+          WHEN 'high' THEN 1 
+          WHEN 'medium' THEN 2 
+          WHEN 'low' THEN 3 
+        END,
+        created_at DESC
     `
 
-    return NextResponse.json({
-      success: true,
-      alerts,
-    })
+    return NextResponse.json(alerts)
   } catch (error) {
-    console.error("Fetch alerts error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to fetch alerts",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Error fetching alerts:", error)
+    return NextResponse.json({ error: "Failed to fetch alerts" }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const { clientId, type, message, severity = "medium" } = await request.json()
+    const { clientName, alertType, message, severity = "medium" } = await request.json()
 
-    if (!clientId || !type || !message) {
-      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 })
+    if (!clientName || !alertType || !message) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
     const result = await sql`
-      INSERT INTO alerts (client_id, type, message, severity, created_at)
-      VALUES (${clientId}, ${type}, ${message}, ${severity}, NOW())
-      RETURNING *
+      INSERT INTO alerts (client_name, alert_type, message, severity)
+      VALUES (${clientName}, ${alertType}, ${message}, ${severity})
+      RETURNING id
     `
 
     return NextResponse.json({
       success: true,
-      alert: result[0],
+      alertId: result[0]?.id,
     })
   } catch (error) {
-    console.error("Create alert error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to create alert",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Error creating alert:", error)
+    return NextResponse.json({ error: "Failed to create alert" }, { status: 500 })
   }
 }

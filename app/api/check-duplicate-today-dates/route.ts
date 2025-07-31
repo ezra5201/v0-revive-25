@@ -5,32 +5,26 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
-    // Find contacts with today's date that might be duplicates
-    const duplicates = await sql`
+    const today = new Date().toISOString().split("T")[0]
+
+    const result = await sql`
       SELECT 
-        client_id,
-        contact_date,
+        client_name,
         COUNT(*) as duplicate_count
-      FROM contacts 
-      WHERE contact_date = CURRENT_DATE
-      GROUP BY client_id, contact_date
+      FROM contacts
+      WHERE contact_date = ${today}
+      GROUP BY client_name
       HAVING COUNT(*) > 1
+      ORDER BY duplicate_count DESC
     `
 
     return NextResponse.json({
-      success: true,
-      duplicates,
-      hasDuplicates: duplicates.length > 0,
+      hasDuplicates: result.length > 0,
+      duplicates: result,
+      totalDuplicateEntries: result.reduce((sum: number, item: any) => sum + Number.parseInt(item.duplicate_count), 0),
     })
   } catch (error) {
-    console.error("Check duplicate today dates error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to check duplicate today dates",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Duplicate check error:", error)
+    return NextResponse.json({ error: "Failed to check for duplicates" }, { status: 500 })
   }
 }

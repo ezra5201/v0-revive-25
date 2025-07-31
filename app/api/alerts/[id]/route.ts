@@ -8,28 +8,18 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     const alertId = Number.parseInt(params.id)
 
     if (isNaN(alertId)) {
-      return NextResponse.json({ success: false, error: "Invalid alert ID" }, { status: 400 })
+      return NextResponse.json({ error: "Invalid alert ID" }, { status: 400 })
     }
 
-    // Delete the alert
-    const result = await sql`
-      DELETE FROM alerts 
+    await sql`
+      UPDATE alerts 
+      SET resolved_at = CURRENT_TIMESTAMP 
       WHERE id = ${alertId}
     `
 
-    return NextResponse.json({
-      success: true,
-      message: "Alert deleted successfully",
-    })
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Delete alert error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to delete alert",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Error resolving alert:", error)
+    return NextResponse.json({ error: "Failed to resolve alert" }, { status: 500 })
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 
 const sqlClient = neon(process.env.DATABASE_URL!)
+const sql = neon(process.env.DATABASE_URL!)
 
 // Service options
 const services = [
@@ -15,6 +16,11 @@ const services = [
   "Occupational",
   "Recreation",
   "Other",
+  "Housing Assistance",
+  "Food Services",
+  "Healthcare Navigation",
+  "Employment Support",
+  "Mental Health Services",
 ]
 
 // Provider names for CM and OT services
@@ -26,6 +32,9 @@ const providers = [
   "Sonia Singh",
   "Leila Garcia",
   "Andrea Leflore",
+  "Community Outreach",
+  "Mobile Services",
+  "Resource Center",
 ]
 
 // Holiday periods for seasonal clustering (month-day format)
@@ -60,6 +69,8 @@ const sampleComments = [
   "Client shared recent accomplishments.",
   "Discussed conflict resolution strategies.",
 ]
+
+const locations = ["Downtown", "Eastside", "Westside", "Northside", "Southside"]
 
 function getRandomElement<T>(array: T[]): T {
   return array[Math.floor(Math.random() * array.length)]
@@ -233,50 +244,68 @@ export async function POST(request: Request) {
       SELECT id, name FROM clients
     `
 
-    if (clients.length === 0) {
-      return NextResponse.json({ success: false, error: "No clients found" }, { status: 400 })
-    }
-
     const contactTypes = ["Phone Call", "Email", "In-Person", "Text Message"]
-    const generated = []
+    const generatedContacts = []
 
-    for (let i = 0; i < count; i++) {
-      const randomClient = clients[Math.floor(Math.random() * clients.length)]
-      const randomType = contactTypes[Math.floor(Math.random() * contactTypes.length)]
+    if (clients.length === 0) {
+      for (let i = 0; i < count; i++) {
+        const clientName = `Generated Client ${Date.now()}-${i}`
+        const provider = getRandomElement(providers)
+        const location = getRandomElement(locations)
 
-      // Generate random date between startDate and endDate (or last 30 days)
-      const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-      const end = endDate ? new Date(endDate) : new Date()
-      const randomDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()))
+        // Random date within last 30 days
+        const randomDate = new Date()
+        randomDate.setDate(randomDate.getDate() - Math.floor(Math.random() * 30))
 
-      const contact = await sqlClient`
-        INSERT INTO contacts (client_id, contact_date, contact_type, notes)
-        VALUES (
-          ${randomClient.id}, 
-          ${randomDate.toISOString().split("T")[0]}, 
-          ${randomType},
-          'Generated contact for testing'
-        )
-        RETURNING *
-      `
+        const selectedServices = services.slice(0, Math.floor(Math.random() * 3) + 1)
 
-      generated.push(contact[0])
+        const contact = await sql`
+          INSERT INTO contacts (client_name, contact_date, provider_name, location, services_requested, services_provided)
+          VALUES (
+            ${clientName}, 
+            ${randomDate.toISOString().split("T")[0]}, 
+            ${provider}, 
+            ${location},
+            ${selectedServices.join(", ")},
+            ${selectedServices.slice(0, Math.floor(Math.random() * selectedServices.length) + 1).join(", ")}
+          )
+          RETURNING id
+        `
+
+        generatedContacts.push(contact[0])
+      }
+    } else {
+      for (let i = 0; i < count; i++) {
+        const randomClient = clients[Math.floor(Math.random() * clients.length)]
+        const randomType = contactTypes[Math.floor(Math.random() * contactTypes.length)]
+
+        // Generate random date between startDate and endDate (or last 30 days)
+        const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        const end = endDate ? new Date(endDate) : new Date()
+        const randomDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()))
+
+        const contact = await sqlClient`
+          INSERT INTO contacts (client_id, contact_date, contact_type, notes)
+          VALUES (
+            ${randomClient.id}, 
+            ${randomDate.toISOString().split("T")[0]}, 
+            ${randomType},
+            'Generated contact for testing'
+          )
+          RETURNING *
+        `
+
+        generatedContacts.push(contact[0])
+      }
     }
 
     return NextResponse.json({
       success: true,
-      message: `Generated ${generated.length} contacts`,
-      contacts: generated,
+      generated: generatedContacts.length,
+      message: `Generated ${generatedContacts.length} contacts`,
     })
   } catch (error) {
     console.error("Generate contacts error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to generate contacts",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: "Failed to generate contacts" }, { status: 500 })
   }
 }

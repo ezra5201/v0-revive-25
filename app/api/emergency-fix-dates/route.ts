@@ -5,28 +5,21 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function POST() {
   try {
-    // Fix any contacts with invalid dates (future dates set to today)
+    const today = new Date().toISOString().split("T")[0]
+
+    // Fix future dates by setting them to today
     const result = await sql`
       UPDATE contacts 
-      SET contact_date = CURRENT_DATE
-      WHERE contact_date > CURRENT_DATE
-      RETURNING id, client_id, contact_date
+      SET contact_date = ${today}
+      WHERE contact_date > ${today}
     `
 
     return NextResponse.json({
       success: true,
-      message: `Fixed ${result.length} contacts with future dates`,
-      fixedContacts: result,
+      message: "Fixed future dates successfully",
     })
   } catch (error) {
-    console.error("Emergency fix dates error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to fix dates",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Emergency fix error:", error)
+    return NextResponse.json({ error: "Failed to fix future dates" }, { status: 500 })
   }
 }

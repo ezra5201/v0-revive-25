@@ -41,7 +41,7 @@ if (!connectionString.startsWith("postgresql://") && !connectionString.startsWit
 }
 
 // Create the SQL client
-export const sql = neon(connectionString)
+const sql = neon(connectionString)
 
 // Export the connection string for debugging
 export const debugConnectionString = connectionString.substring(0, 50) + "..."
@@ -216,193 +216,190 @@ function generateUniqueName(existingNames: Set<string>, isMale: boolean): string
 }
 
 export async function isDatabaseInitialized(): Promise<boolean> {
-  if (!sql) {
-    return false
-  }
-
   try {
-    const tablesCheck = await sql`
-      SELECT 
-        (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'contacts') as contacts_table,
-        (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'clients') as clients_table,
-        (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'providers') as providers_table
+    // Check if contacts table exists and has data
+    const result = await sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'contacts'
+      ) as table_exists
     `
 
-    const tables = tablesCheck[0]
-    if (tables.contacts_table === 0 || tables.clients_table === 0 || tables.providers_table === 0) {
+    if (!result[0]?.table_exists) {
       return false
     }
 
-    const dataCheck = await sql`
-      SELECT 
-        (SELECT COUNT(*) FROM contacts) as contact_count,
-        (SELECT COUNT(*) FROM clients) as client_count,
-        (SELECT COUNT(*) FROM providers) as provider_count
-    `
-
-    const data = dataCheck[0]
-    return data.contact_count > 0 && data.client_count > 0 && data.provider_count > 0
+    // Check if we have any data
+    const dataCheck = await sql`SELECT COUNT(*) as count FROM contacts`
+    return Number.parseInt(dataCheck[0]?.count || "0") > 0
   } catch (error) {
     console.error("Database initialization check failed:", error)
     return false
   }
 }
 
-export async function initializeDatabase(): Promise<boolean> {
-  if (!sql) {
-    throw new Error("Database connection not available")
-  }
-
+export async function initializeDatabase() {
   try {
-    console.log("🔍 Checking database tables...")
+    console.log("🔧 Creating database tables...")
 
+    // Create contacts table
     await sql`
       CREATE TABLE IF NOT EXISTS contacts (
         id SERIAL PRIMARY KEY,
-        contact_date DATE NOT NULL,
-        days_ago INTEGER NOT NULL,
-        provider_name VARCHAR(255) NOT NULL,
         client_name VARCHAR(255) NOT NULL,
-        category VARCHAR(50) NOT NULL,
-        food_accessed BOOLEAN DEFAULT FALSE,
+        contact_date DATE NOT NULL,
+        provider_name VARCHAR(255),
+        location VARCHAR(255),
         services_requested TEXT,
         services_provided TEXT,
-        comments TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `
-
-    await sql`
-      CREATE TABLE IF NOT EXISTS providers (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) UNIQUE NOT NULL,
-        active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `
 
+    // Create clients table
     await sql`
       CREATE TABLE IF NOT EXISTS clients (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
-        category VARCHAR(50) NOT NULL,
-        active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `
-
-    await sql`
-      CREATE TABLE IF NOT EXISTS alerts (
-        id SERIAL PRIMARY KEY,
-        client_name VARCHAR(255) NOT NULL,
-        alert_type VARCHAR(50) NOT NULL,
-        message TEXT NOT NULL,
-        is_read BOOLEAN DEFAULT FALSE,
+        first_contact_date DATE,
+        last_contact_date DATE,
+        total_contacts INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `
 
-    console.log("✅ Database tables verified/created")
-    return true
+    // Create monthly_service_summary table
+    await sql`
+      CREATE TABLE IF NOT EXISTS monthly_service_summary (
+        id SERIAL PRIMARY KEY,
+        year INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        service_name VARCHAR(255) NOT NULL,
+        total_requested INTEGER DEFAULT 0,
+        total_provided INTEGER DEFAULT 0,
+        completion_rate DECIMAL(5,2) DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(year, month, service_name)
+      )
+    `
+
+    // Create alerts table
+    await sql`
+      CREATE TABLE IF NOT EXISTS alerts (
+        id SERIAL PRIMARY KEY,
+        client_name VARCHAR(255) NOT NULL,
+        alert_type VARCHAR(100) NOT NULL,
+        message TEXT NOT NULL,
+        severity VARCHAR(20) DEFAULT 'medium',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        resolved_at TIMESTAMP
+      )
+    `
+
+    // Create indexes for better performance
+    await sql`CREATE INDEX IF NOT EXISTS idx_contacts_client_name ON contacts(client_name)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_contacts_date ON contacts(contact_date)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_contacts_provider ON contacts(provider_name)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_monthly_summary_date ON monthly_service_summary(year, month)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_alerts_client ON alerts(client_name)`
+
+    console.log("✅ Database tables created successfully")
   } catch (error) {
     console.error("❌ Database initialization failed:", error)
     throw error
   }
 }
 
-export async function seedDatabase(): Promise<boolean> {
-  if (!sql) {
-    throw new Error("Database connection not available")
-  }
-
+export async function seedDatabase() {
   try {
-    console.log("🌱 Checking if seeding is needed...")
+    console.log("🌱 Seeding database with sample data...")
 
-    const existingData = await sql`
+    // Sample providers and locations
+    const providers = ["Community Outreach", "Mobile Services", "Resource Center"]
+    const locations = ["Downtown", "Eastside", "Westside", "Northside", "Southside"]
+    const services = [
+      "Housing Assistance",
+      "Food Services",
+      "Healthcare Navigation",
+      "Employment Support",
+      "Mental Health Services",
+      "Substance Abuse Counseling",
+      "Legal Aid",
+      "Transportation",
+    ]
+
+    // Generate sample contacts
+    const sampleContacts = []
+    const clientNames = [
+      "John Smith",
+      "Maria Garcia",
+      "David Johnson",
+      "Sarah Wilson",
+      "Michael Brown",
+      "Lisa Davis",
+      "Robert Miller",
+      "Jennifer Taylor",
+      "William Anderson",
+      "Jessica Thomas",
+    ]
+
+    for (let i = 0; i < 50; i++) {
+      const clientName = clientNames[Math.floor(Math.random() * clientNames.length)]
+      const provider = providers[Math.floor(Math.random() * providers.length)]
+      const location = locations[Math.floor(Math.random() * locations.length)]
+
+      // Generate random date within last 30 days
+      const randomDate = new Date()
+      randomDate.setDate(randomDate.getDate() - Math.floor(Math.random() * 30))
+
+      // Random services
+      const numServices = Math.floor(Math.random() * 3) + 1
+      const selectedServices = []
+      for (let j = 0; j < numServices; j++) {
+        const service = services[Math.floor(Math.random() * services.length)]
+        if (!selectedServices.includes(service)) {
+          selectedServices.push(service)
+        }
+      }
+
+      sampleContacts.push({
+        client_name: clientName,
+        contact_date: randomDate.toISOString().split("T")[0],
+        provider_name: provider,
+        location: location,
+        services_requested: selectedServices.join(", "),
+        services_provided: selectedServices
+          .slice(0, Math.floor(Math.random() * selectedServices.length) + 1)
+          .join(", "),
+      })
+    }
+
+    // Insert sample contacts
+    for (const contact of sampleContacts) {
+      await sql`
+        INSERT INTO contacts (client_name, contact_date, provider_name, location, services_requested, services_provided)
+        VALUES (${contact.client_name}, ${contact.contact_date}, ${contact.provider_name}, ${contact.location}, ${contact.services_requested}, ${contact.services_provided})
+      `
+    }
+
+    // Update clients table with aggregated data
+    await sql`
+      INSERT INTO clients (name, first_contact_date, last_contact_date, total_contacts)
       SELECT 
-        (SELECT COUNT(*) FROM providers) as provider_count,
-        (SELECT COUNT(*) FROM clients) as client_count,
-        (SELECT COUNT(*) FROM contacts) as contact_count
+        client_name,
+        MIN(contact_date) as first_contact_date,
+        MAX(contact_date) as last_contact_date,
+        COUNT(*) as total_contacts
+      FROM contacts
+      GROUP BY client_name
+      ON CONFLICT (name) DO UPDATE SET
+        first_contact_date = EXCLUDED.first_contact_date,
+        last_contact_date = EXCLUDED.last_contact_date,
+        total_contacts = EXCLUDED.total_contacts
     `
 
-    const counts = existingData[0]
-
-    if (counts.provider_count > 0 && counts.client_count > 0 && counts.contact_count > 0) {
-      console.log("📊 Database already contains data, skipping seed")
-      return true
-    }
-
-    console.log("🌱 Seeding minimal data...")
-
-    if (counts.provider_count === 0) {
-      const providers = [
-        "Elena Ahmed",
-        "Sofia Cohen",
-        "Jamal Silva",
-        "Mohammed Ahmed",
-        "Sonia Singh",
-        "Leila Garcia",
-        "Andrea Leflore",
-      ]
-
-      for (const provider of providers) {
-        await sql`INSERT INTO providers (name) VALUES (${provider}) ON CONFLICT (name) DO NOTHING`
-      }
-      console.log("✅ Providers seeded")
-    }
-
-    if (counts.client_count === 0) {
-      const existingNames = new Set<string>()
-      const maleCount = 7
-      const femaleCount = 4
-      const clientNames: string[] = []
-
-      for (let i = 0; i < maleCount; i++) {
-        clientNames.push(generateUniqueName(existingNames, true))
-      }
-      for (let i = 0; i < femaleCount; i++) {
-        clientNames.push(generateUniqueName(existingNames, false))
-      }
-
-      for (let i = clientNames.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1))
-        ;[clientNames[i], clientNames[j]] = [clientNames[j], clientNames[i]]
-      }
-
-      const categories = ["Client", "Prospect", ...Array(9).fill("Client")]
-
-      for (let i = 0; i < clientNames.length; i++) {
-        await sql`INSERT INTO clients (name, category) VALUES (${clientNames[i]}, ${categories[i]}) ON CONFLICT (name) DO NOTHING`
-      }
-      console.log("✅ Clients seeded")
-    }
-
-    if (counts.contact_count === 0) {
-      const clients = await sql`SELECT name FROM clients ORDER BY name`
-      const contacts = [
-        { date: "2025-01-16", days: 0, provider: "Elena Ahmed", category: "Client", food: false },
-        { date: "2025-01-15", days: 1, provider: "Sofia Cohen", category: "Client", food: true },
-        { date: "2025-01-14", days: 2, provider: "Jamal Silva", category: "Client", food: false },
-        { date: "2025-01-13", days: 3, provider: "Mohammed Ahmed", category: "Prospect", food: false },
-        { date: "2025-01-12", days: 4, provider: "Sonia Singh", category: "Client", food: true },
-      ]
-
-      for (let i = 0; i < Math.min(contacts.length, clients.length); i++) {
-        const contact = contacts[i]
-        const client = clients[i]
-
-        await sql`
-          INSERT INTO contacts (contact_date, days_ago, provider_name, client_name, category, food_accessed)
-          VALUES (${contact.date}, ${contact.days}, ${contact.provider}, ${client.name}, ${contact.category}, ${contact.food})
-        `
-      }
-      console.log("✅ Sample contacts seeded")
-    }
-
     console.log("✅ Database seeded successfully")
-    return true
   } catch (error) {
     console.error("❌ Database seeding failed:", error)
     throw error

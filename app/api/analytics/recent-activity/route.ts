@@ -3,36 +3,28 @@ import { neon } from "@neondatabase/serverless"
 
 const sql = neon(process.env.DATABASE_URL!)
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const recentActivity = await sql`
+    const { searchParams } = new URL(request.url)
+    const limit = searchParams.get("limit") || "10"
+
+    const result = await sql`
       SELECT 
-        c.contact_date,
-        c.contact_type,
-        cl.name as client_name,
-        cl.location,
-        p.name as provider_name,
-        c.notes
-      FROM contacts c
-      JOIN clients cl ON c.client_id = cl.id
-      JOIN providers p ON cl.provider_id = p.id
-      ORDER BY c.contact_date DESC
-      LIMIT 20
+        client_name,
+        contact_date,
+        provider_name,
+        location,
+        services_requested,
+        services_provided,
+        created_at
+      FROM contacts
+      ORDER BY contact_date DESC, created_at DESC
+      LIMIT ${Number.parseInt(limit)}
     `
 
-    return NextResponse.json({
-      success: true,
-      activities: recentActivity,
-    })
+    return NextResponse.json(result)
   } catch (error) {
     console.error("Recent activity error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to fetch recent activity",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: "Failed to fetch recent activity" }, { status: 500 })
   }
 }

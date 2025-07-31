@@ -3,36 +3,48 @@ import { neon } from "@neondatabase/serverless"
 
 const sql = neon(process.env.DATABASE_URL!)
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const services = await sql`
+    const { searchParams } = new URL(request.url)
+    const period = searchParams.get("period") || "30"
+
+    const result = await sql`
+      WITH service_completion AS (
+        SELECT 
+          TRIM(UNNEST(STRING_TO_ARRAY(services_requested, ','))) as service_name,
+          CASE 
+            WHEN services_provided IS NOT NULL 
+            AND services_provided != ''
+            AND TRIM(UNNEST(STRING_TO_ARRAY(services_requested, ','))) = ANY(STRING_TO_ARRAY(services_provided, ','))
+            THEN 'completed'
+            ELSE 'pending'
+          END as status
+        FROM contacts
+        WHERE services_requested IS NOT NULL 
+        AND services_requested != ''
+        AND contact_date >= CURRENT_DATE - INTERVAL '${period} days'
+      )
       SELECT 
         service_name,
-        SUM(total_requested) as total_requested,
-        SUM(total_provided) as total_provided,
+        COUNT(*) as total_requests,
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_requests,
+        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_requests,
         ROUND(
-          (SUM(total_provided)::numeric / NULLIF(SUM(total_requested), 0)) * 100, 
-          2
-        ) as completion_rate,
-        COUNT(DISTINCT month_year) as months_active
-      FROM monthly_service_summary
+          CASE 
+            WHEN COUNT(*) > 0 
+            THEN (COUNT(CASE WHEN status = 'completed' THEN 1 END)::float / COUNT(*)::float) * 100
+            ELSE 0 
+          END, 2
+        ) as completion_rate
+      FROM service_completion
+      WHERE service_name != ''
       GROUP BY service_name
-      ORDER BY completion_rate DESC, total_requested DESC
+      ORDER BY total_requests DESC
     `
 
-    return NextResponse.json({
-      success: true,
-      services,
-    })
+    return NextResponse.json(result)
   } catch (error) {
     console.error("Service completion analytics error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to fetch service completion analytics",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: "Failed to fetch service completion data" }, { status: 500 })
   }
 }

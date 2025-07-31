@@ -5,52 +5,35 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
-    // Get table information
     const tables = await sql`
       SELECT 
         table_name,
-        table_type
-      FROM information_schema.tables 
+        column_name,
+        data_type,
+        is_nullable,
+        column_default
+      FROM information_schema.columns
       WHERE table_schema = 'public'
-      ORDER BY table_name
+      ORDER BY table_name, ordinal_position
     `
 
-    // Get column information for each table
-    const schema = {}
-
-    for (const table of tables) {
-      const columns = await sql`
-        SELECT 
-          column_name,
-          data_type,
-          is_nullable,
-          column_default
-        FROM information_schema.columns
-        WHERE table_schema = 'public' 
-        AND table_name = ${table.table_name}
-        ORDER BY ordinal_position
-      `
-
-      schema[table.table_name] = {
-        type: table.table_type,
-        columns,
+    // Group by table
+    const schema = tables.reduce((acc: any, row: any) => {
+      if (!acc[row.table_name]) {
+        acc[row.table_name] = []
       }
-    }
+      acc[row.table_name].push({
+        column: row.column_name,
+        type: row.data_type,
+        nullable: row.is_nullable === "YES",
+        default: row.column_default,
+      })
+      return acc
+    }, {})
 
-    return NextResponse.json({
-      success: true,
-      schema,
-      timestamp: new Date().toISOString(),
-    })
+    return NextResponse.json(schema)
   } catch (error) {
     console.error("Database schema error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to fetch database schema",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: "Failed to fetch database schema" }, { status: 500 })
   }
 }
