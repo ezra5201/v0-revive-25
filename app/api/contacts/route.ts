@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const providers = searchParams.get("providers")?.split(",").filter(Boolean) || []
     const sortColumn = searchParams.get("sortColumn") || "date"
     const sortDirection = searchParams.get("sortDirection") || "desc"
+    const serviceFilter = searchParams.get("serviceFilter") // New parameter
 
     // Get today's date in Chicago time (dynamic)
     const todayString = getTodayString()
@@ -44,6 +45,14 @@ export async function GET(request: NextRequest) {
         whereConditions.push(`c.provider_name = ANY($${queryParams.length + 1})`)
         queryParams.push(providers)
       }
+    }
+
+    // Add service filter if specified
+    if (serviceFilter === "cm") {
+      whereConditions.push(`(
+    (c.services_requested IS NOT NULL AND c.services_requested::text ILIKE '%Case Management%') OR
+    (c.services_provided IS NOT NULL AND c.services_provided::text ILIKE '%Case Management%')
+  )`)
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : ""
@@ -142,6 +151,8 @@ export async function GET(request: NextRequest) {
               c.category,
               c.food_accessed,
               c.alert_id,
+              c.services_requested,
+              c.services_provided,
               c.created_at,
               -- Calculate actual days from current Chicago today to the contact date
               (DATE '${todayString}' - c.contact_date)::INTEGER AS days_ago,
@@ -161,6 +172,8 @@ export async function GET(request: NextRequest) {
             r.category,
             r.food_accessed,
             r.created_at,
+            r.services_requested,
+            r.services_provided,
             a.id as alert_id,
             a.alert_details,
             a.severity as alert_severity,
@@ -192,6 +205,8 @@ export async function GET(request: NextRequest) {
                   c.category,
                   c.food_accessed,
                   c.created_at,
+                  c.services_requested,
+                  c.services_provided,
                   -- Calculate actual days from Chicago today to the contact date
                   (DATE '${todayString}' - c.contact_date)::INTEGER AS days_ago,
                   ROW_NUMBER() OVER (
@@ -209,7 +224,9 @@ export async function GET(request: NextRequest) {
                 r.client_name,
                 r.category,
                 r.food_accessed,
-                r.created_at
+                r.created_at,
+                r.services_requested,
+                r.services_provided
               FROM ranked_contacts r
               WHERE r.rn = 1
               ORDER BY ${dbColumn} ${direction}
