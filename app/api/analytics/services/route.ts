@@ -1,54 +1,87 @@
-import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
+import { NextResponse } from "next/server"
+import type { ServiceData, ServicesResponse } from "@/types/services"
 
-const sql = neon(process.env.DATABASE_URL!)
+// Connection (query) function
+const db = neon(process.env.DATABASE_URL!)
 
-export async function GET(request: Request) {
+/** Determine date range for a given period label */
+function getDateFilters(period: string): { startYear: number; startMonth: number; endYear: number; endMonth: number } {
+  const now = new Date()
+
+  if (period === "Last Month") {
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    return {
+      startYear: lastMonth.getFullYear(),
+      startMonth: lastMonth.getMonth() + 1,
+      endYear: lastMonth.getFullYear(),
+      endMonth: lastMonth.getMonth() + 1,
+    }
+  } else if (period === "This Year") {
+    return {
+      startYear: now.getFullYear(),
+      startMonth: 1,
+      endYear: now.getFullYear(),
+      endMonth: 12,
+    }
+  } else {
+    // Default: This Month
+    return {
+      startYear: now.getFullYear(),
+      startMonth: now.getMonth() + 1,
+      endYear: now.getFullYear(),
+      endMonth: now.getMonth() + 1,
+    }
+  }
+}
+
+export async function GET(request: Request): Promise<NextResponse<ServicesResponse | { error: string }>> {
   try {
+    /* -------------------------------------------------- */
+    /* 1. Parse query-string period                       */
+    /* -------------------------------------------------- */
     const { searchParams } = new URL(request.url)
-    const period = searchParams.get("period") || "30"
+    const period = searchParams.get("period") ?? "This Month"
+    const { startYear, startMonth, endYear, endMonth } = getDateFilters(period)
 
-    // Get service statistics from contacts
-    const result = await sql`
-      WITH service_stats AS (
-        SELECT 
-          TRIM(UNNEST(STRING_TO_ARRAY(services_requested, ','))) as service_name,
-          'requested' as type
-        FROM contacts
-        WHERE services_requested IS NOT NULL 
-        AND services_requested != ''
-        AND contact_date >= CURRENT_DATE - INTERVAL '${period} days'
-        
-        UNION ALL
-        
-        SELECT 
-          TRIM(UNNEST(STRING_TO_ARRAY(services_provided, ','))) as service_name,
-          'provided' as type
-        FROM contacts
-        WHERE services_provided IS NOT NULL 
-        AND services_provided != ''
-        AND contact_date >= CURRENT_DATE - INTERVAL '${period} days'
-      )
+    /* -------------------------------------------------- */
+    /* 2. Query monthly_service_summary table             */
+    /* -------------------------------------------------- */
+    const rows = await db<
+      {
+        service_name: string
+        total_requested: string | number | null
+        total_provided: string | number | null
+      }[]
+    >`
       SELECT 
         service_name,
-        COUNT(CASE WHEN type = 'requested' THEN 1 END) as requested_count,
-        COUNT(CASE WHEN type = 'provided' THEN 1 END) as provided_count,
-        ROUND(
-          CASE 
-            WHEN COUNT(CASE WHEN type = 'requested' THEN 1 END) > 0 
-            THEN (COUNT(CASE WHEN type = 'provided' THEN 1 END)::float / COUNT(CASE WHEN type = 'requested' THEN 1 END)::float) * 100
-            ELSE 0 
-          END, 2
-        ) as completion_rate
-      FROM service_stats
-      WHERE service_name != ''
+        SUM(total_requested) as total_requested,
+        SUM(total_provided) as total_provided
+      FROM monthly_service_summary
+      WHERE (year > ${startYear} OR (year = ${startYear} AND month >= ${startMonth}))
+        AND (year < ${endYear} OR (year = ${endYear} AND month <= ${endMonth}))
       GROUP BY service_name
-      ORDER BY requested_count DESC
+      ORDER BY SUM(total_provided) DESC
     `
 
+    /* -------------------------------------------------- */
+    /* 3. Shape response                                  */
+    /* -------------------------------------------------- */
+    const result: ServicesResponse = rows.map<ServiceData>((row) => {
+      const requested = Number(row.total_requested ?? 0)
+      const provided = Number(row.total_provided ?? 0)
+      return {
+        service: row.service_name,
+        requested,
+        provided,
+        completionRate: requested > 0 ? Math.round((provided / requested) * 100) : 0,
+      }
+    })
+
     return NextResponse.json(result)
-  } catch (error) {
-    console.error("Services analytics error:", error)
+  } catch (err) {
+    console.error("Failed to fetch services data:", err)
     return NextResponse.json({ error: "Failed to fetch services data" }, { status: 500 })
   }
 }

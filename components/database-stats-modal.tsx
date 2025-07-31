@@ -13,10 +13,7 @@ interface DatabaseStatsModalProps {
 export function DatabaseStatsModal({ open, onOpenChange }: DatabaseStatsModalProps) {
   const { stats, loading, error, refetch } = useDatabaseStats()
 
-  const formatNumber = (num: number | undefined | null) => {
-    if (num === undefined || num === null || isNaN(num)) {
-      return "0"
-    }
+  const formatNumber = (num: number) => {
     return num.toLocaleString()
   }
 
@@ -88,32 +85,28 @@ export function DatabaseStatsModal({ open, onOpenChange }: DatabaseStatsModalPro
                     <div className="text-sm text-indigo-800">Unique People</div>
                   </div>
 
-                  <div
-                    className={`p-4 rounded-lg ${(stats.master_records_gap || 0) > 0 ? "bg-red-50" : "bg-green-50"}`}
-                  >
+                  <div className={`p-4 rounded-lg ${stats.master_records_gap > 0 ? "bg-red-50" : "bg-green-50"}`}>
                     <div
-                      className={`text-2xl font-bold flex items-center gap-1 ${(stats.master_records_gap || 0) > 0 ? "text-red-600" : "text-green-600"}`}
+                      className={`text-2xl font-bold flex items-center gap-1 ${stats.master_records_gap > 0 ? "text-red-600" : "text-green-600"}`}
                     >
-                      {(stats.master_records_gap || 0) > 0 && <AlertTriangle className="h-5 w-5" />}
+                      {stats.master_records_gap > 0 && <AlertTriangle className="h-5 w-5" />}
                       {formatNumber(stats.master_records_gap)}
                     </div>
-                    <div
-                      className={`text-sm ${(stats.master_records_gap || 0) > 0 ? "text-red-800" : "text-green-800"}`}
-                    >
+                    <div className={`text-sm ${stats.master_records_gap > 0 ? "text-red-800" : "text-green-800"}`}>
                       Missing Records
                     </div>
                   </div>
 
                   <div
-                    className={`p-4 rounded-lg ${(stats.data_consistency_percentage || 0) < 100 ? "bg-yellow-50" : "bg-green-50"}`}
+                    className={`p-4 rounded-lg ${stats.data_consistency_percentage < 100 ? "bg-yellow-50" : "bg-green-50"}`}
                   >
                     <div
-                      className={`text-2xl font-bold ${(stats.data_consistency_percentage || 0) < 100 ? "text-yellow-600" : "text-green-600"}`}
+                      className={`text-2xl font-bold ${stats.data_consistency_percentage < 100 ? "text-yellow-600" : "text-green-600"}`}
                     >
-                      {stats.data_consistency_percentage || 0}%
+                      {stats.data_consistency_percentage}%
                     </div>
                     <div
-                      className={`text-sm ${(stats.data_consistency_percentage || 0) < 100 ? "text-yellow-800" : "text-green-800"}`}
+                      className={`text-sm ${stats.data_consistency_percentage < 100 ? "text-yellow-800" : "text-green-800"}`}
                     >
                       Consistency
                     </div>

@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
-
-const sql = neon(process.env.DATABASE_URL!)
+import { sql } from "@/lib/db"
 
 export async function GET() {
   if (!sql) {
@@ -27,37 +25,6 @@ export async function GET() {
     } catch (error) {
       // Settings table might not exist yet, continue with other checks
     }
-
-    // Check if 70% update has been applied
-    const result = await sql`
-      SELECT COUNT(*) as count
-      FROM clients 
-      WHERE name LIKE '%70%'
-    `
-
-    const has70PercentUpdate = Number.parseInt(result[0].count) > 0
-
-    // Check for contacts that need 70% name updates
-    const updateResult = await sql`
-      SELECT 
-        client_name,
-        COUNT(*) as contact_count,
-        CASE 
-          WHEN client_name LIKE '%70%' THEN 'needs_update'
-          ELSE 'normal'
-        END as status
-      FROM contacts
-      GROUP BY client_name
-      HAVING client_name LIKE '%70%'
-      ORDER BY contact_count DESC
-    `
-
-    const needsUpdate = updateResult.length > 0
-    const affectedClients = updateResult
-    const totalAffected = updateResult.reduce(
-      (sum: number, client: any) => sum + Number.parseInt(client.contact_count),
-      0,
-    )
 
     // Get all contacts to analyze name patterns
     const contacts = await sql`
@@ -133,7 +100,7 @@ export async function GET() {
     const hasHighAmericanNamePercentage = americanNamePercentage > 60
     const hasGoodDiversity = totalUniqueNames > 50
 
-    const completed = has70PercentUpdate && hasHighAmericanNamePercentage && hasGoodDiversity
+    const completed = hasHighAmericanNamePercentage && hasGoodDiversity
 
     return NextResponse.json({
       completed,
@@ -144,12 +111,7 @@ export async function GET() {
         americanNamePercentage: Math.round(americanNamePercentage),
         hasHighAmericanNamePercentage,
         hasGoodDiversity,
-        has70PercentUpdate,
-        count: Number.parseInt(result[0].count),
       },
-      needsUpdate,
-      affectedClients,
-      totalAffected,
     })
   } catch (error) {
     console.error("Error checking 70% update status:", error)

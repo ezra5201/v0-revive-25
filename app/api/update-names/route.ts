@@ -1,7 +1,5 @@
+import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
-
-const sqlClient = neon(process.env.DATABASE_URL!)
 
 // Name pools for generating realistic names
 const maleFirstNames = [
@@ -268,34 +266,103 @@ function generateUniqueName(existingNames: Set<string>, isMale: boolean): string
   return fullName
 }
 
-export async function POST(request: Request) {
-  try {
-    const { oldName, newName } = await request.json()
+export async function POST() {
+  if (!sql) {
+    return NextResponse.json({ error: "Database not available" }, { status: 500 })
+  }
 
-    if (!oldName || !newName) {
-      return NextResponse.json({ error: "Both old name and new name are required" }, { status: 400 })
+  try {
+    console.log("Generating unique client names...")
+
+    // Get existing contacts
+    const existingContacts = await sql.query("SELECT id FROM contacts ORDER BY id")
+    const totalContacts = existingContacts.length
+
+    if (totalContacts === 0) {
+      return NextResponse.json({ error: "No contacts found in database" }, { status: 400 })
     }
 
-    // Update contacts table
-    await sqlClient`
-      UPDATE contacts 
-      SET client_name = ${newName}
-      WHERE client_name = ${oldName}
-    `
+    // Calculate 60% male names
+    const maleCount = Math.ceil(totalContacts * 0.6)
+    const femaleCount = totalContacts - maleCount
 
-    // Update clients table
-    await sqlClient`
-      UPDATE clients 
-      SET name = ${newName}
-      WHERE name = ${oldName}
-    `
+    console.log(`Generating ${maleCount} male names and ${femaleCount} female names`)
+
+    // Generate unique names
+    const existingNames = new Set<string>()
+    const nameUpdates: { id: number; name: string; isMale: boolean }[] = []
+
+    // Generate male names first
+    for (let i = 0; i < maleCount; i++) {
+      const contact = existingContacts[i]
+      const name = generateUniqueName(existingNames, true)
+      nameUpdates.push({ id: contact.id, name, isMale: true })
+    }
+
+    // Generate female names
+    for (let i = maleCount; i < totalContacts; i++) {
+      const contact = existingContacts[i]
+      const name = generateUniqueName(existingNames, false)
+      nameUpdates.push({ id: contact.id, name, isMale: false })
+    }
+
+    // Shuffle the updates to randomize the distribution
+    for (let i = nameUpdates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[nameUpdates[i], nameUpdates[j]] = [nameUpdates[j], nameUpdates[i]]
+    }
+
+    console.log("Updating contact records...")
+
+    // Update contacts table
+    for (const update of nameUpdates) {
+      await sql.query("UPDATE contacts SET client_name = $1 WHERE id = $2", [update.name, update.id])
+    }
+
+    // Update clients table - first clear it
+    await sql.query("DELETE FROM clients")
+
+    // Get updated contact data to rebuild clients table
+    const updatedContacts = await sql.query(`
+      SELECT DISTINCT client_name, category 
+      FROM contacts 
+      ORDER BY client_name
+    `)
+
+    console.log("Rebuilding clients table...")
+    for (const contact of updatedContacts) {
+      await sql.query("INSERT INTO clients (name, category) VALUES ($1, $2)", [contact.client_name, contact.category])
+    }
+
+    // Verify uniqueness
+    const duplicateCheck = await sql.query(`
+      SELECT client_name, COUNT(*) as count 
+      FROM contacts 
+      GROUP BY client_name 
+      HAVING COUNT(*) > 1
+    `)
+
+    const maleNames = nameUpdates.filter((u) => u.isMale).map((u) => u.name)
+    const femaleNames = nameUpdates.filter((u) => !u.isMale).map((u) => u.name)
 
     return NextResponse.json({
-      success: true,
-      message: `Updated client name from "${oldName}" to "${newName}"`,
+      message: "Successfully updated all client names!",
+      stats: {
+        totalUpdated: nameUpdates.length,
+        maleCount: maleNames.length,
+        femaleCount: femaleNames.length,
+        allUnique: duplicateCheck.length === 0,
+      },
+      sampleNames: {
+        male: maleNames.slice(0, 3),
+        female: femaleNames.slice(0, 3),
+      },
     })
   } catch (error) {
-    console.error("Update names error:", error)
-    return NextResponse.json({ error: "Failed to update client name" }, { status: 500 })
+    console.error("Failed to update client names:", error)
+    return NextResponse.json(
+      { error: `Failed to update client names: ${error instanceof Error ? error.message : "Unknown error"}` },
+      { status: 500 },
+    )
   }
 }
