@@ -1,46 +1,21 @@
-import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { neon } from "@neondatabase/serverless"
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  if (!sql) {
-    return NextResponse.json({ error: "Database not available" }, { status: 500 })
-  }
+const sql = neon(process.env.DATABASE_URL!)
 
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const alertId = Number.parseInt(params.id)
-    const body = await request.json()
-    const { status, resolvedBy } = body
+    const alertId = params.id
 
-    // Validate status
-    if (!["active", "resolved", "dismissed"].includes(status)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 })
-    }
-
-    // Update the alert
-    const result = await sql`
-      UPDATE alerts 
-      SET 
-        status = ${status},
-        resolved_by = ${status !== "active" ? resolvedBy : null},
-        resolved_at = ${status !== "active" ? "NOW()" : null},
-        updated_at = NOW()
+    // Delete the alert
+    await sql`
+      DELETE FROM alerts 
       WHERE id = ${alertId}
-      RETURNING id, client_name, status, resolved_by, resolved_at
     `
 
-    if (result.length === 0) {
-      return NextResponse.json({ error: "Alert not found" }, { status: 404 })
-    }
-
-    return NextResponse.json({
-      message: `Alert ${status}`,
-      alert: result[0],
-    })
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Failed to update alert:", error)
-    return NextResponse.json(
-      { error: `Failed to update alert: ${error instanceof Error ? error.message : "Unknown error"}` },
-      { status: 500 },
-    )
+    console.error("Error deleting alert:", error)
+    return NextResponse.json({ error: "Failed to delete alert" }, { status: 500 })
   }
 }

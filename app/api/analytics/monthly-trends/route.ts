@@ -25,7 +25,6 @@ export async function GET() {
 
     console.log("Executing monthly trends query:", query)
     const result = await sql(query)
-    console.log("Monthly trends query result:", result)
 
     const trends = result.map((row) => ({
       month: row.month,
@@ -35,9 +34,10 @@ export async function GET() {
       servicesCount: Number.parseInt(row.services_count),
     }))
 
+    console.log(`Found ${trends.length} monthly trend records`)
     return NextResponse.json({ trends })
   } catch (error) {
-    console.error("Error fetching monthly trends:", error)
-    return NextResponse.json({ error: "Failed to fetch monthly trends" }, { status: 500 })
+    console.error("Error fetching monthly trends data:", error)
+    return NextResponse.json({ error: "Failed to fetch monthly trends data" }, { status: 500 })
   }
 }

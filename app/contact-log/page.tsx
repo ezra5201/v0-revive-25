@@ -273,16 +273,25 @@ export default function ContactLogPage() {
           />
 
           <main className="bg-white">
-            <ContactTable
-              activeTab={activeTab}
-              contacts={contacts}
-              isLoading={contactsLoading}
-              error={contactsError}
-              onClientClick={handleClientClick}
-              onSelectionChange={handleSelectionChange}
-              onUpdateServicesClick={handleUpdateServicesClick}
-              onClientRowClick={handleClientRowClick} // NEW: Pass client row click handler
-            />
+            <div className="px-4 sm:px-6 py-8">
+              <div className="max-w-7xl mx-auto">
+                <div className="text-center mb-8">
+                  <h1 className="text-3xl font-bold text-gray-900 mb-4">Contact Log</h1>
+                  <p className="text-lg text-gray-600">Track and manage all client interactions and service delivery</p>
+                </div>
+
+                <ContactTable
+                  activeTab={activeTab}
+                  contacts={contacts}
+                  isLoading={contactsLoading}
+                  error={contactsError}
+                  onClientClick={handleClientClick}
+                  onSelectionChange={handleSelectionChange}
+                  onUpdateServicesClick={handleUpdateServicesClick}
+                  onClientRowClick={handleClientRowClick} // NEW: Pass client row click handler
+                />
+              </div>
+            </div>
           </main>
         </>
       )}

@@ -8,7 +8,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const serviceFilter = searchParams.get("service")
 
-    console.log("Fetching service completion data...", { serviceFilter })
+    console.log(
+      "Fetching service completion data...",
+      serviceFilter ? `for service: ${serviceFilter}` : "for all services",
+    )
 
     let query = `
       SELECT 
@@ -35,7 +38,6 @@ export async function GET(request: Request) {
 
     console.log("Executing service completion query:", query)
     const result = serviceFilter ? await sql(query, [serviceFilter]) : await sql(query)
-    console.log("Service completion query result:", result)
 
     const services = result.map((row) => ({
       serviceName: row.service_name,
@@ -45,9 +47,10 @@ export async function GET(request: Request) {
       monthsActive: Number.parseInt(row.months_active),
     }))
 
+    console.log(`Found ${services.length} service completion records`)
     return NextResponse.json({ services })
   } catch (error) {
-    console.error("Error fetching service completion analytics:", error)
-    return NextResponse.json({ error: "Failed to fetch service completion analytics" }, { status: 500 })
+    console.error("Error fetching service completion data:", error)
+    return NextResponse.json({ error: "Failed to fetch service completion data" }, { status: 500 })
   }
 }

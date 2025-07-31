@@ -1,5 +1,7 @@
-import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { neon } from "@neondatabase/serverless"
+
+const sqlClient = neon(process.env.DATABASE_URL!)
 
 // Name pools for generating realistic names
 const maleFirstNames = [
@@ -174,16 +176,16 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 export async function POST() {
-  if (!sql) {
+  if (!sqlClient) {
     return NextResponse.json({ error: "Database connection not available" }, { status: 500 })
   }
 
   try {
     // Start transaction
-    await sql`BEGIN`
+    await sqlClient`BEGIN`
 
     // Create app_settings table if it doesn't exist
-    await sql`
+    await sqlClient`
       CREATE TABLE IF NOT EXISTS app_settings (
         key VARCHAR(255) PRIMARY KEY,
         value TEXT NOT NULL,
@@ -192,12 +194,12 @@ export async function POST() {
     `
 
     // Check if 70% update was already completed
-    const existingFlag = await sql`
+    const existingFlag = await sqlClient`
       SELECT value FROM app_settings WHERE key = 'seventy_percent_update_completed'
     `
 
     if (existingFlag.length > 0 && existingFlag[0].value === "true") {
-      await sql`ROLLBACK`
+      await sqlClient`ROLLBACK`
       return NextResponse.json(
         {
           error: "70% name update has already been completed",
@@ -207,14 +209,14 @@ export async function POST() {
     }
 
     // Get all unique client names from contacts
-    const allContacts = await sql`
+    const allContacts = await sqlClient`
       SELECT DISTINCT client_name 
       FROM contacts 
       ORDER BY client_name
     `
 
     if (allContacts.length === 0) {
-      await sql`ROLLBACK`
+      await sqlClient`ROLLBACK`
       return NextResponse.json({ error: "No contacts found" }, { status: 400 })
     }
 
@@ -264,7 +266,7 @@ export async function POST() {
     const oldNames = Object.keys(nameMapping)
     const newNamesArray = Object.values(nameMapping)
 
-    await sql`
+    await sqlClient`
       UPDATE contacts 
       SET client_name = new_names.new_name
       FROM (
@@ -275,11 +277,11 @@ export async function POST() {
     `
 
     // Update clients table - delete old entries and insert new ones
-    await sql`DELETE FROM clients WHERE name = ANY(${oldNames})`
+    await sqlClient`DELETE FROM clients WHERE name = ANY(${oldNames})`
 
     // Insert new client entries
     for (const newName of newNamesArray) {
-      await sql`
+      await sqlClient`
         INSERT INTO clients (name, category, active) 
         VALUES (${newName}, 'Client', true)
         ON CONFLICT (name) DO NOTHING
@@ -287,7 +289,7 @@ export async function POST() {
     }
 
     // Set completion flag
-    await sql`
+    await sqlClient`
       INSERT INTO app_settings (key, value) 
       VALUES ('seventy_percent_update_completed', 'true')
       ON CONFLICT (key) DO UPDATE SET 
@@ -296,7 +298,7 @@ export async function POST() {
     `
 
     // Commit transaction
-    await sql`COMMIT`
+    await sqlClient`COMMIT`
 
     const statistics = {
       totalContacts: totalClients,
@@ -312,7 +314,7 @@ export async function POST() {
       statistics,
     })
   } catch (error) {
-    await sql`ROLLBACK`
+    await sqlClient`ROLLBACK`
     console.error("Error updating 70% of client names:", error)
     return NextResponse.json(
       {

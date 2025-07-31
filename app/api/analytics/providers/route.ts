@@ -1,30 +1,31 @@
-import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
+import { neon } from "@neondatabase/serverless"
 
 const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
-    const result = await sql`
+    const providers = await sql`
       SELECT 
-        provider_name,
+        COALESCE(provider_name, 'Unassigned') as provider_name,
         COUNT(*) as total_contacts,
-        COUNT(CASE WHEN contact_date >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as recent_contacts
-      FROM contacts 
-      WHERE provider_name IS NOT NULL
+        COUNT(DISTINCT client_name) as unique_clients,
+        COUNT(DISTINCT DATE(contact_date)) as active_days
+      FROM contacts
       GROUP BY provider_name
       ORDER BY total_contacts DESC
     `
 
-    const formattedData = result.map((row) => ({
-      provider: row.provider_name,
+    const formattedProviders = providers.map((row) => ({
+      providerName: row.provider_name,
       totalContacts: Number.parseInt(row.total_contacts),
-      recentContacts: Number.parseInt(row.recent_contacts),
+      uniqueClients: Number.parseInt(row.unique_clients),
+      activeDays: Number.parseInt(row.active_days),
     }))
 
-    return NextResponse.json(formattedData)
+    return NextResponse.json({ providers: formattedProviders })
   } catch (error) {
-    console.error("Failed to fetch provider data:", error)
+    console.error("Error fetching provider data:", error)
     return NextResponse.json({ error: "Failed to fetch provider data" }, { status: 500 })
   }
 }

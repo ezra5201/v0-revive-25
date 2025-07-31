@@ -1,5 +1,7 @@
-import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { neon } from "@neondatabase/serverless"
+
+const sqlClient = neon(process.env.DATABASE_URL!)
 
 // Service options
 const services = [
@@ -24,6 +26,9 @@ const providers = [
   "Sonia Singh",
   "Leila Garcia",
   "Andrea Leflore",
+  "Provider A",
+  "Provider B",
+  "Provider C",
 ]
 
 // Holiday periods for seasonal clustering (month-day format)
@@ -222,13 +227,17 @@ function buildBulkInsert(batch: any[]) {
   return { query, values }
 }
 
-export async function POST() {
+export async function POST(request: Request) {
+  const sql = sqlClient
+
   if (!sql) {
     return NextResponse.json({ error: "Database not available" }, { status: 500 })
   }
 
   try {
-    console.log("Starting generation of 1000 contact records...")
+    const { count = 1000 } = await request.json()
+
+    console.log(`Starting generation of ${count} contact records...`)
 
     // Get existing clients (not prospects)
     const existingClients = await sql`
@@ -313,6 +322,46 @@ export async function POST() {
       })
     }
 
+    // Generate additional contacts based on request count
+    const names = [
+      "John Smith",
+      "Jane Doe",
+      "Mike Johnson",
+      "Sarah Wilson",
+      "David Brown",
+      "Lisa Davis",
+      "Chris Miller",
+      "Amy Taylor",
+      "Tom Anderson",
+      "Maria Garcia",
+    ]
+
+    const locations = ["Downtown", "Uptown", "Midtown", "Suburbs", null]
+
+    for (let i = 0; i < count - 1000; i++) {
+      const randomName = getRandomElement(names)
+      const randomProvider = getRandomElement(providers)
+      const randomLocation = getRandomElement(locations)
+      const randomService = getRandomElement(services)
+
+      // Random date within last 30 days
+      const randomDate = new Date()
+      randomDate.setDate(randomDate.getDate() - Math.floor(Math.random() * 30))
+
+      contactsToCreate.push({
+        contact_date: randomDate.toISOString().split("T")[0],
+        days_ago: Math.floor((today.getTime() - randomDate.getTime()) / (1000 * 60 * 60 * 24)),
+        client_name: randomName,
+        category: "Client",
+        services_requested: randomService,
+        services_provided: Math.random() > 0.5 ? randomService : null,
+        provider_name: randomProvider,
+        location: randomLocation,
+        comments: Math.random() < 0.3 ? getRandomElement(sampleComments) : "",
+        food_accessed: randomService === "Food",
+      })
+    }
+
     console.log(`Generated ${contactsToCreate.length} contact records. Inserting into database...`)
 
     // Insert contacts using sql.query() for parameterized queries
@@ -349,7 +398,7 @@ export async function POST() {
     `
 
     return NextResponse.json({
-      message: "Successfully generated 1000 contact records!",
+      message: `Successfully generated ${count} contact records!`,
       statistics: {
         totalContacts: stats[0].total_contacts,
         uniqueClients: stats[0].unique_clients,

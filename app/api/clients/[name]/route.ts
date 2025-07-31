@@ -1,28 +1,48 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { sql } from "@/lib/db"
+import { NextResponse } from "next/server"
+import { neon } from "@neondatabase/serverless"
 
-export async function GET(_request: NextRequest, { params }: { params: { name: string } }) {
-  if (!sql) {
-    return NextResponse.json({ error: "Database connection not available in this environment" }, { status: 503 })
-  }
+const sql = neon(process.env.DATABASE_URL!)
 
+export async function GET(request: Request, { params }: { params: { name: string } }) {
   try {
     const clientName = decodeURIComponent(params.name)
 
-    const result = await sql`
-      SELECT name, category, active, created_at, updated_at
-      FROM clients
-      WHERE name = ${clientName}
-      LIMIT 1
+    // Get client basic info
+    const clientInfo = await sql`
+      SELECT DISTINCT
+        client_name,
+        MIN(contact_date) as first_contact,
+        MAX(contact_date) as last_contact,
+        COUNT(*) as total_contacts
+      FROM contacts
+      WHERE client_name = ${clientName}
+      GROUP BY client_name
     `
 
-    if (result.length === 0) {
+    if (clientInfo.length === 0) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 })
     }
 
-    return NextResponse.json(result[0])
+    // Get contact history
+    const contactHistory = await sql`
+      SELECT 
+        id,
+        contact_date,
+        provider_name,
+        location,
+        services_requested,
+        services_provided
+      FROM contacts
+      WHERE client_name = ${clientName}
+      ORDER BY contact_date DESC
+    `
+
+    return NextResponse.json({
+      client: clientInfo[0],
+      contacts: contactHistory,
+    })
   } catch (error) {
-    console.error("Error fetching client:", error)
+    console.error("Error fetching client data:", error)
     return NextResponse.json({ error: "Failed to fetch client data" }, { status: 500 })
   }
 }

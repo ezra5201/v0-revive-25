@@ -15,27 +15,78 @@ interface OverviewData {
   newClientsThisMonth: number
 }
 
+interface LocationData {
+  location: string
+  visits: number
+  totalClients: number
+  totalEngaged: number
+  engagementRate: number
+}
+
+interface TrendData {
+  month: string
+  totalRequested: number
+  totalProvided: number
+  completionRate: number
+  servicesCount: number
+}
+
+interface ServiceData {
+  serviceName: string
+  totalRequested: number
+  totalProvided: number
+  completionRate: number
+  monthsActive: number
+}
+
 export default function DashboardPage() {
   const { isInitialized, isLoading: dbLoading } = useDatabase()
   const [overview, setOverview] = useState<OverviewData | null>(null)
+  const [locations, setLocations] = useState<LocationData[]>([])
+  const [trends, setTrends] = useState<TrendData[]>([])
+  const [services, setServices] = useState<ServiceData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedPeriod, setSelectedPeriod] = useState<string>("This Month")
 
   useEffect(() => {
-    const fetchAnalytics = async () => {
+    const fetchAllAnalytics = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        const overviewRes = await fetch(`/api/analytics/overview?period=${encodeURIComponent(selectedPeriod)}`)
+        // Fetch all analytics data in parallel
+        const [overviewRes, locationsRes, trendsRes, servicesRes] = await Promise.all([
+          fetch(`/api/analytics/overview?period=${encodeURIComponent(selectedPeriod)}`),
+          fetch("/api/analytics/locations"),
+          fetch("/api/analytics/monthly-trends"),
+          fetch("/api/analytics/service-completion"),
+        ])
 
         if (!overviewRes.ok) {
           throw new Error("Failed to fetch overview data")
         }
+        if (!locationsRes.ok) {
+          throw new Error("Failed to fetch locations data")
+        }
+        if (!trendsRes.ok) {
+          throw new Error("Failed to fetch trends data")
+        }
+        if (!servicesRes.ok) {
+          throw new Error("Failed to fetch services data")
+        }
 
-        const overviewData = await overviewRes.json()
+        const [overviewData, locationsData, trendsData, servicesData] = await Promise.all([
+          overviewRes.json(),
+          locationsRes.json(),
+          trendsRes.json(),
+          servicesRes.json(),
+        ])
+
         setOverview(overviewData)
+        setLocations(locationsData.locations || [])
+        setTrends(trendsData.trends || [])
+        setServices(servicesData.services || [])
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load analytics")
       } finally {
@@ -44,7 +95,7 @@ export default function DashboardPage() {
     }
 
     if (isInitialized) {
-      fetchAnalytics()
+      fetchAllAnalytics()
     }
   }, [isInitialized, selectedPeriod])
 

@@ -1,8 +1,10 @@
-import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { neon } from "@neondatabase/serverless"
+
+const sqlClient = neon(process.env.DATABASE_URL!)
 
 export async function POST(request: Request) {
-  if (!sql) {
+  if (!sqlClient) {
     return NextResponse.json({ error: "Database not available" }, { status: 500 })
   }
 
@@ -25,7 +27,7 @@ export async function POST(request: Request) {
     for (const contactId of contactIds) {
       try {
         // Get current contact data
-        const contactResult = await sql.query(
+        const contactResult = await sqlClient.query(
           "SELECT id, services_requested, services_provided FROM contacts WHERE id = $1",
           [contactId],
         )
@@ -57,7 +59,7 @@ export async function POST(request: Request) {
         const updatedServicesProvided = [...servicesProvided, newServiceProvided]
 
         // Update the contact record
-        await sql.query("UPDATE contacts SET services_provided = $1, updated_at = NOW() WHERE id = $2", [
+        await sqlClient.query("UPDATE contacts SET services_provided = $1, updated_at = NOW() WHERE id = $2", [
           JSON.stringify(updatedServicesProvided),
           contactId,
         ])

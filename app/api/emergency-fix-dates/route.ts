@@ -1,9 +1,11 @@
-import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { getTodayString } from "@/lib/date-utils"
+import { neon } from "@neondatabase/serverless"
+
+const dbClient = neon(process.env.DATABASE_URL!)
 
 export async function POST() {
-  if (!sql) {
+  if (!dbClient) {
     return NextResponse.json({ error: "Database not available" }, { status: 500 })
   }
 
@@ -14,7 +16,7 @@ export async function POST() {
     const todayString = getTodayString()
 
     // First, check how many records have future dates
-    const futureCount = await sql`
+    const futureCount = await dbClient`
       SELECT COUNT(*) as count 
       FROM contacts 
       WHERE contact_date > (${todayString})::DATE
@@ -24,19 +26,14 @@ export async function POST() {
 
     let updatedCount = 0
     if (futureCount[0].count > 0) {
-      // Update all future dates to random dates between 2021-01-01 and today
-      console.log("Updating future dates to valid range...")
+      // Update all future dates to today
+      console.log("Updating future dates to today...")
 
-      const updated = await sql`
-        UPDATE contacts 
-        SET 
-          contact_date = (
-            DATE '2021-01-01' + 
-            (RANDOM() * ((${todayString})::DATE - DATE '2021-01-01'))::INTEGER
-          ),
-          updated_at = NOW()
-        WHERE contact_date > (${todayString})::DATE
-        RETURNING id
+      const updated = await dbClient`
+        UPDATE contacts
+        SET contact_date = CURRENT_DATE, updated_at = NOW()
+        WHERE contact_date > CURRENT_DATE
+        RETURNING id, client_name, contact_date
       `
 
       updatedCount = updated.length
@@ -45,7 +42,7 @@ export async function POST() {
 
     // Recalculate days_ago for ALL contacts based on Chicago today
     console.log("Recalculating days_ago for all contacts...")
-    await sql`
+    await dbClient`
       UPDATE contacts 
       SET 
         days_ago = ((${todayString})::DATE - contact_date)::INTEGER,
@@ -53,7 +50,7 @@ export async function POST() {
     `
 
     // Verify the fix
-    const verification = await sql`
+    const verification = await dbClient`
       SELECT 
         MIN(contact_date) as earliest_date,
         MAX(contact_date) as latest_date,
@@ -65,7 +62,7 @@ export async function POST() {
     const result = verification[0]
 
     // Get year distribution
-    const yearDistribution = await sql`
+    const yearDistribution = await dbClient`
       SELECT 
         EXTRACT(YEAR FROM contact_date) as year,
         COUNT(*) as count

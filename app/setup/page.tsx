@@ -2,71 +2,84 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, AlertCircle, Loader2 } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { CheckCircle, Database, Loader2 } from "lucide-react"
 
 export default function SetupPage() {
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
-  const [message, setMessage] = useState("")
+  const [isSettingUp, setIsSettingUp] = useState(false)
+  const [setupComplete, setSetupComplete] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSetup = async () => {
-    setStatus("loading")
-    setMessage("Initializing database...")
+    setIsSettingUp(true)
+    setError(null)
 
     try {
       const response = await fetch("/api/setup", {
         method: "POST",
       })
 
-      const result = await response.json()
-
-      if (response.ok) {
-        setStatus("success")
-        setMessage(result.message)
-      } else {
-        setStatus("error")
-        setMessage(result.error || "Setup failed")
+      if (!response.ok) {
+        throw new Error("Setup failed")
       }
-    } catch (error) {
-      setStatus("error")
-      setMessage("Failed to connect to setup API")
+
+      setSetupComplete(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Setup failed")
+    } finally {
+      setIsSettingUp(false)
     }
   }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-center">Database Setup</CardTitle>
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 p-3 bg-blue-100 rounded-full w-fit">
+            <Database className="h-8 w-8 text-blue-600" />
+          </div>
+          <CardTitle className="text-2xl">Database Setup</CardTitle>
+          <CardDescription>Initialize your ReVive Impact Tracker database</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-gray-600 text-center">
-            Initialize your ReVive database with tables and sample data.
-          </p>
-
-          <Button onClick={handleSetup} disabled={status === "loading"} className="w-full">
-            {status === "loading" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {status === "loading" ? "Setting up..." : "Initialize Database"}
-          </Button>
-
-          {status === "success" && (
-            <div className="flex items-center space-x-2 text-green-600 bg-green-50 p-3 rounded">
-              <CheckCircle className="h-5 w-5" />
-              <span className="text-sm">{message}</span>
+          {setupComplete ? (
+            <div className="text-center space-y-4">
+              <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
+              <div>
+                <h3 className="font-semibold text-green-700">Setup Complete!</h3>
+                <p className="text-sm text-gray-600">Your database has been initialized successfully.</p>
+              </div>
+              <Button onClick={() => (window.location.href = "/dashboard")} className="w-full">
+                Go to Dashboard
+              </Button>
             </div>
-          )}
+          ) : (
+            <div className="space-y-4">
+              <div className="text-sm text-gray-600">
+                <p>This will create the necessary database tables:</p>
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Contacts</li>
+                  <li>Clients</li>
+                  <li>Monthly Service Summary</li>
+                  <li>Alerts</li>
+                </ul>
+              </div>
 
-          {status === "error" && (
-            <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded">
-              <AlertCircle className="h-5 w-5" />
-              <span className="text-sm">{message}</span>
-            </div>
-          )}
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
 
-          {status === "success" && (
-            <div className="pt-4">
-              <Button asChild variant="outline" className="w-full bg-transparent">
-                <a href="/">Go to Contact Log</a>
+              <Button onClick={handleSetup} disabled={isSettingUp} className="w-full">
+                {isSettingUp ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Setting up...
+                  </>
+                ) : (
+                  "Initialize Database"
+                )}
               </Button>
             </div>
           )}

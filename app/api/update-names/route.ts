@@ -1,5 +1,7 @@
-import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { neon } from "@neondatabase/serverless"
+
+const sqlClient = neon(process.env.DATABASE_URL!)
 
 // Name pools for generating realistic names
 const maleFirstNames = [
@@ -266,8 +268,22 @@ function generateUniqueName(existingNames: Set<string>, isMale: boolean): string
   return fullName
 }
 
-export async function POST() {
-  if (!sql) {
+export async function POST(request: Request) {
+  const { oldName, newName } = await request.json()
+
+  if (!oldName || !newName) {
+    return NextResponse.json({ error: "Both old name and new name are required" }, { status: 400 })
+  }
+
+  // Update all contacts with the old name
+  const result = await sqlClient`
+    UPDATE contacts
+    SET client_name = ${newName}
+    WHERE client_name = ${oldName}
+    RETURNING id
+  `
+
+  if (!sqlClient) {
     return NextResponse.json({ error: "Database not available" }, { status: 500 })
   }
 
@@ -275,7 +291,7 @@ export async function POST() {
     console.log("Generating unique client names...")
 
     // Get existing contacts
-    const existingContacts = await sql.query("SELECT id FROM contacts ORDER BY id")
+    const existingContacts = await sqlClient.query("SELECT id FROM contacts ORDER BY id")
     const totalContacts = existingContacts.length
 
     if (totalContacts === 0) {
@@ -316,14 +332,14 @@ export async function POST() {
 
     // Update contacts table
     for (const update of nameUpdates) {
-      await sql.query("UPDATE contacts SET client_name = $1 WHERE id = $2", [update.name, update.id])
+      await sqlClient.query("UPDATE contacts SET client_name = $1 WHERE id = $2", [update.name, update.id])
     }
 
     // Update clients table - first clear it
-    await sql.query("DELETE FROM clients")
+    await sqlClient.query("DELETE FROM clients")
 
     // Get updated contact data to rebuild clients table
-    const updatedContacts = await sql.query(`
+    const updatedContacts = await sqlClient.query(`
       SELECT DISTINCT client_name, category 
       FROM contacts 
       ORDER BY client_name
@@ -331,11 +347,14 @@ export async function POST() {
 
     console.log("Rebuilding clients table...")
     for (const contact of updatedContacts) {
-      await sql.query("INSERT INTO clients (name, category) VALUES ($1, $2)", [contact.client_name, contact.category])
+      await sqlClient.query("INSERT INTO clients (name, category) VALUES ($1, $2)", [
+        contact.client_name,
+        contact.category,
+      ])
     }
 
     // Verify uniqueness
-    const duplicateCheck = await sql.query(`
+    const duplicateCheck = await sqlClient.query(`
       SELECT client_name, COUNT(*) as count 
       FROM contacts 
       GROUP BY client_name 
