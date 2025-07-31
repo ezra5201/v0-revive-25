@@ -58,7 +58,7 @@ export default function CmPage() {
     }
   }, [searchParams])
 
-  // Custom hooks for data management (UPDATED to use CM-specific hook)
+  // Custom hooks for data management - using CM-specific hook
   const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
   const {
     contacts,
@@ -88,7 +88,7 @@ export default function CmPage() {
     [router],
   )
 
-  // NEW: Client row click handler for "All Clients" tab
+  // Client row click handler for "All Clients" tab
   const handleClientRowClick = useCallback(
     (clientName: string) => {
       setActiveTab("client")
@@ -99,7 +99,7 @@ export default function CmPage() {
     [updateURL],
   )
 
-  // NEW: Close client tab handler
+  // Close client tab handler
   const handleCloseClientTab = useCallback(() => {
     setActiveTab("all")
     setSelectedClient(null)
@@ -107,7 +107,7 @@ export default function CmPage() {
     updateURL("all")
   }, [updateURL])
 
-  // NEW: Client section change handler
+  // Client section change handler
   const handleClientSectionChange = useCallback(
     (section: ClientSection) => {
       setActiveClientSection(section)
@@ -118,7 +118,7 @@ export default function CmPage() {
     [selectedClient, updateURL],
   )
 
-  // PRESERVED: Existing handlers
+  // Existing handlers
   const handleClientClick = useCallback((clientName: string, isToday?: boolean) => {
     if (isToday) {
       setSelectedClient(clientName)
@@ -180,12 +180,12 @@ export default function CmPage() {
     setSelectedContactForUpdate(null)
   }, [refetchContacts])
 
-  // Show database setup if not initialized (PRESERVED)
+  // Show database setup if not initialized
   if (!isInitialized && !dbLoading) {
     return <DatabaseSetup />
   }
 
-  // Show loading state (PRESERVED)
+  // Show loading state
   if (dbLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -225,7 +225,7 @@ export default function CmPage() {
       <div className="bg-white border-b border-gray-200">
         <div className="px-4 sm:px-6">
           <nav className="flex space-x-8" aria-label="Tabs">
-            {/* PRESERVED: Existing tabs with CM context */}
+            {/* CM-specific tabs */}
             <button
               onClick={() => handleTabChange("today")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -247,7 +247,7 @@ export default function CmPage() {
               All CM Clients
             </button>
 
-            {/* NEW: Dynamic client tab */}
+            {/* Dynamic client tab */}
             {selectedClient && (
               <button
                 onClick={() => handleTabChange("client")}
@@ -301,13 +301,13 @@ export default function CmPage() {
               onClientClick={handleClientClick}
               onSelectionChange={handleSelectionChange}
               onUpdateServicesClick={handleUpdateServicesClick}
-              onClientRowClick={handleClientRowClick} // NEW: Pass client row click handler
+              onClientRowClick={handleClientRowClick}
             />
           </main>
         </>
       )}
 
-      {/* NEW: Client Master Record */}
+      {/* Client Master Record */}
       {activeTab === "client" && selectedClient && (
         <main>
           <ClientMasterRecord
@@ -318,7 +318,7 @@ export default function CmPage() {
         </main>
       )}
 
-      {/* PRESERVED: All existing dialogs */}
+      {/* All existing dialogs */}
       <QuickCheckinDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
