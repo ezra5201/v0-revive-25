@@ -1,12 +1,15 @@
 import { neon } from "@neondatabase/serverless"
 
-// Function to clean connection string if it has psql prefix
+// Function to clean connection strings that might have psql wrapper
 function cleanConnectionString(connectionString: string): string {
   if (!connectionString) return connectionString
 
-  // Remove psql prefix and quotes if present
-  if (connectionString.startsWith("psql '") && connectionString.endsWith("'")) {
-    return connectionString.slice(6, -1) // Remove "psql '" from start and "'" from end
+  // Remove psql command wrapper if present
+  const psqlPattern = /^psql\s+'(.+)'$/
+  const match = connectionString.match(psqlPattern)
+
+  if (match) {
+    return match[1] // Return the URL without the psql wrapper
   }
 
   return connectionString
@@ -36,7 +39,11 @@ if (!connectionString.startsWith("postgresql://") && !connectionString.startsWit
   )
 }
 
+// Create the SQL client
 export const sql = neon(connectionString)
+
+// Export the connection string for debugging
+export const debugConnectionString = connectionString.substring(0, 50) + "..."
 
 // Debug logging to see what we're actually getting
 console.log("🔍 Database connection debug:")
@@ -47,7 +54,7 @@ console.log("POSTGRES_PRISMA_URL exists:", !!process.env.POSTGRES_PRISMA_URL)
 console.log("POSTGRES_URL_NON_POOLING exists:", !!process.env.POSTGRES_URL_NON_POOLING)
 console.log("POSTGRES_URL_NO_SSL exists:", !!process.env.POSTGRES_URL_NO_SSL)
 console.log("Connection string length:", connectionString.length)
-console.log("Connection string preview:", connectionString.substring(0, 50) + "...")
+console.log("Connection string preview:", debugConnectionString)
 
 // Check for problematic environment variables
 if (process.env.POSTGRES_URL && process.env.POSTGRES_URL.includes("psql")) {
