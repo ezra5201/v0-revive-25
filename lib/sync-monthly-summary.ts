@@ -2,11 +2,26 @@ import { neon } from "@neondatabase/serverless"
 
 const sql = neon(process.env.DATABASE_URL!)
 
+// Service mappings - EXACT same as populate script
+const serviceMap = {
+  case_management: "Case Management",
+  occupational_therapy: "Occupational Therapy", 
+  food: "Food",
+  healthcare: "Healthcare",
+  housing: "Housing",
+  employment: "Employment",
+  benefits: "Benefits",
+  legal: "Legal",
+  transportation: "Transportation",
+  childcare: "Childcare",
+  mental_health: "Mental Health",
+  substance_abuse: "Substance Abuse",
+  education: "Education",
+}
+
 /**
  * Synchronizes monthly service summary data for a specific month and year
- * @param targetMonth - Month to sync (1-12), defaults to current month
- * @param targetYear - Year to sync (1900-2099), defaults to current year
- * @returns Promise with sync results
+ * Uses EXACT same logic as populate-monthly-service-summary.ts script
  */
 export async function syncMonthlyServiceSummary(
   targetMonth?: number,
@@ -36,64 +51,56 @@ export async function syncMonthlyServiceSummary(
   const timestamp = new Date().toISOString()
   console.log(`[${timestamp}] Starting sync for ${year}-${month.toString().padStart(2, "0")}`)
 
+  let totalRecordsProcessed = 0
+
   try {
-    // First, delete existing records for this month/year
-    const deleteResult = await sql`
-      DELETE FROM monthly_service_summary 
-      WHERE month = ${month} AND year = ${year}
-    `
+    // Process each service type separately - EXACT same logic as populate script
+    for (const [columnPrefix, serviceName] of Object.entries(serviceMap)) {
+      // Aggregate data for this specific service and month
+      const serviceData = await sql`
+        SELECT 
+          SUM(${sql(columnPrefix + "_requested")}) as total_requested,
+          SUM(${sql(columnPrefix + "_provided")}) as total_provided
+        FROM contacts
+        WHERE EXTRACT(YEAR FROM contact_date) = ${year}
+          AND EXTRACT(MONTH FROM contact_date) = ${month}
+          AND contact_date IS NOT NULL
+      `
 
-    console.log(
-      `[${timestamp}] Deleted ${deleteResult.length} existing records for ${year}-${month.toString().padStart(2, "0")}`,
-    )
+      const totalRequested = Number(serviceData[0]?.total_requested || 0)
+      const totalProvided = Number(serviceData[0]?.total_provided || 0)
 
-    // Get the date range for the target month
-    const startDate = `${year}-${month.toString().padStart(2, "0")}-01`
-    const endDate = new Date(year, month, 0).toISOString().split("T")[0] // Last day of month
+      // Skip if no data for this service/month
+      if (totalRequested === 0 && totalProvided === 0) {
+        continue
+      }
 
-    // Aggregate and insert new data
-    const insertResult = await sql`
-      INSERT INTO monthly_service_summary (
-        client_name, 
-        provider_name, 
-        service_type, 
-        month, 
-        year, 
-        total_contacts, 
-        completed_services, 
-        pending_services, 
-        last_contact_date,
-        created_at,
-        updated_at
-      )
-      SELECT 
-        c.client_name,
-        c.provider_name,
-        c.service_type,
-        ${month} as month,
-        ${year} as year,
-        COUNT(*) as total_contacts,
-        COUNT(CASE WHEN c.service_completed = true THEN 1 END) as completed_services,
-        COUNT(CASE WHEN c.service_completed = false THEN 1 END) as pending_services,
-        MAX(c.contact_date) as last_contact_date,
-        NOW() as created_at,
-        NOW() as updated_at
-      FROM contacts c
-      WHERE c.contact_date >= ${startDate}
-        AND c.contact_date <= ${endDate}
-      GROUP BY c.client_name, c.provider_name, c.service_type
-      ORDER BY c.client_name, c.provider_name, c.service_type
-    `
+      // Calculate completion rate - EXACT same formula as populate script
+      const completionRate = totalRequested > 0 ? 
+        Math.round(((totalProvided * 100.0) / totalRequested) * 100) / 100 : 0
 
-    const recordsProcessed = insertResult.length
-    const successMessage = `Successfully synced ${recordsProcessed} records for ${year}-${month.toString().padStart(2, "0")}`
+      // Upsert the data - EXACT same as populate script
+      await sql`
+        INSERT INTO monthly_service_summary (year, month, service_name, total_requested, total_provided, completion_rate)
+        VALUES (${year}, ${month}, ${serviceName}, ${totalRequested}, ${totalProvided}, ${completionRate})
+        ON CONFLICT (year, month, service_name) 
+        DO UPDATE SET 
+          total_requested = EXCLUDED.total_requested,
+          total_provided = EXCLUDED.total_provided,
+          completion_rate = EXCLUDED.completion_rate
+      `
 
+      totalRecordsProcessed++
+      console.log(`[${timestamp}] ${serviceName}: ${totalRequested} requested, ${totalProvided} provided`)
+    }
+
+    const successMessage = `Successfully synced ${totalRecordsProcessed} service records for ${year}-${month.toString().padStart(2, "0")}`
     console.log(`[${timestamp}] ${successMessage}`)
 
     return {
       success: true,
       message: successMessage,
-      recordsProcessed,
+      recordsProcessed: totalRecordsProcessed,
     }
   } catch (error) {
     const errorMessage = `Failed to sync ${year}-${month.toString().padStart(2, "0")}: ${error instanceof Error ? error.message : "Unknown error"}`
@@ -102,7 +109,7 @@ export async function syncMonthlyServiceSummary(
     return {
       success: false,
       message: errorMessage,
-      recordsProcessed: 0,
+      recordsProcessed: totalRecordsProcessed,
     }
   }
 }
