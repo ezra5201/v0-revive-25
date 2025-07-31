@@ -201,26 +201,6 @@ export default function CmPage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      {/* Page Title and Breadcrumb */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="px-4 sm:px-6 py-4">
-          <div className="flex items-center space-x-2 text-sm text-gray-500 mb-2">
-            <span>Case Management</span>
-            <span>/</span>
-            <span className="text-gray-900 font-medium">
-              {activeTab === "today" && "Today's CM Check-ins"}
-              {activeTab === "all" && "All CM Clients"}
-              {activeTab === "client" && selectedClient && `${selectedClient} - CM Record`}
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {activeTab === "today" && "Today's CM Check-ins"}
-            {activeTab === "all" && "All CM Clients"}
-            {activeTab === "client" && selectedClient && `${selectedClient} - Case Management`}
-          </h1>
-        </div>
-      </div>
-
       {/* Enhanced Tab Navigation */}
       <div className="bg-white border-b border-gray-200">
         <div className="px-4 sm:px-6">
