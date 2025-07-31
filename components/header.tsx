@@ -16,9 +16,9 @@ export function Header() {
 
   const navigationItems = [
     { name: "CONTACT LOG", path: "/contact-log" },
-    { name: "OUTREACH", path: "/outreach" },
     { name: "CM", path: "/cm" },
     { name: "OT", path: "/ot" },
+    { name: "OUTREACH", path: "/outreach" },
     { name: "DASHBOARD", path: "/dashboard" },
   ]
 
