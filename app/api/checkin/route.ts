@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { getTodayString } from "@/lib/date-utils"
+import { syncServicesToIntegerColumns, buildIntegerColumnsSql } from "@/lib/service-sync"
 
 // Helper function to safely parse JSON
 function safeJson(value: unknown, fallback: any = []) {
@@ -89,6 +90,10 @@ export async function POST(request: Request) {
       })
     }
 
+    // Sync JSONB services to integer columns
+    const integerColumnUpdates = syncServicesToIntegerColumns(servicesRequested, servicesProvided)
+    const integerColumnsSql = buildIntegerColumnsSql(integerColumnUpdates)
+
     console.log("Inserting contact with:", {
       todayString,
       providerName,
@@ -98,22 +103,37 @@ export async function POST(request: Request) {
       servicesProvided,
       comments,
       accessedFood,
+      integerColumnUpdates,
     })
 
-    // Insert the check-in record with days_ago = 0 for today
-    const result = await sql`
+    // Insert the check-in record with days_ago = 0 for today, including integer columns
+    const insertSql = `
       INSERT INTO contacts (
         contact_date, days_ago, provider_name, client_name, category,
-        services_requested, services_provided, comments, food_accessed, created_at, updated_at
+        services_requested, services_provided, comments, food_accessed, 
+        created_at, updated_at,
+        ${Object.keys(integerColumnUpdates).join(", ")}
       )
       VALUES (
-        ${todayString}, 0, ${providerName}, ${clientName}, ${category},
-        ${JSON.stringify(servicesRequested)}, ${JSON.stringify(servicesProvided)}, 
-        ${comments || ""}, ${accessedFood || false}, NOW(), NOW()
+        $1, 0, $2, $3, $4,
+        $5, $6, $7, $8, 
+        NOW(), NOW(),
+        ${Object.values(integerColumnUpdates).join(", ")}
       )
       RETURNING id, contact_date, provider_name, client_name, category,
                 services_requested, services_provided, comments, food_accessed
     `
+
+    const result = await sql.unsafe(insertSql, [
+      todayString,
+      providerName,
+      clientName,
+      category,
+      JSON.stringify(servicesRequested),
+      JSON.stringify(servicesProvided),
+      comments || "",
+      accessedFood || false,
+    ])
 
     console.log("Contact inserted successfully:", result[0])
 

@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { syncServicesToIntegerColumns, buildIntegerColumnsSql } from "@/lib/service-sync"
 
 // Helper function to safely parse JSON
 function safeJson(value: unknown, fallback: any = []) {
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
 
     // Get current contact data
     const currentContact = await sql`
-      SELECT id, services_provided, client_name, contact_date
+      SELECT id, services_requested, services_provided, client_name, contact_date
       FROM contacts 
       WHERE id = ${contactId}
     `
@@ -70,6 +71,7 @@ export async function POST(request: Request) {
     }
 
     const contact = currentContact[0]
+    const currentServicesRequested = safeJson(contact.services_requested, [])
     const currentServicesProvided = safeJson(contact.services_provided, [])
 
     // Calculate what services are being added and removed
@@ -86,15 +88,22 @@ export async function POST(request: Request) {
       removed: servicesRemoved.map((s: any) => s.service),
     })
 
-    // Update the contact record
-    const result = await sql`
+    // Sync JSONB services to integer columns
+    const integerColumnUpdates = syncServicesToIntegerColumns(currentServicesRequested, servicesProvided)
+    const integerColumnsSql = buildIntegerColumnsSql(integerColumnUpdates)
+
+    // Update the contact record with both JSONB and integer columns
+    const updateSql = `
       UPDATE contacts 
       SET 
-        services_provided = ${JSON.stringify(servicesProvided)},
-        updated_at = NOW()
-      WHERE id = ${contactId}
-      RETURNING id, client_name, contact_date, services_provided
+        services_provided = $1,
+        updated_at = NOW(),
+        ${integerColumnsSql}
+      WHERE id = $2
+      RETURNING id, client_name, contact_date, services_requested, services_provided
     `
+
+    const result = await sql.unsafe(updateSql, [JSON.stringify(servicesProvided), contactId])
 
     // Log the services update
     await sql`
@@ -109,6 +118,7 @@ export async function POST(request: Request) {
     `
 
     console.log("Services updated successfully:", result[0])
+    console.log("Integer columns updated:", integerColumnUpdates)
 
     return NextResponse.json({
       message: "Services updated successfully",
@@ -116,12 +126,14 @@ export async function POST(request: Request) {
         id: result[0].id,
         clientName: result[0].client_name,
         contactDate: result[0].contact_date,
+        servicesRequested: safeJson(result[0].services_requested, []),
         servicesProvided: safeJson(result[0].services_provided, []),
       },
       changes: {
         added: servicesAdded,
         removed: servicesRemoved,
       },
+      integerColumnsUpdated: integerColumnUpdates,
     })
   } catch (error) {
     console.error("Services update failed:", error)
