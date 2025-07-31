@@ -1,6 +1,6 @@
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
-import { syncServicesToIntegerColumns, buildIntegerColumnsSql } from "@/lib/service-sync"
+import { syncServicesToIntegerColumns } from "@/lib/service-sync"
 
 // Helper function to safely parse JSON
 function safeJson(value: unknown, fallback: any = []) {
@@ -88,22 +88,53 @@ export async function POST(request: Request) {
       removed: servicesRemoved.map((s: any) => s.service),
     })
 
-    // Sync JSONB services to integer columns
-    const integerColumnUpdates = syncServicesToIntegerColumns(currentServicesRequested, servicesProvided)
-    const integerColumnsSql = buildIntegerColumnsSql(integerColumnUpdates)
-
-    // Update the contact record with both JSONB and integer columns
-    const updateSql = `
+    // Update the contact record
+    const result = await sql`
       UPDATE contacts 
       SET 
-        services_provided = $1,
-        updated_at = NOW(),
-        ${integerColumnsSql}
-      WHERE id = $2
+        services_provided = ${JSON.stringify(servicesProvided)},
+        updated_at = NOW()
+      WHERE id = ${contactId}
       RETURNING id, client_name, contact_date, services_requested, services_provided
     `
 
-    const result = await sql.unsafe(updateSql, [JSON.stringify(servicesProvided), contactId])
+    // Sync JSONB services to integer columns
+    const integerColumnUpdates = syncServicesToIntegerColumns(currentServicesRequested, servicesProvided)
+
+    // Update the integer columns
+    await sql`
+      UPDATE contacts 
+      SET 
+        case_management_requested = ${integerColumnUpdates.case_management_requested},
+        case_management_provided = ${integerColumnUpdates.case_management_provided},
+        occupational_therapy_requested = ${integerColumnUpdates.occupational_therapy_requested},
+        occupational_therapy_provided = ${integerColumnUpdates.occupational_therapy_provided},
+        food_requested = ${integerColumnUpdates.food_requested},
+        food_provided = ${integerColumnUpdates.food_provided},
+        healthcare_requested = ${integerColumnUpdates.healthcare_requested},
+        healthcare_provided = ${integerColumnUpdates.healthcare_provided},
+        housing_requested = ${integerColumnUpdates.housing_requested},
+        housing_provided = ${integerColumnUpdates.housing_provided},
+        employment_requested = ${integerColumnUpdates.employment_requested},
+        employment_provided = ${integerColumnUpdates.employment_provided},
+        benefits_requested = ${integerColumnUpdates.benefits_requested},
+        benefits_provided = ${integerColumnUpdates.benefits_provided},
+        legal_requested = ${integerColumnUpdates.legal_requested},
+        legal_provided = ${integerColumnUpdates.legal_provided},
+        transportation_requested = ${integerColumnUpdates.transportation_requested},
+        transportation_provided = ${integerColumnUpdates.transportation_provided},
+        childcare_requested = ${integerColumnUpdates.childcare_requested},
+        childcare_provided = ${integerColumnUpdates.childcare_provided},
+        mental_health_requested = ${integerColumnUpdates.mental_health_requested},
+        mental_health_provided = ${integerColumnUpdates.mental_health_provided},
+        substance_abuse_requested = ${integerColumnUpdates.substance_abuse_requested},
+        substance_abuse_provided = ${integerColumnUpdates.substance_abuse_provided},
+        education_requested = ${integerColumnUpdates.education_requested},
+        education_provided = ${integerColumnUpdates.education_provided}
+      WHERE id = ${contactId}
+    `
+
+    console.log("Integer columns synced successfully")
 
     // Log the services update
     await sql`
@@ -118,7 +149,6 @@ export async function POST(request: Request) {
     `
 
     console.log("Services updated successfully:", result[0])
-    console.log("Integer columns updated:", integerColumnUpdates)
 
     return NextResponse.json({
       message: "Services updated successfully",
@@ -133,7 +163,6 @@ export async function POST(request: Request) {
         added: servicesAdded,
         removed: servicesRemoved,
       },
-      integerColumnsUpdated: integerColumnUpdates,
     })
   } catch (error) {
     console.error("Services update failed:", error)

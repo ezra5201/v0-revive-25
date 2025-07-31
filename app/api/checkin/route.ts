@@ -1,7 +1,7 @@
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { getTodayString } from "@/lib/date-utils"
-import { syncServicesToIntegerColumns, buildIntegerColumnsSql } from "@/lib/service-sync"
+import { syncServicesToIntegerColumns } from "@/lib/service-sync"
 
 // Helper function to safely parse JSON
 function safeJson(value: unknown, fallback: any = []) {
@@ -90,10 +90,6 @@ export async function POST(request: Request) {
       })
     }
 
-    // Sync JSONB services to integer columns
-    const integerColumnUpdates = syncServicesToIntegerColumns(servicesRequested, servicesProvided)
-    const integerColumnsSql = buildIntegerColumnsSql(integerColumnUpdates)
-
     console.log("Inserting contact with:", {
       todayString,
       providerName,
@@ -103,39 +99,63 @@ export async function POST(request: Request) {
       servicesProvided,
       comments,
       accessedFood,
-      integerColumnUpdates,
     })
 
-    // Insert the check-in record with days_ago = 0 for today, including integer columns
-    const insertSql = `
+    // Insert the check-in record with days_ago = 0 for today
+    const result = await sql`
       INSERT INTO contacts (
         contact_date, days_ago, provider_name, client_name, category,
-        services_requested, services_provided, comments, food_accessed, 
-        created_at, updated_at,
-        ${Object.keys(integerColumnUpdates).join(", ")}
+        services_requested, services_provided, comments, food_accessed, created_at, updated_at
       )
       VALUES (
-        $1, 0, $2, $3, $4,
-        $5, $6, $7, $8, 
-        NOW(), NOW(),
-        ${Object.values(integerColumnUpdates).join(", ")}
+        ${todayString}, 0, ${providerName}, ${clientName}, ${category},
+        ${JSON.stringify(servicesRequested)}, ${JSON.stringify(servicesProvided)}, 
+        ${comments || ""}, ${accessedFood || false}, NOW(), NOW()
       )
       RETURNING id, contact_date, provider_name, client_name, category,
                 services_requested, services_provided, comments, food_accessed
     `
 
-    const result = await sql.unsafe(insertSql, [
-      todayString,
-      providerName,
-      clientName,
-      category,
-      JSON.stringify(servicesRequested),
-      JSON.stringify(servicesProvided),
-      comments || "",
-      accessedFood || false,
-    ])
-
     console.log("Contact inserted successfully:", result[0])
+
+    // Sync JSONB services to integer columns
+    const integerColumnUpdates = syncServicesToIntegerColumns(servicesRequested, servicesProvided)
+
+    // Update the integer columns
+    const contactId = result[0].id
+    await sql`
+      UPDATE contacts 
+      SET 
+        case_management_requested = ${integerColumnUpdates.case_management_requested},
+        case_management_provided = ${integerColumnUpdates.case_management_provided},
+        occupational_therapy_requested = ${integerColumnUpdates.occupational_therapy_requested},
+        occupational_therapy_provided = ${integerColumnUpdates.occupational_therapy_provided},
+        food_requested = ${integerColumnUpdates.food_requested},
+        food_provided = ${integerColumnUpdates.food_provided},
+        healthcare_requested = ${integerColumnUpdates.healthcare_requested},
+        healthcare_provided = ${integerColumnUpdates.healthcare_provided},
+        housing_requested = ${integerColumnUpdates.housing_requested},
+        housing_provided = ${integerColumnUpdates.housing_provided},
+        employment_requested = ${integerColumnUpdates.employment_requested},
+        employment_provided = ${integerColumnUpdates.employment_provided},
+        benefits_requested = ${integerColumnUpdates.benefits_requested},
+        benefits_provided = ${integerColumnUpdates.benefits_provided},
+        legal_requested = ${integerColumnUpdates.legal_requested},
+        legal_provided = ${integerColumnUpdates.legal_provided},
+        transportation_requested = ${integerColumnUpdates.transportation_requested},
+        transportation_provided = ${integerColumnUpdates.transportation_provided},
+        childcare_requested = ${integerColumnUpdates.childcare_requested},
+        childcare_provided = ${integerColumnUpdates.childcare_provided},
+        mental_health_requested = ${integerColumnUpdates.mental_health_requested},
+        mental_health_provided = ${integerColumnUpdates.mental_health_provided},
+        substance_abuse_requested = ${integerColumnUpdates.substance_abuse_requested},
+        substance_abuse_provided = ${integerColumnUpdates.substance_abuse_provided},
+        education_requested = ${integerColumnUpdates.education_requested},
+        education_provided = ${integerColumnUpdates.education_provided}
+      WHERE id = ${contactId}
+    `
+
+    console.log("Integer columns synced successfully")
 
     // If this is a new prospect, add them to the clients table
     if (category === "Prospect") {
