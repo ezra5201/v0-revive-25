@@ -53,6 +53,17 @@ export async function GET(request: NextRequest) {
     (c.services_requested IS NOT NULL AND c.services_requested::text ILIKE '%Case Management%') OR
     (c.services_provided IS NOT NULL AND c.services_provided::text ILIKE '%Case Management%')
   )`)
+    } else if (serviceFilter === "ot") {
+      whereConditions.push(`(
+    (c.services_requested IS NOT NULL AND (
+      c.services_requested::text ILIKE '%Occupational Therapy%' OR
+      c.services_requested::text ILIKE '%OT%'
+    )) OR
+    (c.services_provided IS NOT NULL AND (
+      c.services_provided::text ILIKE '%Occupational Therapy%' OR
+      c.services_provided::text ILIKE '%OT%'
+    ))
+  )`)
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : ""
@@ -109,7 +120,7 @@ export async function GET(request: NextRequest) {
         `
 
         try {
-          return queryParams.length ? await sql.query(fullQuery, queryParams) : await sql.query(fullQuery)
+          return queryParams.length > 0 ? await sql.query(fullQuery, queryParams) : await sql.query(fullQuery)
         } catch (e: any) {
           const msg = e?.message ?? ""
           if (
@@ -134,7 +145,7 @@ export async function GET(request: NextRequest) {
               ${whereClause}
               ORDER BY ${dbColumn} ${direction}
             `
-            return queryParams.length ? await sql.query(legacyQuery, queryParams) : await sql.query(legacyQuery)
+            return queryParams.length > 0 ? await sql.query(legacyQuery, queryParams) : await sql.query(legacyQuery)
           }
           throw e
         }
@@ -173,19 +184,14 @@ export async function GET(request: NextRequest) {
             r.food_accessed,
             r.created_at,
             r.services_requested,
-            r.services_provided,
-            a.id as alert_id,
-            a.alert_details,
-            a.severity as alert_severity,
-            a.status as alert_status
+            r.services_provided
           FROM ranked_contacts r
-          LEFT JOIN alerts a ON r.alert_id = a.id AND a.status = 'active'
           WHERE r.rn = 1
           ORDER BY ${dbColumn} ${direction}
         `
 
         try {
-          return queryParams.length
+          return queryParams.length > 0
             ? await sql.query(latestPerClientQuery, queryParams)
             : await sql.query(latestPerClientQuery)
         } catch (e: any) {
@@ -231,7 +237,7 @@ export async function GET(request: NextRequest) {
               WHERE r.rn = 1
               ORDER BY ${dbColumn} ${direction}
             `
-            return queryParams.length ? await sql.query(fallbackQuery, queryParams) : await sql.query(fallbackQuery)
+            return queryParams.length > 0 ? await sql.query(fallbackQuery, queryParams) : await sql.query(fallbackQuery)
           }
           throw e
         }
