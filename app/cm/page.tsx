@@ -1,19 +1,191 @@
 "use client"
 
+import { useState, useCallback, useEffect } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import { ContactTable } from "@/components/contact-table"
+import { QuickCheckinDialog } from "@/components/quick-checkin-dialog"
+import { NewProspectDialog } from "@/components/new-prospect-dialog"
+import { ChangeDateDialog } from "@/components/change-date-dialog"
+import { UpdateServicesDialog } from "@/components/update-services-dialog"
+import { ClientMasterRecord } from "@/components/client-master-record"
 import { Header } from "@/components/header"
+import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
+import { useContacts } from "@/hooks/use-contacts"
 import { useDatabase } from "@/hooks/use-database"
+import { X } from "lucide-react"
+
+type MainTab = "today" | "all" | "client"
+type ClientSection = "basic-info" | "contact-history" | "journey-timeline"
 
 export default function CmPage() {
-  // Use the same database initialization logic as Contact Log
-  const { isInitialized, isLoading: dbLoading } = useDatabase()
+  const searchParams = useSearchParams()
+  const router = useRouter()
 
-  // Show database setup if not initialized
+  // Enhanced state management
+  const [activeTab, setActiveTab] = useState<MainTab>("today")
+  const [selectedClient, setSelectedClient] = useState<string | null>(null)
+  const [activeClientSection, setActiveClientSection] = useState<ClientSection>("basic-info")
+
+  // Existing state (PRESERVED)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isNewProspectDialogOpen, setIsNewProspectDialogOpen] = useState(false)
+  const [isChangeDateDialogOpen, setIsChangeDateDialogOpen] = useState(false)
+  const [isUpdateServicesDialogOpen, setIsUpdateServicesDialogOpen] = useState(false)
+  const [selectedContactForUpdate, setSelectedContactForUpdate] = useState<any>(null)
+  const [selectedCount, setSelectedCount] = useState(0)
+  const [selectedContactIds, setSelectedContactIds] = useState<number[]>([])
+  const [filters, setFilters] = useState<{ categories: string[]; providers: string[] }>({
+    categories: [],
+    providers: [],
+  })
+  const [prefilledProspectName, setPrefilledProspectName] = useState("")
+
+  // Initialize state from URL parameters
+  useEffect(() => {
+    const tab = searchParams.get("tab")
+    const name = searchParams.get("name")
+    const section = searchParams.get("section")
+
+    if (tab === "client" && name) {
+      setActiveTab("client")
+      setSelectedClient(name)
+      setActiveClientSection((section as ClientSection) || "basic-info")
+    } else if (tab === "all") {
+      setActiveTab("all")
+    } else {
+      setActiveTab("today")
+    }
+  }, [searchParams])
+
+  // Custom hooks for data management (PRESERVED)
+  const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
+  const {
+    contacts,
+    filterData,
+    isLoading: contactsLoading,
+    error: contactsError,
+    refetch: refetchContacts,
+  } = useContacts(activeTab === "client" ? "all" : activeTab, filters)
+
+  // URL update helper
+  const updateURL = useCallback(
+    (tab: MainTab, clientName?: string, section?: ClientSection) => {
+      const params = new URLSearchParams()
+
+      if (tab === "client" && clientName) {
+        params.set("tab", "client")
+        params.set("name", clientName)
+        params.set("section", section || "basic-info")
+      } else if (tab === "all") {
+        params.set("tab", "all")
+      }
+      // For 'today' tab, we don't set any params (default state)
+
+      const newURL = params.toString() ? `/cm?${params.toString()}` : "/cm"
+      router.replace(newURL)
+    },
+    [router],
+  )
+
+  // NEW: Client row click handler for "All Clients" tab
+  const handleClientRowClick = useCallback(
+    (clientName: string) => {
+      setActiveTab("client")
+      setSelectedClient(clientName)
+      setActiveClientSection("basic-info")
+      updateURL("client", clientName, "basic-info")
+    },
+    [updateURL],
+  )
+
+  // NEW: Close client tab handler
+  const handleCloseClientTab = useCallback(() => {
+    setActiveTab("all")
+    setSelectedClient(null)
+    setActiveClientSection("basic-info")
+    updateURL("all")
+  }, [updateURL])
+
+  // NEW: Client section change handler
+  const handleClientSectionChange = useCallback(
+    (section: ClientSection) => {
+      setActiveClientSection(section)
+      if (selectedClient) {
+        updateURL("client", selectedClient, section)
+      }
+    },
+    [selectedClient, updateURL],
+  )
+
+  // PRESERVED: Existing handlers
+  const handleClientClick = useCallback((clientName: string, isToday?: boolean) => {
+    if (isToday) {
+      setSelectedClient(clientName)
+      setIsDialogOpen(true)
+    }
+  }, [])
+
+  const handleClientSearch = useCallback((clientName: string) => {
+    setSelectedClient(clientName)
+    setIsDialogOpen(true)
+  }, [])
+
+  const handleNewProspectClick = useCallback((searchedName?: string) => {
+    setPrefilledProspectName(searchedName || "")
+    setIsNewProspectDialogOpen(true)
+  }, [])
+
+  const handleTabChange = useCallback(
+    (tab: MainTab) => {
+      setActiveTab(tab)
+      setSelectedCount(0)
+      setSelectedContactIds([])
+      setFilters({ categories: [], providers: [] })
+
+      if (tab !== "client") {
+        setSelectedClient(null)
+        setActiveClientSection("basic-info")
+      }
+
+      updateURL(tab)
+    },
+    [updateURL],
+  )
+
+  const handleSelectionChange = useCallback((count: number, selectedIds: number[]) => {
+    setSelectedCount(count)
+    setSelectedContactIds(selectedIds)
+  }, [])
+
+  const handleDataUpdate = useCallback(() => {
+    refetchContacts()
+    setSelectedCount(0)
+    setSelectedContactIds([])
+  }, [refetchContacts])
+
+  const handleUpdateServicesClick = useCallback((contact: any) => {
+    setSelectedContactForUpdate(contact)
+    setIsUpdateServicesDialogOpen(true)
+  }, [])
+
+  const handleCloseUpdateServicesDialog = useCallback(() => {
+    setIsUpdateServicesDialogOpen(false)
+    setSelectedContactForUpdate(null)
+  }, [])
+
+  const handleServicesUpdated = useCallback(() => {
+    refetchContacts()
+    setIsUpdateServicesDialogOpen(false)
+    setSelectedContactForUpdate(null)
+  }, [refetchContacts])
+
+  // Show database setup if not initialized (PRESERVED)
   if (!isInitialized && !dbLoading) {
     return <DatabaseSetup />
   }
 
-  // Show loading state
+  // Show loading state (PRESERVED)
   if (dbLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -29,33 +201,135 @@ export default function CmPage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <main className="bg-white">
-        <div className="px-4 sm:px-6 py-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Case Management</h1>
-            <p className="text-lg text-gray-600 mb-8">
-              Coordinate comprehensive case management services to support client needs and outcomes.
-            </p>
-            <div className="bg-gray-50 rounded-lg p-8 border border-gray-200">
-              <div className="text-gray-500 mb-4">
-                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              </div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Coming Soon</h2>
-              <p className="text-gray-600">
-                Case management features are currently in development. This section will include case assignments,
-                service coordination, progress tracking, and comprehensive client support planning.
-              </p>
-            </div>
-          </div>
+      {/* Enhanced Tab Navigation */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-4 sm:px-6">
+          <nav className="flex space-x-8" aria-label="Tabs">
+            {/* PRESERVED: Existing tabs */}
+            <button
+              onClick={() => handleTabChange("today")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "today"
+                  ? "border-orange-500 text-orange-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Today's Check-ins
+            </button>
+            <button
+              onClick={() => handleTabChange("all")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "all"
+                  ? "border-orange-500 text-orange-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              All Clients
+            </button>
+
+            {/* NEW: Dynamic client tab */}
+            {selectedClient && (
+              <button
+                onClick={() => handleTabChange("client")}
+                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                  activeTab === "client"
+                    ? "border-orange-500 text-orange-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <span>{selectedClient}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleCloseClientTab()
+                  }}
+                  className="ml-2 p-1 rounded-full hover:bg-gray-200 transition-colors"
+                  aria-label="Close client tab"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </button>
+            )}
+          </nav>
         </div>
-      </main>
+      </div>
+
+      {/* Conditional Content Rendering */}
+      {activeTab !== "client" && (
+        <>
+          <ActionBar
+            activeTab={activeTab}
+            selectedCount={selectedCount}
+            selectedContactIds={selectedContactIds}
+            onExport={() => console.log("Export")}
+            clients={filterData.clients}
+            onClientSelect={handleClientSearch}
+            onNewProspect={handleNewProspectClick}
+            providers={filterData.providers}
+            categories={filterData.categories}
+            onFiltersChange={setFilters}
+            onServiceCompleted={handleDataUpdate}
+            onDateChangeClick={() => setIsChangeDateDialogOpen(true)}
+          />
+
+          <main className="bg-white">
+            <ContactTable
+              activeTab={activeTab}
+              contacts={contacts}
+              isLoading={contactsLoading}
+              error={contactsError}
+              onClientClick={handleClientClick}
+              onSelectionChange={handleSelectionChange}
+              onUpdateServicesClick={handleUpdateServicesClick}
+              onClientRowClick={handleClientRowClick} // NEW: Pass client row click handler
+            />
+          </main>
+        </>
+      )}
+
+      {/* NEW: Client Master Record */}
+      {activeTab === "client" && selectedClient && (
+        <main>
+          <ClientMasterRecord
+            clientName={selectedClient}
+            activeSection={activeClientSection}
+            onSectionChange={handleClientSectionChange}
+          />
+        </main>
+      )}
+
+      {/* PRESERVED: All existing dialogs */}
+      <QuickCheckinDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        clientName={selectedClient || ""}
+        onCheckInSubmit={handleDataUpdate}
+      />
+
+      <NewProspectDialog
+        isOpen={isNewProspectDialogOpen}
+        onClose={() => setIsNewProspectDialogOpen(false)}
+        onCheckInSubmit={handleDataUpdate}
+        prefilledName={prefilledProspectName}
+        existingClients={filterData.clients}
+      />
+
+      <ChangeDateDialog
+        isOpen={isChangeDateDialogOpen}
+        onClose={() => setIsChangeDateDialogOpen(false)}
+        selectedCount={selectedCount}
+        onDateChange={async (newDate: string) => {
+          // Handle date change logic
+          handleDataUpdate()
+        }}
+      />
+
+      <UpdateServicesDialog
+        isOpen={isUpdateServicesDialogOpen}
+        onClose={handleCloseUpdateServicesDialog}
+        contactData={selectedContactForUpdate}
+        onServicesUpdate={handleServicesUpdated}
+      />
     </div>
   )
 }
