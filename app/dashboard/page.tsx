@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { DatabaseSetup } from "@/components/database-setup"
 import { ServicesPanel } from "@/components/services-panel"
-import { ServicesImpactDashboard } from "@/components/services-impact-dashboard"
+import EnhancedServicesDashboard from "@/components/services-impact-dashboard"
 import { useDatabase } from "@/hooks/use-database"
 import { Card, CardContent } from "@/components/ui/card"
 import { Users, UserPlus, Activity, AlertTriangle } from "lucide-react"
@@ -182,7 +182,7 @@ export default function DashboardPage() {
             </Card>
 
 {/* NEW: Services Impact Dashboard */}
-            <ServicesImpactDashboard />
+            <EnhancedServicesDashboard />
 
             {/* KEEP: Original Services Panel for comparison (you can remove this later) */}
             <div className="border-l-4 border-yellow-400 bg-yellow-50 p-4 rounded-r-lg">
