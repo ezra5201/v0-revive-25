@@ -5,9 +5,7 @@ import { Header } from "@/components/header"
 import { DatabaseSetup } from "@/components/database-setup"
 import EnhancedServicesDashboard from "@/components/services-impact-dashboard"
 import { useDatabase } from "@/hooks/use-database"
-import { Card, CardContent } from "@/components/ui/card"
 import { Users, UserPlus, Activity, AlertTriangle } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface OverviewData {
   totalClients: number
