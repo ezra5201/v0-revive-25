@@ -71,10 +71,20 @@ const getNewClientsLabel = () => {
   }
 }
 
-export default function EnhancedServicesDashboard() {
+interface Props {
+  overview: {
+    totalClients: number
+    totalContacts: number
+    newClientsThisMonth: number
+  } | null
+  selectedPeriod: string
+}
+
+export default function EnhancedServicesDashboard({ overview, selectedPeriod }: Props) {
   const [serviceData, setServiceData] = useState([])
   const [trendData, setTrendData] = useState([])
-  const [selectedPeriod, setSelectedPeriod] = useState("This Month")
+  // REMOVE this line - selectedPeriod now comes from props
+  // const [selectedPeriod, setSelectedPeriod] = useState("This Month")
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
