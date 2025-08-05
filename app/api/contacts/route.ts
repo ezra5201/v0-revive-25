@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
       )`)
     } else if (serviceFilter === "ot") {
       whereConditions.push(`(
-        c.services_requested @> '["Occupational"]' OR
-        c.services_provided::text ILIKE '%"service":"Occupational"%'
+        c.occupational_requested = true OR
+        c.occupational_provided = true
       )`)
     } else if (serviceFilter === "food") {
       whereConditions.push(`(
