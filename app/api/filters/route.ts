@@ -113,7 +113,8 @@ export async function GET(request: NextRequest) {
       clients,
     })
   } catch (error) {
-    console.error("Failed to fetch filter data:", error)
-    return NextResponse.json({ error: "Failed to fetch filter data" }, { status: 500 })
+    console.error(`=== ${serviceFilter || "no-filter"} API ERROR:`, error)
+    console.error("Error details:", error.message, error.stack)
+    return NextResponse.json({ error: "Database error", details: error.message }, { status: 500 })
   }
 }
