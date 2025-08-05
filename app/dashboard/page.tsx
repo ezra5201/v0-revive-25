@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { DatabaseSetup } from "@/components/database-setup"
-import EnhancedServicesDashboard from "@/components/services-impact-dashboard"
+import { ServicesImpactDashboard } from "@/components/services-impact-dashboard"
 import { useDatabase } from "@/hooks/use-database"
-import { Users, UserPlus, Activity, AlertTriangle } from "lucide-react"
+import { AlertTriangle } from "lucide-react"
 
 interface OverviewData {
   totalClients: number
@@ -125,13 +125,8 @@ export default function DashboardPage() {
               <h1 className="text-3xl font-bold text-gray-900 mb-4">Impact Dashboard</h1>
             </div>
 
-
-
             {/* NEW: Services Impact Dashboard */}
-            <EnhancedServicesDashboard 
-  overview={overview}
-  selectedPeriod={selectedPeriod}
-/>
+            <ServicesImpactDashboard overview={overview} selectedPeriod={selectedPeriod} />
           </div>
         </div>
       </main>
