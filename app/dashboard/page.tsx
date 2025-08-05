@@ -151,7 +151,10 @@ export default function DashboardPage() {
             </Card>
 
             {/* NEW: Services Impact Dashboard */}
-            <EnhancedServicesDashboard />
+            <EnhancedServicesDashboard 
+  overview={overview}
+  selectedPeriod={selectedPeriod}
+/>
           </div>
         </div>
       </main>
