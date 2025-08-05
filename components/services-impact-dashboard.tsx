@@ -46,14 +46,33 @@ export default function EnhancedServicesDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState('This Month');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Simulate API call - replace with actual database queries
-    setTimeout(() => {
+useEffect(() => {
+  const fetchServicesData = async () => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch(`/api/analytics/services-impact?period=${encodeURIComponent(selectedPeriod)}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch services data');
+      }
+      
+      const data = await response.json();
+      
+      setServiceData(data.services || []);
+      setTrendData(data.trends || []);
+    } catch (error) {
+      console.error('Error fetching services data:', error);
+      // Fallback to mock data if API fails
       setServiceData(generateServiceData());
       setTrendData(generateTrendData());
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, [selectedPeriod]);
+    }
+  };
+
+  fetchServicesData();
+}, [selectedPeriod]);
 
   const totalRequested = serviceData.reduce((sum, item) => sum + item.requested, 0);
   const totalProvided = serviceData.reduce((sum, item) => sum + item.provided, 0);
