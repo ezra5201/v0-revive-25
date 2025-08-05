@@ -25,8 +25,8 @@ export async function GET(request: Request) {
         whereClause = "WHERE DATE_TRUNC('month', contact_date) = DATE_TRUNC('month', CURRENT_DATE)"
     }
 
-    // Get comprehensive service data using the integer columns
-    const serviceData = await sql`
+    // Build the complete SQL query as a string
+    const serviceQuery = `
       SELECT 
         'Food' as service_name,
         COALESCE(SUM(food_requested), 0) as total_requested,
@@ -39,6 +39,7 @@ export async function GET(request: Request) {
         COALESCE(SUM(food_requested) - SUM(food_provided), 0) as service_gap
       FROM contacts ${whereClause}
       AND (food_requested > 0 OR food_provided > 0)
+      
       
       UNION ALL
       
@@ -176,8 +177,11 @@ export async function GET(request: Request) {
       AND (education_requested > 0 OR education_provided > 0)
     `
 
+    // Execute the service data query
+    const serviceData = await sql(serviceQuery)
+
     // Get monthly trends for the past 6 months
-    const trendData = await sql`
+    const trendQuery = `
       SELECT 
         TO_CHAR(DATE_TRUNC('month', contact_date), 'Mon') as month,
         DATE_TRUNC('month', contact_date) as month_date,
@@ -200,6 +204,8 @@ export async function GET(request: Request) {
       ORDER BY month_date DESC
       LIMIT 6
     `
+
+    const trendData = await sql(trendQuery)
 
     // Calculate completion rates for trend data
     const trendsWithRates = trendData.reverse().map(row => ({
