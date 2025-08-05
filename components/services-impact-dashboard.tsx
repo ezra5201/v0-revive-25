@@ -144,17 +144,6 @@ export default function EnhancedServicesDashboard({ overview, selectedPeriod }: 
             <h1 className="text-3xl font-bold text-gray-900">Service Impact Dashboard</h1>
             <p className="text-gray-600 mt-2">Real-time insights into service delivery and client outcomes</p>
           </div>
-          <div className="mt-4 sm:mt-0">
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="This Month">This Month</option>
-              <option value="Last Month">Last Month</option>
-              <option value="This Year">This Year</option>
-            </select>
-          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
