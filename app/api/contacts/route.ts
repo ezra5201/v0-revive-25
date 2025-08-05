@@ -47,11 +47,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Add service filter using JSONB queries
+    // Add service filter using fast boolean columns instead of slow JSONB queries
     if (serviceFilter === "cm") {
       whereConditions.push(`(
-        c.services_requested @> '["Case Management"]' OR
-        c.services_provided::text ILIKE '%"service":"Case Management"%'
+        c.case_management_requested = true OR
+        c.case_management_provided = true OR
+        c.housing_requested = true OR
+        c.housing_provided = true
       )`)
     } else if (serviceFilter === "ot") {
       whereConditions.push(`(

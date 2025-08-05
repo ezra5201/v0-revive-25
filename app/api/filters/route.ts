@@ -19,11 +19,13 @@ export async function GET(request: NextRequest) {
 
     let whereClause = ""
 
-    // Add service filter using JSONB queries if specified
+    // Add service filter using fast boolean columns if specified
     if (serviceFilter === "cm") {
       whereClause = `WHERE (
-        services_requested @> '["Case Management"]' OR
-        services_provided::text ILIKE '%"service":"Case Management"%'
+        case_management_requested = true OR
+        case_management_provided = true OR
+        housing_requested = true OR
+        housing_provided = true
       )`
     } else if (serviceFilter === "ot") {
       whereClause = `WHERE (
