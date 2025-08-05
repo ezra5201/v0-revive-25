@@ -72,7 +72,7 @@ export function AlertHeaderIndicator() {
   useEffect(() => {
     fetchAlerts()
     // Increase interval from 30s to 60s to reduce API calls
-    const interval = setInterval(fetchAlerts, 60000)
+    const interval = setInterval(fetchAlerts, 120000)
     return () => clearInterval(interval)
   }, [])
 
