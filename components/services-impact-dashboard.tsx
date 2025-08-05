@@ -13,7 +13,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts"
-import { TrendingUp, TrendingDown, Target, AlertTriangle, Activity } from "lucide-react"
+import { TrendingUp, TrendingDown, Target, AlertTriangle, Activity, Users, UserPlus } from 'lucide-react'
 
 // Mock data simulating your Neon database queries - replace with real API calls
 const generateServiceData = () => {
