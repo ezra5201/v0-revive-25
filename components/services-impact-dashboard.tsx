@@ -14,6 +14,11 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import { TrendingUp, TrendingDown, Target, AlertTriangle, Activity, Users, UserPlus } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 // Mock data simulating your Neon database queries - replace with real API calls
 const generateServiceData = () => {
@@ -64,15 +69,19 @@ interface Props {
     totalContacts: number
     newClientsThisMonth: number
   } | null
-  selectedPeriod: string
+  // Remove selectedPeriod: string
 }
 
-export default function EnhancedServicesDashboard({ overview, selectedPeriod }: Props) {
+export default function EnhancedServicesDashboard({ overview }: Props) {
   const [serviceData, setServiceData] = useState([])
   const [trendData, setTrendData] = useState([])
-  // REMOVE this line - selectedPeriod now comes from props
-  // const [selectedPeriod, setSelectedPeriod] = useState("This Month")
+  const [selectedPeriod, setSelectedPeriod] = useState("This Month") // Add internal state
   const [loading, setLoading] = useState(true)
+  const [specificDate, setSpecificDate] = useState("")
+  const [customStartDate, setCustomStartDate] = useState("")
+  const [customEndDate, setCustomEndDate] = useState("")
+  const [isSpecificDateOpen, setIsSpecificDateOpen] = useState(false)
+  const [isCustomRangeOpen, setIsCustomRangeOpen] = useState(false)
 
   const getNewClientsLabel = () => {
     switch (selectedPeriod) {
@@ -135,13 +144,70 @@ export default function EnhancedServicesDashboard({ overview, selectedPeriod }: 
     )
   }
 
+  const handlePeriodChange = (value: string) => {
+    if (value === "Specific Date") {
+      setIsSpecificDateOpen(true)
+      return
+    }
+    if (value === "Custom Date Range") {
+      setIsCustomRangeOpen(true)
+      return
+    }
+    setSelectedPeriod(value)
+  }
+
+  const handleSpecificDateSubmit = () => {
+    if (specificDate) {
+      setSelectedPeriod(`Specific Date: ${specificDate}`)
+      setIsSpecificDateOpen(false)
+    }
+  }
+
+  const handleCustomRangeSubmit = () => {
+    if (customStartDate && customEndDate) {
+      setSelectedPeriod(`Custom Range: ${customStartDate} to ${customEndDate}`)
+      setIsCustomRangeOpen(false)
+    }
+  }
+
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Services Analytics</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="time-period" className="text-sm font-medium text-gray-600">
+              Filter by:
+            </Label>
+            <Select
+              value={
+                selectedPeriod.startsWith("Specific Date") || selectedPeriod.startsWith("Custom Range")
+                  ? selectedPeriod
+                  : selectedPeriod
+              }
+              onValueChange={handlePeriodChange}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select time period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Today">Today</SelectItem>
+                <SelectItem value="Yesterday">Yesterday</SelectItem>
+                <SelectItem value="This Week">This Week</SelectItem>
+                <SelectItem value="Last Week">Last Week</SelectItem>
+                <SelectItem value="This Month">This Month</SelectItem>
+                <SelectItem value="Last Month">Last Month</SelectItem>
+                <SelectItem value="Last 3 Months">Last 3 Months</SelectItem>
+                <SelectItem value="This Quarter">This Quarter</SelectItem>
+                <SelectItem value="Last Quarter">Last Quarter</SelectItem>
+                <SelectItem value="This Year">This Year</SelectItem>
+                <SelectItem value="Specific Date">Specific Date</SelectItem>
+                <SelectItem value="Custom Date Range">Custom Date Range</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -365,6 +431,67 @@ export default function EnhancedServicesDashboard({ overview, selectedPeriod }: 
             ))}
           </div>
         </div>
+
+        {/* Specific Date Dialog */}
+        <Dialog open={isSpecificDateOpen} onOpenChange={setIsSpecificDateOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Select Specific Date</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="specific-date">Date</Label>
+                <Input
+                  id="specific-date"
+                  type="date"
+                  value={specificDate}
+                  onChange={(e) => setSpecificDate(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsSpecificDateOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSpecificDateSubmit}>Apply</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Custom Date Range Dialog */}
+        <Dialog open={isCustomRangeOpen} onOpenChange={setIsCustomRangeOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Select Custom Date Range</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="start-date">Start Date</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="end-date">End Date</Label>
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsCustomRangeOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCustomRangeSubmit}>Apply</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
