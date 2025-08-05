@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { DatabaseSetup } from "@/components/database-setup"
-import { ServicesPanel } from "@/components/services-panel"
 import EnhancedServicesDashboard from "@/components/services-impact-dashboard"
 import { useDatabase } from "@/hooks/use-database"
 import { Card, CardContent } from "@/components/ui/card"
@@ -181,16 +180,8 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-{/* NEW: Services Impact Dashboard */}
+            {/* NEW: Services Impact Dashboard */}
             <EnhancedServicesDashboard />
-
-            {/* KEEP: Original Services Panel for comparison (you can remove this later) */}
-            <div className="border-l-4 border-yellow-400 bg-yellow-50 p-4 rounded-r-lg">
-              <p className="text-sm text-yellow-800">
-                <strong>Original Services Panel (for comparison):</strong>
-              </p>
-            </div>
-            <ServicesPanel />
 
             <div className="bg-gray-50 rounded-lg p-8 border border-gray-200 text-center">
               <div className="text-gray-500 mb-4">
