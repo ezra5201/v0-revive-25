@@ -57,19 +57,7 @@ const COLORS = {
   primary: "#3B82F6",
   secondary: "#6366F1",
 }
-// Helper function to get the correct label for new clients based on period
-const getNewClientsLabel = () => {
-  switch (selectedPeriod) {
-    case "This Month":
-      return "New Clients This Month"
-    case "Last Month":
-      return "New Clients Last Month"
-    case "This Year":
-      return "New Clients This Year"
-    default:
-      return "New Clients"
-  }
-}
+
 
 interface Props {
   overview: {
@@ -86,6 +74,20 @@ export default function EnhancedServicesDashboard({ overview, selectedPeriod }: 
   // REMOVE this line - selectedPeriod now comes from props
   // const [selectedPeriod, setSelectedPeriod] = useState("This Month")
   const [loading, setLoading] = useState(true)
+
+
+const getNewClientsLabel = () => {
+  switch (selectedPeriod) {
+    case "This Month":
+      return "New Clients This Month"
+    case "Last Month":
+      return "New Clients Last Month"
+    case "This Year":
+      return "New Clients This Year"
+    default:
+      return "New Clients"
+  }
+}
 
   useEffect(() => {
     const fetchServicesData = async () => {
