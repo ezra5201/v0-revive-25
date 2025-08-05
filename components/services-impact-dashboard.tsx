@@ -172,7 +172,7 @@ export default function EnhancedServicesDashboard({ overview, selectedPeriod }: 
                       <UserPlus className="h-6 w-6 text-purple-600" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">{getNewClientsLabel()}</p>
+                      <p className="text-sm font-medium text-gray-600">{getNewClientsLabel(selectedPeriod)}</p>
                       <p className="text-2xl font-bold text-gray-900">{overview?.newClientsThisMonth || 0}</p>
                     </div>
                   </div>
