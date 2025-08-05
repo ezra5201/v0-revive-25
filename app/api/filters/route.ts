@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
       )`
     } else if (serviceFilter === "ot") {
       whereClause = `WHERE (
-        occupational_requested = true OR
-        occupational_provided = true
+        occupational_therapy_requested > 0 OR
+        occupational_therapy_provided > 0
       )`
     } else if (serviceFilter === "food") {
       whereClause = `WHERE (

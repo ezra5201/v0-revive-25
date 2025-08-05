@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
       )`)
     } else if (serviceFilter === "ot") {
       whereConditions.push(`(
-        c.occupational_requested = true OR
-        c.occupational_provided = true
+        c.occupational_therapy_requested > 0 OR
+        c.occupational_therapy_provided > 0
       )`)
     } else if (serviceFilter === "food") {
       whereConditions.push(`(
