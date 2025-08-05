@@ -146,37 +146,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Users className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Active Clients</p>
-                      <p className="text-2xl font-bold text-gray-900">{overview?.totalClients || 0}</p>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <Activity className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Contacts</p>
-                      <p className="text-2xl font-bold text-gray-900">{overview?.totalContacts || 0}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <UserPlus className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">{getNewClientsLabel()}</p>
-                      <p className="text-2xl font-bold text-gray-900">{overview?.newClientsThisMonth || 0}</p>
-                    </div>
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
