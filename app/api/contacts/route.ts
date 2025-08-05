@@ -50,10 +50,10 @@ export async function GET(request: NextRequest) {
     // Add service filter using fast boolean columns instead of slow JSONB queries
     if (serviceFilter === "cm") {
       whereConditions.push(`(
-        c.case_management_requested = true OR
-        c.case_management_provided = true OR
-        c.housing_requested = true OR
-        c.housing_provided = true
+        c.case_management_requested > 0 OR
+        c.case_management_provided > 0 OR
+        c.housing_requested > 0 OR
+        c.housing_provided > 0
       )`)
     } else if (serviceFilter === "ot") {
       whereConditions.push(`(

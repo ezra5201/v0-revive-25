@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
     // Add service filter using fast boolean columns if specified
     if (serviceFilter === "cm") {
       whereClause = `WHERE (
-        case_management_requested = true OR
-        case_management_provided = true OR
-        housing_requested = true OR
-        housing_provided = true
+        case_management_requested > 0 OR
+        case_management_provided > 0 OR
+        housing_requested > 0 OR
+        housing_provided > 0
       )`
     } else if (serviceFilter === "ot") {
       whereClause = `WHERE (
