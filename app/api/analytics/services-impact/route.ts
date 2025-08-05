@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
     // Get comprehensive service data using the integer columns
     // We'll run separate queries for each service to avoid the template literal issue
-    
+
     const getServiceData = async (serviceName: string, requestedCol: string, providedCol: string) => {
       const result = await sql`
         SELECT 
@@ -44,13 +44,15 @@ export async function GET(request: Request) {
         WHERE ${dateCondition}
         AND (${requestedCol} > 0 OR ${providedCol} > 0)
       `
-      return result[0] || {
-        service_name: serviceName,
-        total_requested: 0,
-        total_provided: 0,
-        completion_rate: 0,
-        service_gap: 0
-      }
+      return (
+        result[0] || {
+          service_name: serviceName,
+          total_requested: 0,
+          total_provided: 0,
+          completion_rate: 0,
+          service_gap: 0,
+        }
+      )
     }
 
     // This approach still won't work with template literals. Let me use a different approach:
@@ -68,19 +70,20 @@ export async function GET(request: Request) {
         END as completion_rate,
         COALESCE(SUM(food_requested) - SUM(food_provided), 0) as service_gap
       FROM contacts 
-      WHERE ${period === "This Month" 
-        ? sql`DATE_TRUNC('month', contact_date) = DATE_TRUNC('month', CURRENT_DATE)`
-        : period === "Last Month"
-        ? sql`DATE_TRUNC('month', contact_date) = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')`
-        : sql`EXTRACT(YEAR FROM contact_date) = EXTRACT(YEAR FROM CURRENT_DATE)`
+      WHERE ${
+        period === "This Month"
+          ? sql`DATE_TRUNC('month', contact_date) = DATE_TRUNC('month', CURRENT_DATE)`
+          : period === "Last Month"
+            ? sql`DATE_TRUNC('month', contact_date) = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')`
+            : sql`EXTRACT(YEAR FROM contact_date) = EXTRACT(YEAR FROM CURRENT_DATE)`
       }
       AND (food_requested > 0 OR food_provided > 0)
     `
 
     // Actually, let me simplify this by creating separate queries for each period:
-    
+
     let serviceData = []
-    
+
     if (period === "This Month") {
       serviceData = await sql`
         SELECT 'Food' as service_name,
@@ -210,6 +213,19 @@ export async function GET(request: Request) {
         FROM contacts 
         WHERE DATE_TRUNC('month', contact_date) = DATE_TRUNC('month', CURRENT_DATE)
         AND (education_requested > 0 OR education_provided > 0)
+
+        UNION ALL
+
+        SELECT 'Occupational Therapy' as service_name,
+               COALESCE(SUM(occupational_therapy_requested), 0) as total_requested,
+               COALESCE(SUM(occupational_therapy_provided), 0) as total_provided,
+               CASE WHEN SUM(occupational_therapy_requested) > 0 
+                    THEN ROUND((SUM(occupational_therapy_provided)::decimal / SUM(occupational_therapy_requested) * 100), 1)
+                    ELSE 0 END as completion_rate,
+               COALESCE(SUM(occupational_therapy_requested) - SUM(occupational_therapy_provided), 0) as service_gap
+        FROM contacts 
+        WHERE DATE_TRUNC('month', contact_date) = DATE_TRUNC('month', CURRENT_DATE)
+        AND (occupational_therapy_requested > 0 OR occupational_therapy_provided > 0)
       `
     } else if (period === "Last Month") {
       serviceData = await sql`
@@ -340,6 +356,19 @@ export async function GET(request: Request) {
         FROM contacts 
         WHERE DATE_TRUNC('month', contact_date) = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
         AND (education_requested > 0 OR education_provided > 0)
+
+        UNION ALL
+
+        SELECT 'Occupational Therapy' as service_name,
+               COALESCE(SUM(occupational_therapy_requested), 0) as total_requested,
+               COALESCE(SUM(occupational_therapy_provided), 0) as total_provided,
+               CASE WHEN SUM(occupational_therapy_requested) > 0 
+                    THEN ROUND((SUM(occupational_therapy_provided)::decimal / SUM(occupational_therapy_requested) * 100), 1)
+                    ELSE 0 END as completion_rate,
+               COALESCE(SUM(occupational_therapy_requested) - SUM(occupational_therapy_provided), 0) as service_gap
+        FROM contacts 
+        WHERE DATE_TRUNC('month', contact_date) = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
+        AND (occupational_therapy_requested > 0 OR occupational_therapy_provided > 0)
       `
     } else {
       // "This Year"
@@ -471,6 +500,19 @@ export async function GET(request: Request) {
         FROM contacts 
         WHERE EXTRACT(YEAR FROM contact_date) = EXTRACT(YEAR FROM CURRENT_DATE)
         AND (education_requested > 0 OR education_provided > 0)
+
+        UNION ALL
+
+        SELECT 'Occupational Therapy' as service_name,
+               COALESCE(SUM(occupational_therapy_requested), 0) as total_requested,
+               COALESCE(SUM(occupational_therapy_provided), 0) as total_provided,
+               CASE WHEN SUM(occupational_therapy_requested) > 0 
+                    THEN ROUND((SUM(occupational_therapy_provided)::decimal / SUM(occupational_therapy_requested) * 100), 1)
+                    ELSE 0 END as completion_rate,
+               COALESCE(SUM(occupational_therapy_requested) - SUM(occupational_therapy_provided), 0) as service_gap
+        FROM contacts 
+        WHERE EXTRACT(YEAR FROM contact_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+        AND (occupational_therapy_requested > 0 OR occupational_therapy_provided > 0)
       `
     }
 
@@ -483,13 +525,13 @@ export async function GET(request: Request) {
           food_requested + housing_requested + healthcare_requested + 
           case_management_requested + benefits_requested + employment_requested + 
           legal_requested + transportation_requested + mental_health_requested + 
-          education_requested
+          education_requested + occupational_therapy_requested
         ) as total_requested,
         SUM(
           food_provided + housing_provided + healthcare_provided + 
           case_management_provided + benefits_provided + employment_provided + 
           legal_provided + transportation_provided + mental_health_provided + 
-          education_provided
+          education_provided + occupational_therapy_provided
         ) as total_provided
       FROM contacts 
       WHERE contact_date >= CURRENT_DATE - INTERVAL '6 months'
@@ -500,26 +542,24 @@ export async function GET(request: Request) {
     `
 
     // Calculate completion rates for trend data
-    const trendsWithRates = trendData.reverse().map(row => ({
+    const trendsWithRates = trendData.reverse().map((row) => ({
       month: row.month,
       requested: Number(row.total_requested) || 0,
       provided: Number(row.total_provided) || 0,
-      completionRate: row.total_requested > 0 
-        ? Math.round((Number(row.total_provided) / Number(row.total_requested)) * 100)
-        : 0
+      completionRate:
+        row.total_requested > 0 ? Math.round((Number(row.total_provided) / Number(row.total_requested)) * 100) : 0,
     }))
 
     // Format service data
     const formattedServiceData = serviceData
-      .filter(row => Number(row.total_requested) > 0 || Number(row.total_provided) > 0)
-      .map(row => ({
+      .filter((row) => Number(row.total_requested) > 0 || Number(row.total_provided) > 0)
+      .map((row) => ({
         name: row.service_name,
         requested: Number(row.total_requested) || 0,
         provided: Number(row.total_provided) || 0,
         gap: Number(row.service_gap) || 0,
         completionRate: Number(row.completion_rate) || 0,
-        impact: Number(row.completion_rate) >= 80 ? 'high' : 
-                Number(row.completion_rate) >= 60 ? 'medium' : 'low'
+        impact: Number(row.completion_rate) >= 80 ? "high" : Number(row.completion_rate) >= 60 ? "medium" : "low",
       }))
       .sort((a, b) => b.requested - a.requested) // Sort by demand
 
@@ -531,20 +571,17 @@ export async function GET(request: Request) {
         totalRequested: formattedServiceData.reduce((sum, s) => sum + s.requested, 0),
         totalProvided: formattedServiceData.reduce((sum, s) => sum + s.provided, 0),
         totalGap: formattedServiceData.reduce((sum, s) => sum + s.gap, 0),
-        overallCompletionRate: formattedServiceData.length > 0 
-          ? Math.round(
-              formattedServiceData.reduce((sum, s) => sum + (s.requested > 0 ? s.completionRate : 0), 0) / 
-              formattedServiceData.filter(s => s.requested > 0).length
-            )
-          : 0
-      }
+        overallCompletionRate:
+          formattedServiceData.length > 0
+            ? Math.round(
+                formattedServiceData.reduce((sum, s) => sum + (s.requested > 0 ? s.completionRate : 0), 0) /
+                  formattedServiceData.filter((s) => s.requested > 0).length,
+              )
+            : 0,
+      },
     })
-
   } catch (error) {
     console.error("Failed to fetch services impact data:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch services impact data" }, 
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Failed to fetch services impact data" }, { status: 500 })
   }
 }
