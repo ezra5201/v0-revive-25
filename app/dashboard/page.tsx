@@ -182,17 +182,6 @@ export default function DashboardPage() {
 
             {/* NEW: Services Impact Dashboard */}
             <EnhancedServicesDashboard />
-
-            <div className="bg-gray-50 rounded-lg p-8 border border-gray-200 text-center">
-              <div className="text-gray-500 mb-4">
-                <Activity className="mx-auto h-12 w-12 text-gray-400" />
-              </div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Detailed Analytics Coming Soon</h2>
-              <p className="text-gray-600">
-                Charts and detailed analytics are being added progressively. The KPI metrics above show your current
-                performance for {selectedPeriod.toLowerCase()}.
-              </p>
-            </div>
           </div>
         </div>
       </main>
