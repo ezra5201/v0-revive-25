@@ -14,14 +14,17 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  const { searchParams } = new URL(request.url)
+  const serviceFilter = searchParams.get("serviceFilter")
+  console.log(`=== ${serviceFilter || "no-filter"} API called at ${new Date().toISOString()} ===`)
+  console.log("Query params:", Object.fromEntries(searchParams.entries()))
+
   try {
-    const { searchParams } = new URL(request.url)
     const tab = searchParams.get("tab") || "all"
     const categories = searchParams.get("categories")?.split(",").filter(Boolean) || []
     const providers = searchParams.get("providers")?.split(",").filter(Boolean) || []
     const sortColumn = searchParams.get("sortColumn") || "date"
     const sortDirection = searchParams.get("sortDirection") || "desc"
-    const serviceFilter = searchParams.get("serviceFilter") // New parameter
 
     // Get today's date in Chicago time (dynamic)
     const todayString = getTodayString()
@@ -47,16 +50,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Add service filter using JSONB queries
+    // Add service filter using fast boolean columns instead of slow JSONB queries
     if (serviceFilter === "cm") {
       whereConditions.push(`(
-        c.services_requested @> '["Case Management"]' OR
-        c.services_provided::text ILIKE '%"service":"Case Management"%'
+        c.case_management_requested > 0 OR
+        c.case_management_provided > 0 OR
+        c.housing_requested > 0 OR
+        c.housing_provided > 0
       )`)
     } else if (serviceFilter === "ot") {
       whereConditions.push(`(
-        c.services_requested @> '["Occupational"]' OR
-        c.services_provided::text ILIKE '%"service":"Occupational"%'
+        c.occupational_therapy_requested > 0 OR
+        c.occupational_therapy_provided > 0
       )`)
     } else if (serviceFilter === "food") {
       whereConditions.push(`(
@@ -318,7 +323,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ contacts })
   } catch (error) {
-    console.error("Failed to fetch contacts:", error)
-    return NextResponse.json({ error: "Failed to fetch contacts" }, { status: 500 })
+    console.error(`=== ${serviceFilter || "no-filter"} API ERROR:`, error)
+    console.error("Error details:", error.message, error.stack)
+    return NextResponse.json({ error: "Database error", details: error.message }, { status: 500 })
   }
 }

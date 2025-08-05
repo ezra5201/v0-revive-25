@@ -53,6 +53,8 @@ export function useOTContacts(
   const [error, setError] = useState<string | null>(null)
 
   const fetchContacts = async () => {
+    if (loading && contacts.length > 0) return // Only block if we have data
+
     try {
       setLoading(true)
       setError(null)
@@ -89,7 +91,11 @@ export function useOTContacts(
       }
     } catch (err) {
       console.error("Error fetching OT contacts:", err)
-      setError(err instanceof Error ? err.message : "An error occurred")
+      if (err instanceof Error && (err.message.includes("Too Many") || err.message.includes("Rate Limit"))) {
+        setError("You have reached the rate limit. Please try again later.")
+      } else {
+        setError(err instanceof Error ? err.message : "An error occurred")
+      }
       setContacts([])
     } finally {
       setLoading(false)

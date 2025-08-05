@@ -23,16 +23,43 @@ export function AlertHeaderIndicator() {
   const [loading, setLoading] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Fetch alerts
+  // Fetch alerts with better error handling and rate limiting
   const fetchAlerts = async () => {
     try {
-      const response = await fetch("/api/alerts")
+      const response = await fetch("/api/alerts", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // Add cache control to reduce requests
+        cache: "no-cache",
+      })
+
+      // Check if response is ok before trying to parse JSON
+      if (!response.ok) {
+        console.error(`Alerts API returned ${response.status}: ${response.statusText}`)
+        setAlerts([])
+        return
+      }
+
+      // Check content type to ensure we're getting JSON
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("Alerts API returned non-JSON response:", contentType)
+        setAlerts([])
+        return
+      }
+
       const data = await response.json()
-      if (response.ok && data.alerts) {
-        console.log("Fetched alerts:", data.alerts) // Debug log
+
+      if (data.alerts) {
+        console.log("Fetched alerts:", data.alerts)
         setAlerts(data.alerts)
+      } else if (data.error) {
+        console.error("Alerts API error:", data.error, data.message)
+        setAlerts([])
       } else {
-        console.log("No alerts or error:", data)
+        console.log("No alerts in response")
         setAlerts([])
       }
     } catch (error) {
@@ -41,10 +68,11 @@ export function AlertHeaderIndicator() {
     }
   }
 
-  // Poll for alerts every 30 seconds
+  // Reduce polling frequency to avoid rate limits
   useEffect(() => {
     fetchAlerts()
-    const interval = setInterval(fetchAlerts, 30000)
+    // Increase interval from 30s to 60s to reduce API calls
+    const interval = setInterval(fetchAlerts, 120000)
     return () => clearInterval(interval)
   }, [])
 
@@ -75,8 +103,10 @@ export function AlertHeaderIndicator() {
       })
 
       if (response.ok) {
-        // Refresh alerts
+        // Refresh alerts after successful action
         await fetchAlerts()
+      } else {
+        console.error(`Failed to ${action} alert: ${response.status} ${response.statusText}`)
       }
     } catch (error) {
       console.error(`Failed to ${action} alert:`, error)
@@ -100,8 +130,10 @@ export function AlertHeaderIndicator() {
       })
 
       if (response.ok) {
-        // Refresh alerts
+        // Refresh alerts after successful action
         await fetchAlerts()
+      } else {
+        console.error(`Failed to clear client alerts: ${response.status} ${response.statusText}`)
       }
     } catch (error) {
       console.error("Failed to clear client alerts:", error)

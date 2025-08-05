@@ -44,6 +44,8 @@ export function useCMContacts(activeTab: "today" | "all", filters: Filters) {
   const [error, setError] = useState<string | null>(null)
 
   const fetchContacts = useCallback(async () => {
+    if (isLoading && contacts.length > 0) return // Only block if we have data
+
     setIsLoading(true)
     setError(null)
 
@@ -68,9 +70,15 @@ export function useCMContacts(activeTab: "today" | "all", filters: Filters) {
         setContacts(data.contacts || [])
       } else {
         setError(data.error || "Failed to fetch contacts")
+        if (data.error && data.error.includes("Too Many")) {
+          console.error("Rate limit exceeded:", data.error)
+        }
       }
     } catch (err) {
       setError("Failed to connect to server")
+      if (err instanceof Error && err.message.includes("Too Many")) {
+        console.error("Rate limit exceeded:", err.message)
+      }
     } finally {
       setIsLoading(false)
     }

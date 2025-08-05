@@ -73,7 +73,16 @@ export async function GET() {
     return NextResponse.json({ alerts: rows })
   } catch (err: any) {
     console.error("alerts GET failed:", err)
-    return NextResponse.json({ alerts: [] })
+
+    // Return a proper JSON error response instead of letting it bubble up
+    return NextResponse.json(
+      {
+        alerts: [],
+        error: "Failed to fetch alerts",
+        message: err.message || "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
 
