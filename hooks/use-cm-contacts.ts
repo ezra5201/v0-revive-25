@@ -44,7 +44,7 @@ export function useCMContacts(activeTab: "today" | "all", filters: Filters) {
   const [error, setError] = useState<string | null>(null)
 
   const fetchContacts = useCallback(async () => {
-    if (isLoading) return // Added request deduplication
+    if (isLoading && contacts.length > 0) return // Only block if we have data
 
     setIsLoading(true)
     setError(null)
