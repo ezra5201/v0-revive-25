@@ -141,7 +141,7 @@ export default function EnhancedServicesDashboard({ overview, selectedPeriod }: 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Service Impact Dashboard</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Services Analytics</h1>
           </div>
         </div>
 
