@@ -127,28 +127,7 @@ export default function DashboardPage() {
               <h1 className="text-3xl font-bold text-gray-900 mb-4">Impact Dashboard</h1>
             </div>
 
-            {/* Summary Section */}
-            <Card className="mb-8">
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Summary</h2>
-                  <div className="mt-4 sm:mt-0">
-                    <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="This Month">This Month</SelectItem>
-                        <SelectItem value="Last Month">Last Month</SelectItem>
-                        <SelectItem value="This Year">This Year</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
 
-
-              </CardContent>
-            </Card>
 
             {/* NEW: Services Impact Dashboard */}
             <EnhancedServicesDashboard 
