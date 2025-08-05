@@ -14,14 +14,17 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  const { searchParams } = new URL(request.url)
+  const serviceFilter = searchParams.get("serviceFilter")
+  console.log(`=== ${serviceFilter || "no-filter"} API called at ${new Date().toISOString()} ===`)
+  console.log("Query params:", Object.fromEntries(searchParams.entries()))
+
   try {
-    const { searchParams } = new URL(request.url)
     const tab = searchParams.get("tab") || "all"
     const categories = searchParams.get("categories")?.split(",").filter(Boolean) || []
     const providers = searchParams.get("providers")?.split(",").filter(Boolean) || []
     const sortColumn = searchParams.get("sortColumn") || "date"
     const sortDirection = searchParams.get("sortDirection") || "desc"
-    const serviceFilter = searchParams.get("serviceFilter") // New parameter
 
     // Get today's date in Chicago time (dynamic)
     const todayString = getTodayString()

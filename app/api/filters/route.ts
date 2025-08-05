@@ -13,10 +13,13 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  try {
-    const { searchParams } = new URL(request.url)
-    const serviceFilter = searchParams.get("serviceFilter")
+  const { searchParams } = new URL(request.url)
+  const serviceFilter = searchParams.get("serviceFilter")
 
+  console.log(`=== ${serviceFilter || "no-filter"} API called at ${new Date().toISOString()} ===`)
+  console.log("Query params:", Object.fromEntries(searchParams.entries()))
+
+  try {
     let whereClause = ""
 
     // Add service filter using fast boolean columns if specified
