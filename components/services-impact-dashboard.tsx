@@ -13,7 +13,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts"
-import { TrendingUp, TrendingDown, Target, AlertTriangle, Activity, Users, UserPlus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Target, AlertTriangle, Activity, Users, UserPlus } from "lucide-react"
 
 // Mock data simulating your Neon database queries - replace with real API calls
 const generateServiceData = () => {
@@ -58,7 +58,6 @@ const COLORS = {
   secondary: "#6366F1",
 }
 
-
 interface Props {
   overview: {
     totalClients: number
@@ -75,19 +74,18 @@ export default function EnhancedServicesDashboard({ overview, selectedPeriod }: 
   // const [selectedPeriod, setSelectedPeriod] = useState("This Month")
   const [loading, setLoading] = useState(true)
 
-
-const getNewClientsLabel = () => {
-  switch (selectedPeriod) {
-    case "This Month":
-      return "New Clients This Month"
-    case "Last Month":
-      return "New Clients Last Month"
-    case "This Year":
-      return "New Clients This Year"
-    default:
-      return "New Clients"
+  const getNewClientsLabel = () => {
+    switch (selectedPeriod) {
+      case "This Month":
+        return "New Clients This Month"
+      case "Last Month":
+        return "New Clients Last Month"
+      case "This Year":
+        return "New Clients This Year"
+      default:
+        return "New Clients"
+    }
   }
-}
 
   useEffect(() => {
     const fetchServicesData = async () => {
@@ -144,41 +142,40 @@ const getNewClientsLabel = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Service Impact Dashboard</h1>
-            <p className="text-gray-600 mt-2">Real-time insights into service delivery and client outcomes</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex items-center">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Users className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Active Clients</p>
-                      <p className="text-2xl font-bold text-gray-900">{overview?.totalClients || 0}</p>
-                    </div>
-                  </div>
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Users className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Active Clients</p>
+              <p className="text-2xl font-bold text-gray-900">{overview?.totalClients || 0}</p>
+            </div>
+          </div>
 
-                  <div className="flex items-center">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <Activity className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Contacts</p>
-                      <p className="text-2xl font-bold text-gray-900">{overview?.totalContacts || 0}</p>
-                    </div>
-                  </div>
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Activity className="h-6 w-6 text-green-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Contacts</p>
+              <p className="text-2xl font-bold text-gray-900">{overview?.totalContacts || 0}</p>
+            </div>
+          </div>
 
-                  <div className="flex items-center">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <UserPlus className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">{getNewClientsLabel(selectedPeriod)}</p>
-                      <p className="text-2xl font-bold text-gray-900">{overview?.newClientsThisMonth || 0}</p>
-                    </div>
-                  </div>
-                </div>
+          <div className="flex items-center">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <UserPlus className="h-6 w-6 text-purple-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">{getNewClientsLabel(selectedPeriod)}</p>
+              <p className="text-2xl font-bold text-gray-900">{overview?.newClientsThisMonth || 0}</p>
+            </div>
+          </div>
+        </div>
 
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
