@@ -293,71 +293,6 @@ export function ServicesImpactDashboard({ overview }: Props) {
           </div>
         </div>
 
-        {/* Service Comparison Chart */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Service Delivery vs Demand</h2>
-            <div className="text-sm text-gray-500">Shows the gap between what clients need and what we deliver</div>
-          </div>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={serviceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
-              <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Trends and Critical Gaps */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Service Trends */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Service Delivery Trends</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="requested" stroke="#94A3B8" strokeWidth={2} name="Requested" />
-                <Line type="monotone" dataKey="provided" stroke="#3B82F6" strokeWidth={2} name="Provided" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Critical Service Gaps */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Critical Service Gaps</h2>
-            <div className="space-y-4">
-              {criticalGaps.slice(0, 5).map((service, index) => (
-                <div
-                  key={service.name}
-                  className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-bold text-red-600">{index + 1}</span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{service.name}</p>
-                      <p className="text-sm text-gray-600">{service.completionRate}% completion rate</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-red-600">{service.gap}</p>
-                    <p className="text-sm text-gray-500">unmet requests</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
         {/* Service Performance Grid */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Service Performance Overview</h2>
@@ -428,6 +363,71 @@ export function ServicesImpactDashboard({ overview }: Props) {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Service Comparison Chart */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Service Delivery vs Demand</h2>
+            <div className="text-sm text-gray-500">Shows the gap between what clients need and what we deliver</div>
+          </div>
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart data={serviceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
+              <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Trends and Critical Gaps */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Service Trends */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Service Delivery Trends</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="requested" stroke="#94A3B8" strokeWidth={2} name="Requested" />
+                <Line type="monotone" dataKey="provided" stroke="#3B82F6" strokeWidth={2} name="Provided" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Critical Service Gaps */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Critical Service Gaps</h2>
+            <div className="space-y-4">
+              {criticalGaps.slice(0, 5).map((service, index) => (
+                <div
+                  key={service.name}
+                  className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-bold text-red-600">{index + 1}</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{service.name}</p>
+                      <p className="text-sm text-gray-600">{service.completionRate}% completion rate</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-red-600">{service.gap}</p>
+                    <p className="text-sm text-gray-500">unmet requests</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
