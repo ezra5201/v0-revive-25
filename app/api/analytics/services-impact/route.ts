@@ -516,3 +516,35 @@ export async function GET(request: Request) {
         name: row.service_name,
         requested: Number(row.total_requested) || 0,
         provided: Number(row.total_provided) || 0,
+        gap: Number(row.service_gap) || 0,
+        completionRate: Number(row.completion_rate) || 0,
+        impact: Number(row.completion_rate) >= 80 ? 'high' : 
+                Number(row.completion_rate) >= 60 ? 'medium' : 'low'
+      }))
+      .sort((a, b) => b.requested - a.requested) // Sort by demand
+
+    return NextResponse.json({
+      services: formattedServiceData,
+      trends: trendsWithRates,
+      period: period,
+      summary: {
+        totalRequested: formattedServiceData.reduce((sum, s) => sum + s.requested, 0),
+        totalProvided: formattedServiceData.reduce((sum, s) => sum + s.provided, 0),
+        totalGap: formattedServiceData.reduce((sum, s) => sum + s.gap, 0),
+        overallCompletionRate: formattedServiceData.length > 0 
+          ? Math.round(
+              formattedServiceData.reduce((sum, s) => sum + (s.requested > 0 ? s.completionRate : 0), 0) / 
+              formattedServiceData.filter(s => s.requested > 0).length
+            )
+          : 0
+      }
+    })
+
+  } catch (error) {
+    console.error("Failed to fetch services impact data:", error)
+    return NextResponse.json(
+      { error: "Failed to fetch services impact data" }, 
+      { status: 500 }
+    )
+  }
+}
