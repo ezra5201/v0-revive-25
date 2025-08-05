@@ -53,7 +53,7 @@ export function useOTContacts(
   const [error, setError] = useState<string | null>(null)
 
   const fetchContacts = async () => {
-    if (loading) return // Added request deduplication
+    if (loading && contacts.length > 0) return // Only block if we have data
 
     try {
       setLoading(true)
