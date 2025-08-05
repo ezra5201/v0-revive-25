@@ -2194,106 +2194,162 @@ export async function GET(request: Request) {
         break
     }
 
-    // Get trends based on the selected period
+    // Get trends based on the selected period - separate complete queries for each time period
     let trendData = []
-    let trendInterval = "month"
-    let trendLimit = 6
 
-    // Determine trend granularity based on period
-    if (period === "Today" || period === "Yesterday") {
-      trendInterval = "hour"
-      trendLimit = 24
-    } else if (period === "This Week" || period === "Last Week") {
-      trendInterval = "day"
-      trendLimit = 7
-    } else if (period === "Last 3 Months") {
-      trendInterval = "month"
-      trendLimit = 3
-    } else {
-      trendInterval = "month"
-      trendLimit = 6
-    }
+    switch (period) {
+      case "Today":
+        trendData = await sql`
+          SELECT 
+            EXTRACT(HOUR FROM contact_date) as period_label,
+            DATE_TRUNC('hour', contact_date) as period_date,
+            SUM(
+              food_requested + housing_requested + healthcare_requested + 
+              case_management_requested + benefits_requested + employment_requested + 
+              legal_requested + transportation_requested + mental_health_requested + 
+              education_requested + occupational_therapy_requested
+            ) as total_requested,
+            SUM(
+              food_provided + housing_provided + healthcare_provided + 
+              case_management_provided + benefits_provided + employment_provided + 
+              legal_provided + transportation_provided + mental_health_provided + 
+              education_provided + occupational_therapy_provided
+            ) as total_provided
+          FROM contacts 
+          WHERE DATE(contact_date) = CURRENT_DATE
+          GROUP BY DATE_TRUNC('hour', contact_date), EXTRACT(HOUR FROM contact_date)
+          ORDER BY period_date ASC
+          LIMIT 24
+        `
+        break
 
-    if (trendInterval === "hour") {
-      trendData = await sql`
-        SELECT 
-          EXTRACT(HOUR FROM contact_date) as period_label,
-          DATE_TRUNC('hour', contact_date) as period_date,
-          SUM(
-            food_requested + housing_requested + healthcare_requested + 
-            case_management_requested + benefits_requested + employment_requested + 
-            legal_requested + transportation_requested + mental_health_requested + 
-            education_requested + occupational_therapy_requested
-          ) as total_requested,
-          SUM(
-            food_provided + housing_provided + healthcare_provided + 
-            case_management_provided + benefits_provided + employment_provided + 
-            legal_provided + transportation_provided + mental_health_provided + 
-            education_provided + occupational_therapy_provided
-          ) as total_provided
-        FROM contacts 
-        WHERE ${
-          period === "Today"
-            ? sql`DATE(contact_date) = CURRENT_DATE`
-            : sql`DATE(contact_date) = CURRENT_DATE - INTERVAL '1 day'`
-        }
-        GROUP BY DATE_TRUNC('hour', contact_date), EXTRACT(HOUR FROM contact_date)
-        ORDER BY period_date ASC
-        LIMIT ${trendLimit}
-      `
-    } else if (trendInterval === "day") {
-      trendData = await sql`
-        SELECT 
-          TO_CHAR(DATE_TRUNC('day', contact_date), 'Dy') as period_label,
-          DATE_TRUNC('day', contact_date) as period_date,
-          SUM(
-            food_requested + housing_requested + healthcare_requested + 
-            case_management_requested + benefits_requested + employment_requested + 
-            legal_requested + transportation_requested + mental_health_requested + 
-            education_requested + occupational_therapy_requested
-          ) as total_requested,
-          SUM(
-            food_provided + housing_provided + healthcare_provided + 
-            case_management_provided + benefits_provided + employment_provided + 
-            legal_provided + transportation_provided + mental_health_provided + 
-            education_provided + occupational_therapy_provided
-          ) as total_provided
-        FROM contacts 
-        WHERE ${
-          period === "This Week"
-            ? sql`DATE_TRUNC('week', contact_date) = DATE_TRUNC('week', CURRENT_DATE)`
-            : sql`DATE_TRUNC('week', contact_date) = DATE_TRUNC('week', CURRENT_DATE - INTERVAL '1 week')`
-        }
-        GROUP BY DATE_TRUNC('day', contact_date)
-        ORDER BY period_date ASC
-        LIMIT ${trendLimit}
-      `
-    } else {
-      // Monthly trends (existing logic)
-      const monthsBack = period === "Last 3 Months" ? 3 : 6
-      trendData = await sql`
-        SELECT 
-          TO_CHAR(DATE_TRUNC('month', contact_date), 'Mon') as period_label,
-          DATE_TRUNC('month', contact_date) as period_date,
-          SUM(
-            food_requested + housing_requested + healthcare_requested + 
-            case_management_requested + benefits_requested + employment_requested + 
-            legal_requested + transportation_requested + mental_health_requested + 
-            education_requested + occupational_therapy_requested
-          ) as total_requested,
-          SUM(
-            food_provided + housing_provided + healthcare_provided + 
-            case_management_provided + benefits_provided + employment_provided + 
-            legal_provided + transportation_provided + mental_health_provided + 
-            education_provided + occupational_therapy_provided
-          ) as total_provided
-        FROM contacts 
-        WHERE contact_date >= CURRENT_DATE - INTERVAL '${monthsBack} months'
-        AND contact_date <= CURRENT_DATE
-        GROUP BY DATE_TRUNC('month', contact_date)
-        ORDER BY period_date DESC
-        LIMIT ${trendLimit}
-      `
+      case "Yesterday":
+        trendData = await sql`
+          SELECT 
+            EXTRACT(HOUR FROM contact_date) as period_label,
+            DATE_TRUNC('hour', contact_date) as period_date,
+            SUM(
+              food_requested + housing_requested + healthcare_requested + 
+              case_management_requested + benefits_requested + employment_requested + 
+              legal_requested + transportation_requested + mental_health_requested + 
+              education_requested + occupational_therapy_requested
+            ) as total_requested,
+            SUM(
+              food_provided + housing_provided + healthcare_provided + 
+              case_management_provided + benefits_provided + employment_provided + 
+              legal_provided + transportation_provided + mental_health_provided + 
+              education_provided + occupational_therapy_provided
+            ) as total_provided
+          FROM contacts 
+          WHERE DATE(contact_date) = CURRENT_DATE - INTERVAL '1 day'
+          GROUP BY DATE_TRUNC('hour', contact_date), EXTRACT(HOUR FROM contact_date)
+          ORDER BY period_date ASC
+          LIMIT 24
+        `
+        break
+
+      case "This Week":
+        trendData = await sql`
+          SELECT 
+            TO_CHAR(DATE_TRUNC('day', contact_date), 'Dy') as period_label,
+            DATE_TRUNC('day', contact_date) as period_date,
+            SUM(
+              food_requested + housing_requested + healthcare_requested + 
+              case_management_requested + benefits_requested + employment_requested + 
+              legal_requested + transportation_requested + mental_health_requested + 
+              education_requested + occupational_therapy_requested
+            ) as total_requested,
+            SUM(
+              food_provided + housing_provided + healthcare_provided + 
+              case_management_provided + benefits_provided + employment_provided + 
+              legal_provided + transportation_provided + mental_health_provided + 
+              education_provided + occupational_therapy_provided
+            ) as total_provided
+          FROM contacts 
+          WHERE DATE_TRUNC('week', contact_date) = DATE_TRUNC('week', CURRENT_DATE)
+          GROUP BY DATE_TRUNC('day', contact_date)
+          ORDER BY period_date ASC
+          LIMIT 7
+        `
+        break
+
+      case "Last Week":
+        trendData = await sql`
+          SELECT 
+            TO_CHAR(DATE_TRUNC('day', contact_date), 'Dy') as period_label,
+            DATE_TRUNC('day', contact_date) as period_date,
+            SUM(
+              food_requested + housing_requested + healthcare_requested + 
+              case_management_requested + benefits_requested + employment_requested + 
+              legal_requested + transportation_requested + mental_health_requested + 
+              education_requested + occupational_therapy_requested
+            ) as total_requested,
+            SUM(
+              food_provided + housing_provided + healthcare_provided + 
+              case_management_provided + benefits_provided + employment_provided + 
+              legal_provided + transportation_provided + mental_health_provided + 
+              education_provided + occupational_therapy_provided
+            ) as total_provided
+          FROM contacts 
+          WHERE DATE_TRUNC('week', contact_date) = DATE_TRUNC('week', CURRENT_DATE - INTERVAL '1 week')
+          GROUP BY DATE_TRUNC('day', contact_date)
+          ORDER BY period_date ASC
+          LIMIT 7
+        `
+        break
+
+      case "Last 3 Months":
+        trendData = await sql`
+          SELECT 
+            TO_CHAR(DATE_TRUNC('month', contact_date), 'Mon') as period_label,
+            DATE_TRUNC('month', contact_date) as period_date,
+            SUM(
+              food_requested + housing_requested + healthcare_requested + 
+              case_management_requested + benefits_requested + employment_requested + 
+              legal_requested + transportation_requested + mental_health_requested + 
+              education_requested + occupational_therapy_requested
+            ) as total_requested,
+            SUM(
+              food_provided + housing_provided + healthcare_provided + 
+              case_management_provided + benefits_provided + employment_provided + 
+              legal_provided + transportation_provided + mental_health_provided + 
+              education_provided + occupational_therapy_provided
+            ) as total_provided
+          FROM contacts 
+          WHERE contact_date >= CURRENT_DATE - INTERVAL '3 months'
+          AND contact_date <= CURRENT_DATE
+          GROUP BY DATE_TRUNC('month', contact_date)
+          ORDER BY period_date DESC
+          LIMIT 3
+        `
+        break
+
+      default:
+        // Monthly trends for all other periods
+        trendData = await sql`
+          SELECT 
+            TO_CHAR(DATE_TRUNC('month', contact_date), 'Mon') as period_label,
+            DATE_TRUNC('month', contact_date) as period_date,
+            SUM(
+              food_requested + housing_requested + healthcare_requested + 
+              case_management_requested + benefits_requested + employment_requested + 
+              legal_requested + transportation_requested + mental_health_requested + 
+              education_requested + occupational_therapy_requested
+            ) as total_requested,
+            SUM(
+              food_provided + housing_provided + healthcare_provided + 
+              case_management_provided + benefits_provided + employment_provided + 
+              legal_provided + transportation_provided + mental_health_provided + 
+              education_provided + occupational_therapy_provided
+            ) as total_provided
+          FROM contacts 
+          WHERE contact_date >= CURRENT_DATE - INTERVAL '6 months'
+          AND contact_date <= CURRENT_DATE
+          GROUP BY DATE_TRUNC('month', contact_date)
+          ORDER BY period_date DESC
+          LIMIT 6
+        `
+        break
     }
 
     // Calculate completion rates for trend data
