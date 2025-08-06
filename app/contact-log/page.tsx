@@ -143,9 +143,9 @@ export default function ContactLogPage() {
       setSelectedContactIds([])
       setFilters({ categories: [], providers: [] })
 
-      updateURL(tab)
+      updateURL(tab, selectedClient || undefined, activeClientSection)
     },
-    [updateURL],
+    [updateURL, selectedClient, activeClientSection],
   )
 
   const handleSelectionChange = useCallback((count: number, selectedIds: number[]) => {
