@@ -13,12 +13,30 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts"
-import { TrendingUp, TrendingDown, Target, AlertTriangle, Activity, Users, UserPlus } from "lucide-react"
+import { TrendingUp, TrendingDown, Target, AlertTriangle, Activity, Users, UserPlus } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { abbreviateServiceName } from "@/lib/utils"
+
+// Hook to detect mobile breakpoint
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 640)
+    }
+
+    checkIsMobile()
+    window.addEventListener('resize', checkIsMobile)
+    return () => window.removeEventListener('resize', checkIsMobile)
+  }, [])
+
+  return isMobile
+}
 
 // Mock data simulating your Neon database queries - replace with real API calls
 const generateServiceData = () => {
@@ -81,6 +99,7 @@ export function ServicesImpactDashboard({ overview }: Props) {
   const [customEndDate, setCustomEndDate] = useState("")
   const [isSpecificDateOpen, setIsSpecificDateOpen] = useState(false)
   const [isCustomRangeOpen, setIsCustomRangeOpen] = useState(false)
+  const isMobile = useIsMobile()
 
   const getNewClientsLabel = () => {
     switch (selectedPeriod) {
@@ -369,20 +388,41 @@ export function ServicesImpactDashboard({ overview }: Props) {
         {/* Service Comparison Chart */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Service Delivery vs Demand</h2>
-            <div className="text-sm text-gray-500">Shows the gap between what clients need and what we deliver</div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Service Delivery vs Demand</h2>
+              <p className="text-sm text-gray-500 mt-1">Shows the gap between what clients need and what we deliver</p>
+            </div>
           </div>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={serviceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
-              <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className={`${isMobile ? 'h-[300px]' : 'h-[400px]'}`}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart 
+                data={serviceData} 
+                margin={{ 
+                  top: 20, 
+                  right: 30, 
+                  left: 20, 
+                  bottom: isMobile ? 100 : 80 
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="name" 
+                  angle={isMobile ? -90 : -45} 
+                  textAnchor="end" 
+                  height={isMobile ? 100 : 80}
+                  tickFormatter={(value) => abbreviateServiceName(value, isMobile)}
+                />
+                <YAxis />
+                <Tooltip 
+                  labelFormatter={(label) => label}
+                  formatter={(value, name) => [value, name === 'requested' ? 'Requested' : 'Provided']}
+                />
+                <Legend />
+                <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
+                <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Trends and Critical Gaps */}
