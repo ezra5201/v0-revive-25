@@ -230,7 +230,7 @@ export default function ContactLogPage() {
             {/* NEW: Dynamic client tab */}
             {selectedClient && (
               <button
-                onClick={handleCloseClientTab}
+                onClick={() => handleTabChange("client")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                   activeTab === "client"
                     ? "border-orange-500 text-orange-600"
