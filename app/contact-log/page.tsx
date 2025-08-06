@@ -13,7 +13,7 @@ import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
 import { useContacts } from "@/hooks/use-contacts"
 import { useDatabase } from "@/hooks/use-database"
-import { X } from "lucide-react"
+import { X } from 'lucide-react'
 
 type MainTab = "today" | "all" | "client"
 type ClientSection = "basic-info" | "contact-history" | "journey-timeline"
@@ -230,7 +230,7 @@ export default function ContactLogPage() {
             {/* NEW: Dynamic client tab */}
             {selectedClient && (
               <button
-                onClick={() => handleTabChange("client")}
+                onClick={handleCloseClientTab}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                   activeTab === "client"
                     ? "border-orange-500 text-orange-600"
