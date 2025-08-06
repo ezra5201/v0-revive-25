@@ -393,35 +393,48 @@ export function ServicesImpactDashboard({ overview }: Props) {
               <p className="text-sm text-gray-500 mt-1">Shows the gap between what clients need and what we deliver</p>
             </div>
           </div>
-          <div className={`${isMobile ? 'h-[300px]' : 'h-[400px]'}`}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart 
-                data={serviceData} 
-                margin={{ 
-                  top: 20, 
-                  right: 30, 
-                  left: 20, 
-                  bottom: isMobile ? 100 : 80 
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="name" 
-                  angle={isMobile ? -90 : -45} 
-                  textAnchor="end" 
-                  height={isMobile ? 100 : 80}
-                  tickFormatter={(value) => abbreviateServiceName(value, isMobile)}
-                />
-                <YAxis />
-                <Tooltip 
-                  labelFormatter={(label) => label}
-                  formatter={(value, name) => [value, name === 'requested' ? 'Requested' : 'Provided']}
-                />
-                <Legend />
-                <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
-                <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="min-w-[320px] overflow-x-auto">
+            <div className="h-[300px] md:h-[400px] min-w-[600px] sm:min-w-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={serviceData} 
+                  margin={{ 
+                    top: 20, 
+                    right: 30, 
+                    left: 20, 
+                    bottom: isMobile ? 120 : 80 
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="name" 
+                    angle={isMobile ? -90 : -45} 
+                    textAnchor="end" 
+                    height={isMobile ? 120 : 80}
+                    tickFormatter={(value) => abbreviateServiceName(value, isMobile)}
+                    fontSize={isMobile ? 12 : 14}
+                  />
+                  <YAxis fontSize={isMobile ? 12 : 14} />
+                  <Tooltip 
+                    labelFormatter={(label) => label}
+                    formatter={(value, name) => [value, name === 'requested' ? 'Requested' : 'Provided']}
+                    contentStyle={{
+                      fontSize: isMobile ? '12px' : '14px',
+                      padding: isMobile ? '8px' : '12px'
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{
+                      paddingTop: isMobile ? '10px' : '20px',
+                      fontSize: isMobile ? '12px' : '14px'
+                    }}
+                    iconType={isMobile ? 'rect' : 'line'}
+                  />
+                  <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
+                  <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 

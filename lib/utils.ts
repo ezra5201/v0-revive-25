@@ -7,23 +7,23 @@ export function cn(...inputs: ClassValue[]) {
 
 export function abbreviateServiceName(serviceName: string, isMobile: boolean): string {
   if (!isMobile) {
-    return serviceName
+    return serviceName;
   }
-
-  const words = serviceName.split(' ')
+  
+  const words = serviceName.split(' ');
   
   if (words.length > 1) {
     // Multiple words: use first character of each word
-    return words.map(word => word.charAt(0).toUpperCase()).join('')
+    return words.map(word => word.charAt(0).toUpperCase()).join('');
   } else {
     // Single word
-    const singleWord = words[0]
+    const singleWord = words[0];
     if (singleWord.length > 6) {
       // Long single word: use first 4 characters
-      return singleWord.substring(0, 4)
+      return singleWord.substring(0, 4);
     } else {
       // Short single word: keep as-is
-      return singleWord
+      return singleWord;
     }
   }
 }
