@@ -250,58 +250,49 @@ export async function GET(request: NextRequest) {
       } else {
         // All contacts tab - show most recent contact per unique client with today's alerts pinned to top
         const latestPerClientQuery = `
-          WITH ranked_contacts AS (
-            SELECT
-              c.id,
-              c.contact_date,
-              c.provider_name,
-              c.client_name,
-              c.category,
-              c.food_accessed,
-              c.alert_id,
-              c.services_requested,
-              c.services_provided,
-              c.created_at,
-              -- Calculate actual days from current Chicago today to the contact date
-              (DATE '${todayString}' - c.contact_date)::INTEGER AS days_ago,
-              ROW_NUMBER() OVER (
-                PARTITION BY c.client_name
-                ORDER BY c.contact_date DESC, c.created_at DESC
-              ) AS rn
-            FROM contacts c
-            ${whereClause}
-          ),
-          contacts_with_alerts AS (
-            SELECT
-              r.*,
-              a.id as alert_id,
-              a.alert_details,
-              a.severity as alert_severity,
-              a.status as alert_status
-            FROM ranked_contacts r
-            LEFT JOIN alerts a ON r.alert_id = a.id AND a.status = 'active'
-            WHERE r.rn = 1
-          )
-          SELECT
-            id,
-            contact_date,
-            days_ago,
-            provider_name,
-            client_name,
-            category,
-            food_accessed,
-            created_at,
-            services_requested,
-            services_provided,
-            alert_id,
-            alert_details,
-            alert_severity,
-            alert_status
-          FROM contacts_with_alerts
-          ORDER BY 
-            CASE WHEN (contact_date = '${todayString}' AND alert_id IS NOT NULL) THEN 0 ELSE 1 END,
-            ${dbColumn} ${direction}
-        `
+  WITH ranked_contacts AS (
+    SELECT
+      c.id,
+      c.contact_date,
+      c.provider_name,
+      c.client_name,
+      c.category,
+      c.food_accessed,
+      c.alert_id,
+      c.services_requested,
+      c.services_provided,
+      c.created_at,
+      -- Calculate actual days from current Chicago today to the contact date
+      (DATE '${todayString}' - c.contact_date)::INTEGER AS days_ago,
+      ROW_NUMBER() OVER (
+        PARTITION BY c.client_name
+        ORDER BY c.contact_date DESC, c.created_at DESC
+      ) AS rn
+    FROM contacts c
+    ${whereClause}
+  )
+  SELECT
+    r.id,
+    r.contact_date,
+    r.days_ago,
+    r.provider_name,
+    r.client_name,
+    r.category,
+    r.food_accessed,
+    r.created_at,
+    r.services_requested,
+    r.services_provided,
+    a.id as alert_id,
+    a.alert_details,
+    a.severity as alert_severity,
+    a.status as alert_status
+  FROM ranked_contacts r
+  LEFT JOIN alerts a ON r.alert_id = a.id AND a.status = 'active'
+  WHERE r.rn = 1
+  ORDER BY 
+    CASE WHEN (r.contact_date = '${todayString}' AND a.id IS NOT NULL) THEN 0 ELSE 1 END,
+    ${dbColumn} ${direction}
+`
 
         try {
           return queryParams.length > 0
