@@ -57,23 +57,6 @@ function useDebounce(value, delay) {
   return debouncedValue
 }
 
-// Memoized chart configuration to prevent unnecessary re-renders
-const getChartConfig = (isMobile, isTablet) => ({
-  height: isMobile ? 300 : 400,
-  xAxisProps: {
-    angle: isMobile ? -90 : -45,
-    textAnchor: "end",
-    height: isMobile ? 120 : 80
-  },
-  margin: { 
-    top: 20, 
-    right: 30, 
-    left: 20, 
-    bottom: isMobile ? 120 : 80 
-  },
-  labelFormatter: (value) => abbreviateServiceName(value, isMobile)
-})
-
 const COLORS = {
   high: "#10B981",
   medium: "#F59E0B",
@@ -105,9 +88,6 @@ export function ServicesImpactDashboard({ overview }: Props) {
   // Debounce filter changes to prevent excessive API calls
   const debouncedSelectedPeriod = useDebounce(selectedPeriod, 300)
 
-  // Memoize chart configuration to prevent unnecessary re-renders
-  const chartConfig = useMemo(() => getChartConfig(isMobile, false), [isMobile])
-
   // Memoize calculated values to minimize re-calculations
   const calculatedMetrics = useMemo(() => {
     const totalRequested = serviceData.reduce((sum, item) => sum + item.requested, 0)
@@ -138,15 +118,6 @@ export function ServicesImpactDashboard({ overview }: Props) {
         return "New Clients"
     }
   }, [selectedPeriod])
-
-  // Memoize tooltip formatter to prevent recreation on each render
-  const tooltipFormatter = useCallback((value, name) => [
-    value, 
-    name === 'requested' ? 'Requested' : 'Provided'
-  ], [])
-
-  // Memoize tooltip label formatter
-  const tooltipLabelFormatter = useCallback((label) => label, [])
 
   useEffect(() => {
     const fetchServicesData = async () => {
@@ -270,6 +241,20 @@ export function ServicesImpactDashboard({ overview }: Props) {
               <p className="text-sm text-yellow-700">Sample Service: {JSON.stringify(serviceData[0])}</p>
             </div>
           )}
+        </div>
+
+        {/* TEST CHART - Remove after debugging */}
+        <div className="bg-blue-50 rounded-lg p-4 mb-4">
+          <h3 className="text-blue-800 mb-2">Test Chart (Should show 2 bars)</h3>
+          <div className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={[{name: 'Test', value: 100}, {name: 'Test2', value: 150}]}>
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Bar dataKey="value" fill="#3B82F6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -436,51 +421,35 @@ export function ServicesImpactDashboard({ overview }: Props) {
               <p className="text-sm text-gray-500 mt-1">Shows the gap between what clients need and what we deliver</p>
             </div>
           </div>
-          <div className="min-w-[320px] overflow-x-auto">
-            <div className="h-[300px] md:h-[400px] min-w-[600px] sm:min-w-0">
-              {serviceData.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-600 mb-2">No services data available for {selectedPeriod}</p>
-                  <p className="text-sm text-gray-500">Check console for API response details</p>
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={serviceData}
-                    margin={chartConfig.margin}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="name"
-                      angle={chartConfig.xAxisProps.angle}
-                      textAnchor={chartConfig.xAxisProps.textAnchor}
-                      height={chartConfig.xAxisProps.height}
-                      tickFormatter={chartConfig.labelFormatter}
-                      fontSize={isMobile ? 12 : 14}
-                    />
-                    <YAxis fontSize={isMobile ? 12 : 14} />
-                    <Tooltip
-                      labelFormatter={tooltipLabelFormatter}
-                      formatter={tooltipFormatter}
-                      contentStyle={{
-                        fontSize: isMobile ? '12px' : '14px',
-                        padding: isMobile ? '8px' : '12px'
-                      }}
-                    />
-                    <Legend
-                      wrapperStyle={{
-                        paddingTop: isMobile ? '10px' : '20px',
-                        fontSize: isMobile ? '12px' : '14px'
-                      }}
-                      iconType={isMobile ? 'rect' : 'line'}
-                    />
-                    <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
-                    <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
+          
+          {serviceData.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-600">No services data available for {selectedPeriod}</p>
             </div>
-          </div>
+          ) : (
+            <div className="h-[400px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={serviceData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="name"
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    fontSize={12}
+                  />
+                  <YAxis fontSize={12} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
+                  <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
         {/* Trends and Critical Gaps */}
