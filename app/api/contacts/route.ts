@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
         }
       }
       if (tab === "today") {
-        // Today's tab - show all check-ins for today (06/30/2025)
+        // Today's tab - show all check-ins for today with alerts pinned to top
         const fullQuery = `
           SELECT 
             c.id,
@@ -212,7 +212,9 @@ export async function GET(request: NextRequest) {
           FROM contacts c
           LEFT JOIN alerts a ON c.alert_id = a.id AND a.status = 'active'
           ${whereClause}
-          ORDER BY ${dbColumn} ${direction}
+          ORDER BY 
+            CASE WHEN (c.contact_date = '${todayString}' AND a.id IS NOT NULL) THEN 0 ELSE 1 END,
+            ${dbColumn} ${direction}
         `
 
         try {
@@ -246,8 +248,7 @@ export async function GET(request: NextRequest) {
           throw e
         }
       } else {
-        // All contacts tab - show most recent contact per unique client
-        // Calculate days_ago dynamically based on current Chicago today
+        // All contacts tab - show most recent contact per unique client with today's alerts pinned to top
         const latestPerClientQuery = `
           WITH ranked_contacts AS (
             SELECT
@@ -269,21 +270,37 @@ export async function GET(request: NextRequest) {
               ) AS rn
             FROM contacts c
             ${whereClause}
+          ),
+          contacts_with_alerts AS (
+            SELECT
+              r.*,
+              a.id as alert_id,
+              a.alert_details,
+              a.severity as alert_severity,
+              a.status as alert_status
+            FROM ranked_contacts r
+            LEFT JOIN alerts a ON r.alert_id = a.id AND a.status = 'active'
+            WHERE r.rn = 1
           )
           SELECT
-            r.id,
-            r.contact_date,
-            r.days_ago,
-            r.provider_name,
-            r.client_name,
-            r.category,
-            r.food_accessed,
-            r.created_at,
-            r.services_requested,
-            r.services_provided
-          FROM ranked_contacts r
-          WHERE r.rn = 1
-          ORDER BY ${dbColumn} ${direction}
+            id,
+            contact_date,
+            days_ago,
+            provider_name,
+            client_name,
+            category,
+            food_accessed,
+            created_at,
+            services_requested,
+            services_provided,
+            alert_id,
+            alert_details,
+            alert_severity,
+            alert_status
+          FROM contacts_with_alerts
+          ORDER BY 
+            CASE WHEN (contact_date = '${todayString}' AND alert_id IS NOT NULL) THEN 0 ELSE 1 END,
+            ${dbColumn} ${direction}
         `
 
         try {
