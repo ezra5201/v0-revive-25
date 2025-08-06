@@ -74,41 +74,6 @@ const getChartConfig = (isMobile, isTablet) => ({
   labelFormatter: (value) => abbreviateServiceName(value, isMobile)
 })
 
-// Mock data simulating your Neon database queries - replace with real API calls
-const generateServiceData = () => {
-  const services = [
-    { name: "Housing", requested: 142, provided: 128, gap: 14, trend: 8.5 },
-    { name: "Food", requested: 298, provided: 289, gap: 9, trend: -2.1 },
-    { name: "Healthcare", requested: 167, provided: 134, gap: 33, trend: 12.3 },
-    { name: "Case Management", requested: 89, provided: 87, gap: 2, trend: 4.7 },
-    { name: "Benefits", requested: 124, provided: 98, gap: 26, trend: -5.2 },
-    { name: "Employment", requested: 76, provided: 45, gap: 31, trend: 15.8 },
-    { name: "Legal", requested: 43, provided: 39, gap: 4, trend: 2.3 },
-    { name: "Transportation", requested: 156, provided: 142, gap: 14, trend: 6.1 },
-  ]
-
-  return services.map((service) => ({
-    ...service,
-    completionRate: ((service.provided / service.requested) * 100).toFixed(1),
-    impact:
-      service.provided > service.requested * 0.8
-        ? "high"
-        : service.provided > service.requested * 0.6
-          ? "medium"
-          : "low",
-  }))
-}
-
-const generateTrendData = () => {
-  const months = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar"]
-  return months.map((month, index) => ({
-    month,
-    requested: 800 + Math.floor(Math.random() * 200),
-    provided: 720 + Math.floor(Math.random() * 180),
-    completionRate: 85 + Math.floor(Math.random() * 15),
-  }))
-}
-
 const COLORS = {
   high: "#10B981",
   medium: "#F59E0B",
@@ -195,14 +160,16 @@ export function ServicesImpactDashboard({ overview }: Props) {
         }
 
         const data = await response.json()
+        console.log("API Response:", data)
+        console.log("Services data:", data.services)
+        console.log("Services length:", data.services?.length)
 
         setServiceData(data.services || [])
         setTrendData(data.trends || [])
       } catch (error) {
         console.error("Error fetching services data:", error)
-        // Fallback to mock data if API fails
-        setServiceData(generateServiceData())
-        setTrendData(generateTrendData())
+        setServiceData([])
+        setTrendData([])
       } finally {
         setLoading(false)
       }
@@ -289,6 +256,20 @@ export function ServicesImpactDashboard({ overview }: Props) {
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* DEBUG INFO - Remove after debugging */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+          <h3 className="font-medium text-yellow-800 mb-2">Debug Information</h3>
+          <p className="text-sm text-yellow-700">Loading: {loading ? 'true' : 'false'}</p>
+          <p className="text-sm text-yellow-700">Selected Period: {selectedPeriod}</p>
+          <p className="text-sm text-yellow-700">Services Data Length: {serviceData.length}</p>
+          <p className="text-sm text-yellow-700">API Endpoint: /api/analytics/services-impact?period={selectedPeriod}</p>
+          {serviceData.length > 0 && (
+            <div className="mt-2">
+              <p className="text-sm text-yellow-700">Sample Service: {JSON.stringify(serviceData[0])}</p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -457,40 +438,47 @@ export function ServicesImpactDashboard({ overview }: Props) {
           </div>
           <div className="min-w-[320px] overflow-x-auto">
             <div className="h-[300px] md:h-[400px] min-w-[600px] sm:min-w-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={serviceData}
-                  margin={chartConfig.margin}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="name"
-                    angle={chartConfig.xAxisProps.angle}
-                    textAnchor={chartConfig.xAxisProps.textAnchor}
-                    height={chartConfig.xAxisProps.height}
-                    tickFormatter={chartConfig.labelFormatter}
-                    fontSize={isMobile ? 12 : 14}
-                  />
-                  <YAxis fontSize={isMobile ? 12 : 14} />
-                  <Tooltip
-                    labelFormatter={tooltipLabelFormatter}
-                    formatter={tooltipFormatter}
-                    contentStyle={{
-                      fontSize: isMobile ? '12px' : '14px',
-                      padding: isMobile ? '8px' : '12px'
-                    }}
-                  />
-                  <Legend
-                    wrapperStyle={{
-                      paddingTop: isMobile ? '10px' : '20px',
-                      fontSize: isMobile ? '12px' : '14px'
-                    }}
-                    iconType={isMobile ? 'rect' : 'line'}
-                  />
-                  <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
-                  <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
-                </BarChart>
-              </ResponsiveContainer>
+              {serviceData.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-600 mb-2">No services data available for {selectedPeriod}</p>
+                  <p className="text-sm text-gray-500">Check console for API response details</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={serviceData}
+                    margin={chartConfig.margin}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="name"
+                      angle={chartConfig.xAxisProps.angle}
+                      textAnchor={chartConfig.xAxisProps.textAnchor}
+                      height={chartConfig.xAxisProps.height}
+                      tickFormatter={chartConfig.labelFormatter}
+                      fontSize={isMobile ? 12 : 14}
+                    />
+                    <YAxis fontSize={isMobile ? 12 : 14} />
+                    <Tooltip
+                      labelFormatter={tooltipLabelFormatter}
+                      formatter={tooltipFormatter}
+                      contentStyle={{
+                        fontSize: isMobile ? '12px' : '14px',
+                        padding: isMobile ? '8px' : '12px'
+                      }}
+                    />
+                    <Legend
+                      wrapperStyle={{
+                        paddingTop: isMobile ? '10px' : '20px',
+                        fontSize: isMobile ? '12px' : '14px'
+                      }}
+                      iconType={isMobile ? 'rect' : 'line'}
+                    />
+                    <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
+                    <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
         </div>
