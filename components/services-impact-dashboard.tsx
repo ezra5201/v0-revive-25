@@ -38,6 +38,23 @@ function useIsMobile() {
   return isMobile
 }
 
+// Chart configuration for responsive behavior
+const getChartConfig = (isMobile, isTablet) => ({
+  height: isMobile ? 300 : 400,
+  xAxisProps: {
+    angle: isMobile ? -90 : -45,
+    textAnchor: "end",
+    height: isMobile ? 120 : 80
+  },
+  margin: { 
+    top: 20, 
+    right: 30, 
+    left: 20, 
+    bottom: isMobile ? 120 : 80 
+  },
+  labelFormatter: (value) => abbreviateServiceName(value, isMobile)
+})
+
 // Mock data simulating your Neon database queries - replace with real API calls
 const generateServiceData = () => {
   const services = [
@@ -394,46 +411,47 @@ export function ServicesImpactDashboard({ overview }: Props) {
             </div>
           </div>
           <div className="min-w-[320px] overflow-x-auto">
-            <div className="h-[300px] md:h-[400px] min-w-[600px] sm:min-w-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={serviceData} 
-                  margin={{ 
-                    top: 20, 
-                    right: 30, 
-                    left: 20, 
-                    bottom: isMobile ? 120 : 80 
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="name" 
-                    angle={isMobile ? -90 : -45} 
-                    textAnchor="end" 
-                    height={isMobile ? 120 : 80}
-                    tickFormatter={(value) => abbreviateServiceName(value, isMobile)}
-                    fontSize={isMobile ? 12 : 14}
-                  />
-                  <YAxis fontSize={isMobile ? 12 : 14} />
-                  <Tooltip 
-                    labelFormatter={(label) => label}
-                    formatter={(value, name) => [value, name === 'requested' ? 'Requested' : 'Provided']}
-                    contentStyle={{
-                      fontSize: isMobile ? '12px' : '14px',
-                      padding: isMobile ? '8px' : '12px'
-                    }}
-                  />
-                  <Legend 
-                    wrapperStyle={{
-                      paddingTop: isMobile ? '10px' : '20px',
-                      fontSize: isMobile ? '12px' : '14px'
-                    }}
-                    iconType={isMobile ? 'rect' : 'line'}
-                  />
-                  <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
-                  <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className={`h-[${getChartConfig(isMobile, false).height}px] min-w-[600px] sm:min-w-0`}>
+              {/* Inside the Service Comparison Chart section, replace the BarChart with: */}
+              {/* isTablet can be added later if needed */}
+              {(() => {
+                const chartConfig = getChartConfig(isMobile, false);
+
+                return (
+                  <BarChart
+                    data={serviceData}
+                    margin={chartConfig.margin}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="name"
+                      angle={chartConfig.xAxisProps.angle}
+                      textAnchor={chartConfig.xAxisProps.textAnchor}
+                      height={chartConfig.xAxisProps.height}
+                      tickFormatter={chartConfig.labelFormatter}
+                      fontSize={isMobile ? 12 : 14}
+                    />
+                    <YAxis fontSize={isMobile ? 12 : 14} />
+                    <Tooltip
+                      labelFormatter={(label) => label}
+                      formatter={(value, name) => [value, name === 'requested' ? 'Requested' : 'Provided']}
+                      contentStyle={{
+                        fontSize: isMobile ? '12px' : '14px',
+                        padding: isMobile ? '8px' : '12px'
+                      }}
+                    />
+                    <Legend
+                      wrapperStyle={{
+                        paddingTop: isMobile ? '10px' : '20px',
+                        fontSize: isMobile ? '12px' : '14px'
+                      }}
+                      iconType={isMobile ? 'rect' : 'line'}
+                    />
+                    <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
+                    <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
+                  </BarChart>
+                );
+              })()}
             </div>
           </div>
         </div>
