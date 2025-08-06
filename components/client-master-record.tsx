@@ -2,17 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { ClientBasicInfo } from "./client-basic-info"
 import { ClientContactHistory } from "./client-contact-history"
 import { ClientJourneyTimeline } from "./client-journey-timeline"
-import { CMFollowupFormSimple } from "./cm-followup-form-simple"
-import { Plus } from "lucide-react"
 
 interface ClientMasterRecordProps {
   clientName: string
-  activeSection: "basic-info" | "contact-history" | "journey-timeline" | "cm-followups"
-  onSectionChange: (section: "basic-info" | "contact-history" | "journey-timeline" | "cm-followups") => void
+  activeSection: "basic-info" | "contact-history" | "journey-timeline"
+  onSectionChange: (section: "basic-info" | "contact-history" | "journey-timeline") => void
 }
 
 interface ClientData {
@@ -42,22 +39,11 @@ interface ContactRecord {
   alertSeverity?: string
 }
 
-interface CMFollowup {
-  id: number
-  followup_date: string
-  cm_provider_name: string
-  status: "draft" | "submitted"
-  current_status: string
-  created_at: string
-}
-
 export function ClientMasterRecord({ clientName, activeSection, onSectionChange }: ClientMasterRecordProps) {
   const [clientData, setClientData] = useState<ClientData | null>(null)
   const [contactHistory, setContactHistory] = useState<ContactRecord[]>([])
-  const [cmFollowups, setCMFollowups] = useState<CMFollowup[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showCMForm, setShowCMForm] = useState(false)
 
   // Fetch client data and contact history
   useEffect(() => {
@@ -90,13 +76,6 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
         console.log("First history item:", history?.[0] || "N/A")
         console.log("=== END DEBUG ===")
         setContactHistory(history)
-
-        // Fetch CM followups for this client
-        const cmResponse = await fetch(`/api/cm-checkings?client_name=${encodeURIComponent(clientName)}`)
-        if (cmResponse.ok) {
-          const cmData = await cmResponse.json()
-          setCMFollowups(cmData)
-        }
       } catch (err) {
         console.error("=== CLIENT MASTER RECORD ERROR ===")
         console.error("Error fetching client data:", err)
@@ -121,14 +100,6 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
       default:
         return "bg-gray-100 text-gray-800"
     }
-  }
-
-  const handleCMFormSubmit = () => {
-    // Refresh CM followups after form submission
-    fetch(`/api/cm-checkings?client_name=${encodeURIComponent(clientName)}`)
-      .then((response) => response.json())
-      .then((data) => setCMFollowups(data))
-      .catch((error) => console.error("Error refreshing CM followups:", error))
   }
 
   if (isLoading) {
@@ -204,14 +175,10 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
             Journey Timeline
           </button>
           <button
-            onClick={() => onSectionChange("cm-followups")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeSection === "cm-followups"
-                ? "border-orange-500 text-orange-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            disabled
+            className="py-4 px-1 border-b-2 border-transparent text-gray-400 font-medium text-sm cursor-not-allowed"
           >
-            CM Followups
+            TBD
           </button>
         </nav>
       </div>
@@ -229,63 +196,7 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
         {activeSection === "journey-timeline" && (
           <ClientJourneyTimeline clientName={clientName} contactHistory={contactHistory} />
         )}
-
-        {activeSection === "cm-followups" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Case Manager Followups</h2>
-              <Button onClick={() => setShowCMForm(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                New CM Followup
-              </Button>
-            </div>
-
-            {cmFollowups.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No CM followups recorded yet.</p>
-                <Button onClick={() => setShowCMForm(true)} className="mt-4">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First CM Followup
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {cmFollowups.map((followup) => (
-                  <div key={followup.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium text-gray-900">
-                          {new Date(followup.followup_date).toLocaleDateString()}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          CM: {followup.cm_provider_name} • Status: {followup.current_status}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={followup.status === "submitted" ? "default" : "secondary"}>
-                          {followup.status}
-                        </Badge>
-                        <Button variant="outline" size="sm">
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
-
-      {/* CM Followup Form Modal */}
-      {showCMForm && (
-        <CMFollowupFormSimple
-          clientName={clientName}
-          onClose={() => setShowCMForm(false)}
-          onSubmit={handleCMFormSubmit}
-        />
-      )}
     </div>
   )
 }
