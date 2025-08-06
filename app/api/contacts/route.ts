@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
     const providers = searchParams.get("providers")?.split(",").filter(Boolean) || []
     const sortColumn = searchParams.get("sortColumn") || "date"
     const sortDirection = searchParams.get("sortDirection") || "desc"
+    const clientName = searchParams.get("client")
 
     // Get today's date in Chicago time (dynamic)
     const todayString = getTodayString()
@@ -133,6 +134,62 @@ export async function GET(request: NextRequest) {
 
     // ---------- helper -------------------------------------------------
     async function fetchRows() {
+      // If client parameter is provided, fetch ALL contacts for that specific client
+      if (clientName) {
+        const clientQuery = `
+          SELECT 
+            c.id,
+            c.contact_date,
+            c.days_ago,
+            c.provider_name,
+            c.client_name,
+            c.category,
+            c.food_accessed,
+            c.services_requested,
+            c.services_provided,
+            c.comments,
+            c.created_at,
+            a.id as alert_id,
+            a.alert_details,
+            a.severity as alert_severity,
+            a.status as alert_status
+          FROM contacts c
+          LEFT JOIN alerts a ON c.alert_id = a.id AND a.status = 'active'
+          WHERE c.client_name = $1
+          ORDER BY c.contact_date DESC, c.created_at DESC
+        `
+
+        try {
+          return await sql.query(clientQuery, [clientName])
+        } catch (e: any) {
+          const msg = e?.message ?? ""
+          if (
+            (msg.includes("column") && (msg.includes("alert_id") || msg.includes("alerts"))) ||
+            (msg.includes("relation") && msg.includes("alerts"))
+          ) {
+            console.warn("contacts API: alerts columns missing – falling back to legacy schema")
+            const legacyClientQuery = `
+              SELECT 
+                c.id,
+                c.contact_date,
+                c.days_ago,
+                c.provider_name,
+                c.client_name,
+                c.category,
+                c.food_accessed,
+                c.services_requested,
+                c.services_provided,
+                c.comments,
+                c.created_at
+            FROM contacts c
+            WHERE c.client_name = $1
+            ORDER BY c.contact_date DESC, c.created_at DESC
+          `
+            return await sql.query(legacyClientQuery, [clientName])
+          }
+          throw e
+        }
+      }
       if (tab === "today") {
         // Today's tab - show all check-ins for today (06/30/2025)
         const fullQuery = `
@@ -309,7 +366,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Only include services and comments for today's tab
-      if (tab === "today") {
+      if (tab === "today" || clientName) {
         return {
           ...baseContact,
           servicesRequested: row.services_requested ?? [],
