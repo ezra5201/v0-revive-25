@@ -456,7 +456,7 @@ export function ServicesImpactDashboard({ overview }: Props) {
             </div>
           </div>
           <div className="min-w-[320px] overflow-x-auto">
-            <div className={`h-[${chartConfig.height}px] min-w-[600px] sm:min-w-0`}>
+            <div className="h-[300px] md:h-[400px] min-w-[600px] sm:min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={serviceData}
