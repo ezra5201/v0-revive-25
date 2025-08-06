@@ -14,14 +14,18 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  const { searchParams } = new URL(request.url)
+  const serviceFilter = searchParams.get("serviceFilter")
+  console.log(`=== ${serviceFilter || "no-filter"} API called at ${new Date().toISOString()} ===`)
+  console.log("Query params:", Object.fromEntries(searchParams.entries()))
+
   try {
-    const { searchParams } = new URL(request.url)
     const tab = searchParams.get("tab") || "all"
     const categories = searchParams.get("categories")?.split(",").filter(Boolean) || []
     const providers = searchParams.get("providers")?.split(",").filter(Boolean) || []
     const sortColumn = searchParams.get("sortColumn") || "date"
     const sortDirection = searchParams.get("sortDirection") || "desc"
-    const serviceFilter = searchParams.get("serviceFilter") // New parameter
+    const clientName = searchParams.get("client")
 
     // Get today's date in Chicago time (dynamic)
     const todayString = getTodayString()
@@ -47,16 +51,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Add service filter using JSONB queries
+    // Add service filter using fast boolean columns instead of slow JSONB queries
     if (serviceFilter === "cm") {
       whereConditions.push(`(
-        c.services_requested @> '["Case Management"]' OR
-        c.services_provided::text ILIKE '%"service":"Case Management"%'
+        c.case_management_requested > 0 OR
+        c.case_management_provided > 0 OR
+        c.housing_requested > 0 OR
+        c.housing_provided > 0
       )`)
     } else if (serviceFilter === "ot") {
       whereConditions.push(`(
-        c.services_requested @> '["Occupational"]' OR
-        c.services_provided::text ILIKE '%"service":"Occupational"%'
+        c.occupational_therapy_requested > 0 OR
+        c.occupational_therapy_provided > 0
       )`)
     } else if (serviceFilter === "food") {
       whereConditions.push(`(
@@ -128,8 +134,64 @@ export async function GET(request: NextRequest) {
 
     // ---------- helper -------------------------------------------------
     async function fetchRows() {
+      // If client parameter is provided, fetch ALL contacts for that specific client
+      if (clientName) {
+        const clientQuery = `
+          SELECT 
+            c.id,
+            c.contact_date,
+            c.days_ago,
+            c.provider_name,
+            c.client_name,
+            c.category,
+            c.food_accessed,
+            c.services_requested,
+            c.services_provided,
+            c.comments,
+            c.created_at,
+            a.id as alert_id,
+            a.alert_details,
+            a.severity as alert_severity,
+            a.status as alert_status
+          FROM contacts c
+          LEFT JOIN alerts a ON c.alert_id = a.id AND a.status = 'active'
+          WHERE c.client_name = $1
+          ORDER BY c.contact_date DESC, c.created_at DESC
+        `
+
+        try {
+          return await sql.query(clientQuery, [clientName])
+        } catch (e: any) {
+          const msg = e?.message ?? ""
+          if (
+            (msg.includes("column") && (msg.includes("alert_id") || msg.includes("alerts"))) ||
+            (msg.includes("relation") && msg.includes("alerts"))
+          ) {
+            console.warn("contacts API: alerts columns missing – falling back to legacy schema")
+            const legacyClientQuery = `
+              SELECT 
+                c.id,
+                c.contact_date,
+                c.days_ago,
+                c.provider_name,
+                c.client_name,
+                c.category,
+                c.food_accessed,
+                c.services_requested,
+                c.services_provided,
+                c.comments,
+                c.created_at
+            FROM contacts c
+            WHERE c.client_name = $1
+            ORDER BY c.contact_date DESC, c.created_at DESC
+          `
+            return await sql.query(legacyClientQuery, [clientName])
+          }
+          throw e
+        }
+      }
       if (tab === "today") {
-        // Today's tab - show all check-ins for today (06/30/2025)
+        // Today's tab - show all check-ins for today with alerts pinned to top
         const fullQuery = `
           SELECT 
             c.id,
@@ -150,7 +212,9 @@ export async function GET(request: NextRequest) {
           FROM contacts c
           LEFT JOIN alerts a ON c.alert_id = a.id AND a.status = 'active'
           ${whereClause}
-          ORDER BY ${dbColumn} ${direction}
+          ORDER BY 
+            CASE WHEN (c.contact_date = '${todayString}' AND a.id IS NOT NULL) THEN 0 ELSE 1 END,
+            ${dbColumn} ${direction}
         `
 
         try {
@@ -184,45 +248,51 @@ export async function GET(request: NextRequest) {
           throw e
         }
       } else {
-        // All contacts tab - show most recent contact per unique client
-        // Calculate days_ago dynamically based on current Chicago today
+        // All contacts tab - show most recent contact per unique client with today's alerts pinned to top
         const latestPerClientQuery = `
-          WITH ranked_contacts AS (
-            SELECT
-              c.id,
-              c.contact_date,
-              c.provider_name,
-              c.client_name,
-              c.category,
-              c.food_accessed,
-              c.alert_id,
-              c.services_requested,
-              c.services_provided,
-              c.created_at,
-              -- Calculate actual days from current Chicago today to the contact date
-              (DATE '${todayString}' - c.contact_date)::INTEGER AS days_ago,
-              ROW_NUMBER() OVER (
-                PARTITION BY c.client_name
-                ORDER BY c.contact_date DESC, c.created_at DESC
-              ) AS rn
-            FROM contacts c
-            ${whereClause}
-          )
-          SELECT
-            r.id,
-            r.contact_date,
-            r.days_ago,
-            r.provider_name,
-            r.client_name,
-            r.category,
-            r.food_accessed,
-            r.created_at,
-            r.services_requested,
-            r.services_provided
-          FROM ranked_contacts r
-          WHERE r.rn = 1
-          ORDER BY ${dbColumn} ${direction}
-        `
+  WITH ranked_contacts AS (
+    SELECT
+      c.id,
+      c.contact_date,
+      c.provider_name,
+      c.client_name,
+      c.category,
+      c.food_accessed,
+      c.alert_id,
+      c.services_requested,
+      c.services_provided,
+      c.created_at,
+      -- Calculate actual days from current Chicago today to the contact date
+      (DATE '${todayString}' - c.contact_date)::INTEGER AS days_ago,
+      ROW_NUMBER() OVER (
+        PARTITION BY c.client_name
+        ORDER BY c.contact_date DESC, c.created_at DESC
+      ) AS rn
+    FROM contacts c
+    ${whereClause}
+  )
+  SELECT
+    r.id,
+    r.contact_date,
+    r.days_ago,
+    r.provider_name,
+    r.client_name,
+    r.category,
+    r.food_accessed,
+    r.created_at,
+    r.services_requested,
+    r.services_provided,
+    a.id as alert_id,
+    a.alert_details,
+    a.severity as alert_severity,
+    a.status as alert_status
+  FROM ranked_contacts r
+  LEFT JOIN alerts a ON r.alert_id = a.id AND a.status = 'active'
+  WHERE r.rn = 1
+  ORDER BY 
+    CASE WHEN (r.contact_date = '${todayString}' AND a.id IS NOT NULL) THEN 0 ELSE 1 END,
+    ${dbColumn} ${direction}
+`
 
         try {
           return queryParams.length > 0
@@ -304,7 +374,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Only include services and comments for today's tab
-      if (tab === "today") {
+      if (tab === "today" || clientName) {
         return {
           ...baseContact,
           servicesRequested: row.services_requested ?? [],
@@ -318,7 +388,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ contacts })
   } catch (error) {
-    console.error("Failed to fetch contacts:", error)
-    return NextResponse.json({ error: "Failed to fetch contacts" }, { status: 500 })
+    console.error(`=== ${serviceFilter || "no-filter"} API ERROR:`, error)
+    console.error("Error details:", error.message, error.stack)
+    return NextResponse.json({ error: "Database error", details: error.message }, { status: 500 })
   }
 }

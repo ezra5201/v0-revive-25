@@ -13,7 +13,7 @@ import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
 import { useContacts } from "@/hooks/use-contacts"
 import { useDatabase } from "@/hooks/use-database"
-import { X } from "lucide-react"
+import { X } from 'lucide-react'
 
 type MainTab = "today" | "all" | "client"
 type ClientSection = "basic-info" | "contact-history" | "journey-timeline"
@@ -143,14 +143,13 @@ export default function ContactLogPage() {
       setSelectedContactIds([])
       setFilters({ categories: [], providers: [] })
 
-      if (tab !== "client") {
-        setSelectedClient(null)
-        setActiveClientSection("basic-info")
+      if (tab === "client" && selectedClient) {
+        updateURL(tab, selectedClient, activeClientSection)
+      } else {
+        updateURL(tab)
       }
-
-      updateURL(tab)
     },
-    [updateURL],
+    [updateURL, selectedClient, activeClientSection],
   )
 
   const handleSelectionChange = useCallback((count: number, selectedIds: number[]) => {

@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Menu, User, Settings } from "lucide-react"
+import { Menu, User, Settings } from 'lucide-react'
 import { useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { AlertHeaderIndicator } from "./alert-header-indicator"
@@ -20,6 +20,7 @@ export function Header() {
     { name: "OT", path: "/ot" },
     { name: "OUTREACH", path: "/outreach" },
     { name: "DASHBOARD", path: "/dashboard" },
+    { name: "REPORTS", path: "/reports" },
   ]
 
   const handleNavigation = (path: string) => {

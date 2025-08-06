@@ -3,11 +3,9 @@
 import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { DatabaseSetup } from "@/components/database-setup"
-import { ServicesPanel } from "@/components/services-panel"
+import { ServicesImpactDashboard } from "@/components/services-impact-dashboard"
 import { useDatabase } from "@/hooks/use-database"
-import { Card, CardContent } from "@/components/ui/card"
-import { Users, UserPlus, Activity, AlertTriangle } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { AlertTriangle } from "lucide-react"
 
 interface OverviewData {
   totalClients: number
@@ -127,72 +125,8 @@ export default function DashboardPage() {
               <h1 className="text-3xl font-bold text-gray-900 mb-4">Impact Dashboard</h1>
             </div>
 
-            {/* Summary Section */}
-            <Card className="mb-8">
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Summary</h2>
-                  <div className="mt-4 sm:mt-0">
-                    <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="This Month">This Month</SelectItem>
-                        <SelectItem value="Last Month">Last Month</SelectItem>
-                        <SelectItem value="This Year">This Year</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Users className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Active Clients</p>
-                      <p className="text-2xl font-bold text-gray-900">{overview?.totalClients || 0}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <Activity className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Contacts</p>
-                      <p className="text-2xl font-bold text-gray-900">{overview?.totalContacts || 0}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <UserPlus className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">{getNewClientsLabel()}</p>
-                      <p className="text-2xl font-bold text-gray-900">{overview?.newClientsThisMonth || 0}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Services Panel */}
-            <ServicesPanel />
-
-            <div className="bg-gray-50 rounded-lg p-8 border border-gray-200 text-center">
-              <div className="text-gray-500 mb-4">
-                <Activity className="mx-auto h-12 w-12 text-gray-400" />
-              </div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Detailed Analytics Coming Soon</h2>
-              <p className="text-gray-600">
-                Charts and detailed analytics are being added progressively. The KPI metrics above show your current
-                performance for {selectedPeriod.toLowerCase()}.
-              </p>
-            </div>
+            {/* NEW: Services Impact Dashboard */}
+            <ServicesImpactDashboard overview={overview} selectedPeriod={selectedPeriod} />
           </div>
         </div>
       </main>

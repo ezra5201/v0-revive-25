@@ -75,7 +75,7 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
         console.log("History length:", history?.length || "N/A")
         console.log("First history item:", history?.[0] || "N/A")
         console.log("=== END DEBUG ===")
-        setContactHistory(history)
+        setContactHistory(history.contacts)
       } catch (err) {
         console.error("=== CLIENT MASTER RECORD ERROR ===")
         console.error("Error fetching client data:", err)

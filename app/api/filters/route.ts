@@ -13,22 +13,27 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  try {
-    const { searchParams } = new URL(request.url)
-    const serviceFilter = searchParams.get("serviceFilter")
+  const { searchParams } = new URL(request.url)
+  const serviceFilter = searchParams.get("serviceFilter")
 
+  console.log(`=== ${serviceFilter || "no-filter"} API called at ${new Date().toISOString()} ===`)
+  console.log("Query params:", Object.fromEntries(searchParams.entries()))
+
+  try {
     let whereClause = ""
 
-    // Add service filter using JSONB queries if specified
+    // Add service filter using fast boolean columns if specified
     if (serviceFilter === "cm") {
       whereClause = `WHERE (
-        services_requested @> '["Case Management"]' OR
-        services_provided::text ILIKE '%"service":"Case Management"%'
+        case_management_requested > 0 OR
+        case_management_provided > 0 OR
+        housing_requested > 0 OR
+        housing_provided > 0
       )`
     } else if (serviceFilter === "ot") {
       whereClause = `WHERE (
-        services_requested @> '["Occupational"]' OR
-        services_provided::text ILIKE '%"service":"Occupational"%'
+        occupational_therapy_requested > 0 OR
+        occupational_therapy_provided > 0
       )`
     } else if (serviceFilter === "food") {
       whereClause = `WHERE (
@@ -108,7 +113,8 @@ export async function GET(request: NextRequest) {
       clients,
     })
   } catch (error) {
-    console.error("Failed to fetch filter data:", error)
-    return NextResponse.json({ error: "Failed to fetch filter data" }, { status: 500 })
+    console.error(`=== ${serviceFilter || "no-filter"} API ERROR:`, error)
+    console.error("Error details:", error.message, error.stack)
+    return NextResponse.json({ error: "Database error", details: error.message }, { status: 500 })
   }
 }
