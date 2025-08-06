@@ -143,7 +143,11 @@ export default function ContactLogPage() {
       setSelectedContactIds([])
       setFilters({ categories: [], providers: [] })
 
-      updateURL(tab, selectedClient || undefined, activeClientSection)
+      if (tab === "client" && selectedClient) {
+        updateURL(tab, selectedClient, activeClientSection)
+      } else {
+        updateURL(tab)
+      }
     },
     [updateURL, selectedClient, activeClientSection],
   )
