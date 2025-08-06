@@ -243,18 +243,21 @@ export function ServicesImpactDashboard({ overview }: Props) {
           )}
         </div>
 
-        {/* TEST CHART - Remove after debugging */}
-        <div className="bg-blue-50 rounded-lg p-4 mb-4">
-          <h3 className="text-blue-800 mb-2">Test Chart (Should show 2 bars)</h3>
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={[{name: 'Test', value: 100}, {name: 'Test2', value: 150}]}>
+        {/* MINIMAL TEST CHART */}
+        <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-4">
+          <h3 className="text-red-800 mb-2">🔍 Import Test (Should show simple bar chart)</h3>
+          <div style={{ width: '100%', height: '200px', border: '1px solid red' }}>
+            <ResponsiveContainer>
+              <BarChart data={[{name: 'A', value: 10}, {name: 'B', value: 20}]}>
                 <XAxis dataKey="name" />
                 <YAxis />
-                <Bar dataKey="value" fill="#3B82F6" />
+                <Bar dataKey="value" fill="red" />
               </BarChart>
             </ResponsiveContainer>
           </div>
+          <p className="text-red-700 text-sm mt-2">
+            If you see red bars above, Recharts is working. If empty, imports are broken.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
