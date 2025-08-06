@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import {
   BarChart,
   Bar,
@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { abbreviateServiceName } from "@/lib/utils"
 
-// Hook to detect mobile breakpoint
+// Hook to detect mobile breakpoint with cleanup
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false)
 
@@ -32,13 +32,32 @@ function useIsMobile() {
 
     checkIsMobile()
     window.addEventListener('resize', checkIsMobile)
+    
+    // Proper cleanup for responsive event listeners
     return () => window.removeEventListener('resize', checkIsMobile)
   }, [])
 
   return isMobile
 }
 
-// Chart configuration for responsive behavior
+// Debounce hook for filter changes
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
+
+// Memoized chart configuration to prevent unnecessary re-renders
 const getChartConfig = (isMobile, isTablet) => ({
   height: isMobile ? 300 : 400,
   xAxisProps: {
@@ -118,7 +137,31 @@ export function ServicesImpactDashboard({ overview }: Props) {
   const [isCustomRangeOpen, setIsCustomRangeOpen] = useState(false)
   const isMobile = useIsMobile()
 
-  const getNewClientsLabel = () => {
+  // Debounce filter changes to prevent excessive API calls
+  const debouncedSelectedPeriod = useDebounce(selectedPeriod, 300)
+
+  // Memoize chart configuration to prevent unnecessary re-renders
+  const chartConfig = useMemo(() => getChartConfig(isMobile, false), [isMobile])
+
+  // Memoize calculated values to minimize re-calculations
+  const calculatedMetrics = useMemo(() => {
+    const totalRequested = serviceData.reduce((sum, item) => sum + item.requested, 0)
+    const totalProvided = serviceData.reduce((sum, item) => sum + item.provided, 0)
+    const totalGap = serviceData.reduce((sum, item) => sum + item.gap, 0)
+    const overallCompletionRate = totalRequested > 0 ? ((totalProvided / totalRequested) * 100).toFixed(1) : 0
+    const criticalGaps = serviceData.filter((service) => service.gap > 20).sort((a, b) => b.gap - a.gap)
+
+    return {
+      totalRequested,
+      totalProvided,
+      totalGap,
+      overallCompletionRate,
+      criticalGaps
+    }
+  }, [serviceData])
+
+  // Memoize new clients label to prevent unnecessary recalculations
+  const newClientsLabel = useMemo(() => {
     switch (selectedPeriod) {
       case "This Month":
         return "New Clients This Month"
@@ -129,14 +172,23 @@ export function ServicesImpactDashboard({ overview }: Props) {
       default:
         return "New Clients"
     }
-  }
+  }, [selectedPeriod])
+
+  // Memoize tooltip formatter to prevent recreation on each render
+  const tooltipFormatter = useCallback((value, name) => [
+    value, 
+    name === 'requested' ? 'Requested' : 'Provided'
+  ], [])
+
+  // Memoize tooltip label formatter
+  const tooltipLabelFormatter = useCallback((label) => label, [])
 
   useEffect(() => {
     const fetchServicesData = async () => {
       try {
         setLoading(true)
 
-        const response = await fetch(`/api/analytics/services-impact?period=${encodeURIComponent(selectedPeriod)}`)
+        const response = await fetch(`/api/analytics/services-impact?period=${encodeURIComponent(debouncedSelectedPeriod)}`)
 
         if (!response.ok) {
           throw new Error("Failed to fetch services data")
@@ -157,14 +209,7 @@ export function ServicesImpactDashboard({ overview }: Props) {
     }
 
     fetchServicesData()
-  }, [selectedPeriod])
-
-  const totalRequested = serviceData.reduce((sum, item) => sum + item.requested, 0)
-  const totalProvided = serviceData.reduce((sum, item) => sum + item.provided, 0)
-  const totalGap = serviceData.reduce((sum, item) => sum + item.gap, 0)
-  const overallCompletionRate = totalRequested > 0 ? ((totalProvided / totalRequested) * 100).toFixed(1) : 0
-
-  const criticalGaps = serviceData.filter((service) => service.gap > 20).sort((a, b) => b.gap - a.gap)
+  }, [debouncedSelectedPeriod])
 
   if (loading) {
     return (
@@ -272,7 +317,7 @@ export function ServicesImpactDashboard({ overview }: Props) {
               <UserPlus className="h-6 w-6 text-purple-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">{getNewClientsLabel(selectedPeriod)}</p>
+              <p className="text-sm font-medium text-gray-600">{newClientsLabel}</p>
               <p className="text-2xl font-bold text-gray-900">{overview?.newClientsThisMonth || 0}</p>
             </div>
           </div>
@@ -284,7 +329,7 @@ export function ServicesImpactDashboard({ overview }: Props) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Services Requested</p>
-                <p className="text-3xl font-bold text-gray-900">{totalRequested.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-gray-900">{calculatedMetrics.totalRequested.toLocaleString()}</p>
               </div>
               <div className="p-3 bg-blue-100 rounded-lg">
                 <Target className="h-6 w-6 text-blue-600" />
@@ -296,7 +341,7 @@ export function ServicesImpactDashboard({ overview }: Props) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Services Provided</p>
-                <p className="text-3xl font-bold text-green-600">{totalProvided.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-green-600">{calculatedMetrics.totalProvided.toLocaleString()}</p>
               </div>
               <div className="p-3 bg-green-100 rounded-lg">
                 <Activity className="h-6 w-6 text-green-600" />
@@ -308,7 +353,7 @@ export function ServicesImpactDashboard({ overview }: Props) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Completion Rate</p>
-                <p className="text-3xl font-bold text-indigo-600">{overallCompletionRate}%</p>
+                <p className="text-3xl font-bold text-indigo-600">{calculatedMetrics.overallCompletionRate}%</p>
               </div>
               <div className="p-3 bg-indigo-100 rounded-lg">
                 <TrendingUp className="h-6 w-6 text-indigo-600" />
@@ -320,7 +365,7 @@ export function ServicesImpactDashboard({ overview }: Props) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Service Gap</p>
-                <p className="text-3xl font-bold text-red-600">{totalGap}</p>
+                <p className="text-3xl font-bold text-red-600">{calculatedMetrics.totalGap}</p>
               </div>
               <div className="p-3 bg-red-100 rounded-lg">
                 <AlertTriangle className="h-6 w-6 text-red-600" />
@@ -411,47 +456,41 @@ export function ServicesImpactDashboard({ overview }: Props) {
             </div>
           </div>
           <div className="min-w-[320px] overflow-x-auto">
-            <div className={`h-[${getChartConfig(isMobile, false).height}px] min-w-[600px] sm:min-w-0`}>
-              {/* Inside the Service Comparison Chart section, replace the BarChart with: */}
-              {/* isTablet can be added later if needed */}
-              {(() => {
-                const chartConfig = getChartConfig(isMobile, false);
-
-                return (
-                  <BarChart
-                    data={serviceData}
-                    margin={chartConfig.margin}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="name"
-                      angle={chartConfig.xAxisProps.angle}
-                      textAnchor={chartConfig.xAxisProps.textAnchor}
-                      height={chartConfig.xAxisProps.height}
-                      tickFormatter={chartConfig.labelFormatter}
-                      fontSize={isMobile ? 12 : 14}
-                    />
-                    <YAxis fontSize={isMobile ? 12 : 14} />
-                    <Tooltip
-                      labelFormatter={(label) => label}
-                      formatter={(value, name) => [value, name === 'requested' ? 'Requested' : 'Provided']}
-                      contentStyle={{
-                        fontSize: isMobile ? '12px' : '14px',
-                        padding: isMobile ? '8px' : '12px'
-                      }}
-                    />
-                    <Legend
-                      wrapperStyle={{
-                        paddingTop: isMobile ? '10px' : '20px',
-                        fontSize: isMobile ? '12px' : '14px'
-                      }}
-                      iconType={isMobile ? 'rect' : 'line'}
-                    />
-                    <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
-                    <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
-                  </BarChart>
-                );
-              })()}
+            <div className={`h-[${chartConfig.height}px] min-w-[600px] sm:min-w-0`}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={serviceData}
+                  margin={chartConfig.margin}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="name"
+                    angle={chartConfig.xAxisProps.angle}
+                    textAnchor={chartConfig.xAxisProps.textAnchor}
+                    height={chartConfig.xAxisProps.height}
+                    tickFormatter={chartConfig.labelFormatter}
+                    fontSize={isMobile ? 12 : 14}
+                  />
+                  <YAxis fontSize={isMobile ? 12 : 14} />
+                  <Tooltip
+                    labelFormatter={tooltipLabelFormatter}
+                    formatter={tooltipFormatter}
+                    contentStyle={{
+                      fontSize: isMobile ? '12px' : '14px',
+                      padding: isMobile ? '8px' : '12px'
+                    }}
+                  />
+                  <Legend
+                    wrapperStyle={{
+                      paddingTop: isMobile ? '10px' : '20px',
+                      fontSize: isMobile ? '12px' : '14px'
+                    }}
+                    iconType={isMobile ? 'rect' : 'line'}
+                  />
+                  <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
+                  <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
@@ -478,7 +517,7 @@ export function ServicesImpactDashboard({ overview }: Props) {
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Critical Service Gaps</h2>
             <div className="space-y-4">
-              {criticalGaps.slice(0, 5).map((service, index) => (
+              {calculatedMetrics.criticalGaps.slice(0, 5).map((service, index) => (
                 <div
                   key={service.name}
                   className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200"
