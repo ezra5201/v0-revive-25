@@ -156,16 +156,6 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
             Basic Info
           </button>
           <button
-            onClick={() => onSectionChange("contact-history")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeSection === "contact-history"
-                ? "border-orange-500 text-orange-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Contact History
-          </button>
-          <button
             onClick={() => onSectionChange("journey-timeline")}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeSection === "journey-timeline"
@@ -173,7 +163,7 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
                 : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
-            Journey Timeline
+            CM Checkings Timeline
           </button>
           <button
             onClick={() => onSectionChange("cm-goals")}
@@ -184,6 +174,16 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
             }`}
           >
             CM Goals
+          </button>
+          <button
+            onClick={() => onSectionChange("contact-history")}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeSection === "contact-history"
+                ? "border-orange-500 text-orange-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Contact Log
           </button>
         </nav>
       </div>
