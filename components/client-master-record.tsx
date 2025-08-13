@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge"
 import { ClientBasicInfo } from "./client-basic-info"
 import { ClientContactHistory } from "./client-contact-history"
 import { ClientJourneyTimeline } from "./client-journey-timeline"
+import { GoalWidget } from "./goal-widget"
 
 interface ClientMasterRecordProps {
   clientName: string
-  activeSection: "basic-info" | "contact-history" | "journey-timeline"
-  onSectionChange: (section: "basic-info" | "contact-history" | "journey-timeline") => void
+  activeSection: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals"
+  onSectionChange: (section: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals") => void
 }
 
 interface ClientData {
@@ -175,10 +176,14 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
             Journey Timeline
           </button>
           <button
-            disabled
-            className="py-4 px-1 border-b-2 border-transparent text-gray-400 font-medium text-sm cursor-not-allowed"
+            onClick={() => onSectionChange("cm-goals")}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeSection === "cm-goals"
+                ? "border-orange-500 text-orange-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
           >
-            TBD
+            CM Goals
           </button>
         </nav>
       </div>
@@ -196,6 +201,8 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
         {activeSection === "journey-timeline" && (
           <ClientJourneyTimeline clientName={clientName} contactHistory={contactHistory} />
         )}
+
+        {activeSection === "cm-goals" && <GoalWidget clientName={clientName} />}
       </div>
     </div>
   )

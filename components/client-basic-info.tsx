@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, User, Clock } from "lucide-react"
-import { GoalWidget } from "./goal-widget"
 
 interface ClientData {
   name: string
@@ -100,10 +99,6 @@ export function ClientBasicInfo({ clientData, contactHistoryLength }: ClientBasi
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      <div className="grid grid-cols-1">
-        <GoalWidget clientName={clientData.name} />
       </div>
     </div>
   )
