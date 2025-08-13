@@ -1,0 +1,105 @@
+import { sql } from "@/lib/db"
+import { type NextRequest, NextResponse } from "next/server"
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { client_name, goal_text, target_date, priority } = body
+
+    // Validation
+    if (!client_name || typeof client_name !== "string" || client_name.trim().length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Client name is required",
+            details: { field: "client_name", value: client_name },
+          },
+        },
+        { status: 400 },
+      )
+    }
+
+    if (!goal_text || typeof goal_text !== "string" || goal_text.trim().length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Goal text is required",
+            details: { field: "goal_text", value: goal_text },
+          },
+        },
+        { status: 400 },
+      )
+    }
+
+    if (goal_text.length > 500) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Goal text must be 500 characters or less",
+            details: { field: "goal_text", value: goal_text },
+          },
+        },
+        { status: 400 },
+      )
+    }
+
+    if (priority && (typeof priority !== "number" || priority < 1 || priority > 5)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Priority must be between 1 and 5",
+            details: { field: "priority", value: priority },
+          },
+        },
+        { status: 400 },
+      )
+    }
+
+    // Create the goal
+    const result = await sql`
+      INSERT INTO cm_goals (client_name, goal_text, target_date, priority)
+      VALUES (${client_name.trim()}, ${goal_text.trim()}, ${target_date || null}, ${priority || 1})
+      RETURNING id, client_name, goal_text, status, target_date, priority, created_at, updated_at
+    `
+
+    const newGoal = result[0]
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          id: newGoal.id,
+          client_name: newGoal.client_name,
+          goal_text: newGoal.goal_text,
+          status: newGoal.status,
+          target_date: newGoal.target_date,
+          priority: newGoal.priority,
+          created_at: newGoal.created_at,
+          updated_at: newGoal.updated_at,
+        },
+      },
+      { status: 201 },
+    )
+  } catch (error) {
+    console.error("Failed to create goal:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "DATABASE_ERROR",
+          message: "Failed to create goal",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
+      },
+      { status: 500 },
+    )
+  }
+}
