@@ -36,7 +36,7 @@ export function GoalWidget({ clientName }: GoalWidgetProps) {
           throw new Error("Failed to fetch goals")
         }
         const data = await response.json()
-        setGoals(data.goals || [])
+        setGoals(data.data || [])
       } catch (err) {
         console.error("Error fetching goals:", err)
         setError(err instanceof Error ? err.message : "An error occurred")
