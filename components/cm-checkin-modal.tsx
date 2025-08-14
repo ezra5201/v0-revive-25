@@ -159,10 +159,27 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
       console.log("DEBUG: Goals fetch response status:", response.status)
       console.log("DEBUG: Goals fetch response headers:", Object.fromEntries(response.headers.entries()))
 
+      const contentType = response.headers.get("content-type")
+      const isJson = contentType && contentType.includes("application/json")
+
       if (!response.ok) {
         const errorText = await response.text()
         console.log("DEBUG: Goals fetch error response:", errorText)
+
+        // If we get HTML instead of JSON (like a 404 page), treat as no goals
+        if (!isJson && errorText.includes("<!DOCTYPE")) {
+          console.log("DEBUG: Received HTML response, treating as no goals found")
+          setGoals([])
+          return
+        }
+
         throw new Error(`Failed to fetch goals: ${response.status} - ${errorText}`)
+      }
+
+      if (!isJson) {
+        console.log("DEBUG: Response is not JSON, treating as no goals found")
+        setGoals([])
+        return
       }
 
       const result = await response.json()
@@ -175,8 +192,15 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
       }
     } catch (err) {
       console.error("DEBUG: Error in fetchGoals:", err)
-      setError(err instanceof Error ? err.message : "Failed to fetch goals")
-      setGoals([])
+
+      if (err instanceof Error && err.message.includes("Unexpected token")) {
+        console.log("DEBUG: JSON parsing error, treating as no goals found")
+        setGoals([])
+        setError(null) // Don't show error for this case
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to fetch goals")
+        setGoals([])
+      }
     } finally {
       setLoading(false)
     }
@@ -478,7 +502,7 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <Target className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-sm">No goals set for this client yet.</p>
+                  <p className="text-sm">Client has no CM goals</p>
                   <p className="text-xs text-gray-400 mt-1">Click "New Goal" to get started.</p>
                 </div>
               )}
