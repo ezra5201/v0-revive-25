@@ -329,6 +329,7 @@ export default function OtPage() {
         onClose={handleCloseUpdateServicesDialog}
         contactData={selectedContactForUpdate}
         onServicesUpdate={handleServicesUpdated}
+        isFromOTTab={true}
       />
     </div>
   )
