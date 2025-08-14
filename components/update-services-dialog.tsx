@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { AlertTriangle, Clock, User, Plus, Edit } from "lucide-react"
 import { CMCheckinModal } from "./cm-checkin-modal"
+import { OTCheckinModal } from "./ot-checkin-modal"
 
 interface UpdateServicesDialogProps {
   isOpen: boolean
@@ -24,6 +25,7 @@ interface UpdateServicesDialogProps {
   } | null
   onServicesUpdate?: () => void
   isFromCMTab?: boolean
+  isFromOTTab?: boolean
 }
 
 const services = [
@@ -55,6 +57,7 @@ export function UpdateServicesDialog({
   contactData,
   onServicesUpdate,
   isFromCMTab = false,
+  isFromOTTab = false,
 }: UpdateServicesDialogProps) {
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [serviceProviders, setServiceProviders] = useState<{ [key: string]: string }>({})
@@ -63,6 +66,9 @@ export function UpdateServicesDialog({
   const [isCMCheckinModalOpen, setIsCMCheckinModalOpen] = useState(false)
   const [hasCheckinToday, setHasCheckinToday] = useState(false)
   const [checkingCheckin, setCheckingCheckin] = useState(false)
+  const [isOTCheckinModalOpen, setIsOTCheckinModalOpen] = useState(false)
+  const [hasOTCheckinToday, setHasOTCheckinToday] = useState(false)
+  const [checkingOTCheckin, setCheckingOTCheckin] = useState(false)
 
   useEffect(() => {
     if (isOpen && contactData) {
@@ -80,8 +86,11 @@ export function UpdateServicesDialog({
       if (isFromCMTab) {
         checkForTodaysCheckin()
       }
+      if (isFromOTTab) {
+        checkForTodaysOTCheckin()
+      }
     }
-  }, [isOpen, contactData, isFromCMTab])
+  }, [isOpen, contactData, isFromCMTab, isFromOTTab])
 
   const checkForTodaysCheckin = async () => {
     if (!contactData) return
@@ -107,6 +116,30 @@ export function UpdateServicesDialog({
     }
   }
 
+  const checkForTodaysOTCheckin = async () => {
+    if (!contactData) return
+
+    setCheckingOTCheckin(true)
+    try {
+      const response = await fetch(`/api/ot-checkins/by-contact/${contactData.id}`)
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data) {
+          const today = new Date().toDateString()
+          const todaysCheckin = result.data.find((checkin: any) => {
+            const checkinDate = new Date(checkin.created_at).toDateString()
+            return checkinDate === today
+          })
+          setHasOTCheckinToday(!!todaysCheckin)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check for today's OT check-in:", error)
+    } finally {
+      setCheckingOTCheckin(false)
+    }
+  }
+
   const handleClose = () => {
     setSelectedServices([])
     setServiceProviders({})
@@ -115,6 +148,9 @@ export function UpdateServicesDialog({
     setIsCMCheckinModalOpen(false)
     setHasCheckinToday(false)
     setCheckingCheckin(false)
+    setIsOTCheckinModalOpen(false)
+    setHasOTCheckinToday(false)
+    setCheckingOTCheckin(false)
     onClose()
   }
 
@@ -199,16 +235,37 @@ export function UpdateServicesDialog({
   }
 
   const handleCMCheckinSubmit = () => {
-    // Auto-check Case Management service if not already checked
     if (!selectedServices.includes("Case Management")) {
       setSelectedServices((prev) => [...prev, "Case Management"])
-      // Set provider to the logged-in user (Andrea Leflore)
       setServiceProviders((prev) => ({ ...prev, "Case Management": "Andrea Leflore" }))
     }
 
     setIsCMCheckinModalOpen(false)
     if (isFromCMTab) {
       checkForTodaysCheckin()
+    }
+  }
+
+  const handleOTCheckinClick = () => {
+    setIsOTCheckinModalOpen(true)
+  }
+
+  const handleOTCheckinClose = () => {
+    setIsOTCheckinModalOpen(false)
+    if (isFromOTTab) {
+      checkForTodaysOTCheckin()
+    }
+  }
+
+  const handleOTCheckinSubmit = () => {
+    if (!selectedServices.includes("Occupational")) {
+      setSelectedServices((prev) => [...prev, "Occupational"])
+      setServiceProviders((prev) => ({ ...prev, Occupational: "Andrea Leflore" }))
+    }
+
+    setIsOTCheckinModalOpen(false)
+    if (isFromOTTab) {
+      checkForTodaysOTCheckin()
     }
   }
 
@@ -237,6 +294,24 @@ export function UpdateServicesDialog({
                     <Plus className="h-4 w-4 mr-2" />
                   )}
                   {checkingCheckin ? "Checking..." : hasCheckinToday ? "Edit CM Check-In" : "+ CM Check-In"}
+                </Button>
+              )}
+              {isFromOTTab && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOTCheckinClick}
+                  disabled={checkingOTCheckin}
+                  className="ml-4 bg-transparent mr-2"
+                >
+                  {checkingOTCheckin ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-2" />
+                  ) : hasOTCheckinToday ? (
+                    <Edit className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Plus className="h-4 w-4 mr-2" />
+                  )}
+                  {checkingOTCheckin ? "Checking..." : hasOTCheckinToday ? "Edit OT Check-In" : "+ OT Check-In"}
                 </Button>
               )}
             </DialogTitle>
@@ -359,6 +434,16 @@ export function UpdateServicesDialog({
           isOpen={isCMCheckinModalOpen}
           onClose={handleCMCheckinClose}
           onSubmit={handleCMCheckinSubmit}
+          clientName={contactData?.client || ""}
+          contactId={contactData?.id || 0}
+        />
+      )}
+
+      {isFromOTTab && (
+        <OTCheckinModal
+          isOpen={isOTCheckinModalOpen}
+          onClose={handleOTCheckinClose}
+          onSubmit={handleOTCheckinSubmit}
           clientName={contactData?.client || ""}
           contactId={contactData?.id || 0}
         />
