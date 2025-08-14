@@ -155,7 +155,7 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
     setError(null)
     try {
       console.log("DEBUG: Fetching goals for client:", clientName)
-      const response = await fetch(`/api/goals/${encodeURIComponent(clientName)}`)
+      const response = await fetch(`/api/goals/by-client/${encodeURIComponent(clientName)}`)
       console.log("DEBUG: Goals fetch response status:", response.status)
       console.log("DEBUG: Goals fetch response headers:", Object.fromEntries(response.headers.entries()))
 

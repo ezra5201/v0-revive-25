@@ -34,7 +34,7 @@ export function GoalWidget({ clientName }: GoalWidgetProps) {
       setError(null)
 
       try {
-        const response = await fetch(`/api/goals/${encodeURIComponent(clientName)}`)
+        const response = await fetch(`/api/goals/by-client/${encodeURIComponent(clientName)}`)
 
         const contentType = response.headers.get("content-type")
         if (!contentType || !contentType.includes("application/json")) {
