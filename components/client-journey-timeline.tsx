@@ -1,9 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Calendar, User, MessageSquare, CheckCircle, Clock, AlertTriangle, Plus } from "lucide-react"
+import { CMCheckinModal } from "./cm-checkin-modal"
 
 interface ContactRecord {
   id: number
@@ -30,6 +32,9 @@ interface ClientJourneyTimelineProps {
 }
 
 export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJourneyTimelineProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedContactId, setSelectedContactId] = useState<number | null>(null)
+
   /* ---------------------------------------------------------------------
    * Defensive fallback ➜ ensure we always work with an array
    * ------------------------------------------------------------------- */
@@ -75,6 +80,11 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
   }
 
   /* ---------------------------------------------------------------------
+   * Sort newest ➜ oldest so gaps are easy to calculate
+   * ------------------------------------------------------------------- */
+  const sortedContacts = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+  /* ---------------------------------------------------------------------
    * Early-return states
    * ------------------------------------------------------------------- */
   if (history.length === 0) {
@@ -87,14 +97,14 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
     )
   }
 
-  /* ---------------------------------------------------------------------
-   * Sort newest ➜ oldest so gaps are easy to calculate
-   * ------------------------------------------------------------------- */
-  const sortedContacts = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-
   const handleCMCheckIn = (contactId: number) => {
-    // TODO: Implement CM Check-In functionality
-    console.log(`CM Check-In for contact ${contactId}`)
+    setSelectedContactId(contactId)
+    setIsModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedContactId(null)
   }
 
   return (
@@ -253,6 +263,14 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
           </div>
         </div>
       </div>
+
+      {/* CM Check-In Modal */}
+      <CMCheckinModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        clientName={clientName}
+        contactId={selectedContactId || 0}
+      />
     </div>
   )
 }
