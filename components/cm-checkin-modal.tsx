@@ -24,11 +24,12 @@ interface Goal {
 interface CMCheckinModalProps {
   isOpen: boolean
   onClose: () => void
+  onSubmit?: () => void // Added optional onSubmit callback
   clientName: string
   contactId: number
 }
 
-export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMCheckinModalProps) {
+export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactId }: CMCheckinModalProps) {
   const [currentView, setCurrentView] = useState<"checkin" | "new-goal">("checkin")
   const [notes, setNotes] = useState("")
   const [goals, setGoals] = useState<Goal[]>([])
@@ -212,12 +213,18 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
       return
     }
 
+    if (!clientUuid) {
+      setError("Client UUID not found. Please try again.")
+      return
+    }
+
     setSavingGoal(true)
     setError(null)
 
     try {
       const goalData = {
         client_name: clientName,
+        client_uuid: clientUuid, // Add the missing client_uuid field
         goal_text: goalText.trim(),
         target_date: targetDate || null,
         priority: priority,
@@ -361,7 +368,11 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
         setSuccessMessage("Check-in completed successfully!")
         setTimeout(() => {
           setSuccessMessage(null)
-          onClose()
+          if (onSubmit) {
+            onSubmit()
+          } else {
+            onClose()
+          }
         }, 1500)
       } else {
         throw new Error(result.error?.message || "Failed to complete check-in")
