@@ -82,12 +82,20 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
 
     try {
       // First, fetch client data to get the UUID
+      console.log("DEBUG: Fetching client data for:", clientName)
       const clientResponse = await fetch(`/api/clients/${encodeURIComponent(clientName)}`)
+      console.log("DEBUG: Client API response status:", clientResponse.status)
+      console.log("DEBUG: Client API response headers:", Object.fromEntries(clientResponse.headers.entries()))
+
       if (!clientResponse.ok) {
-        throw new Error("Failed to fetch client data")
+        const errorText = await clientResponse.text()
+        console.log("DEBUG: Client API error response:", errorText)
+        throw new Error(`Failed to fetch client data: ${clientResponse.status} - ${errorText}`)
       }
 
       const clientData = await clientResponse.json()
+      console.log("DEBUG: Client data received:", clientData)
+
       if (!clientData.client_uuid) {
         throw new Error("Client UUID not found")
       }
@@ -95,6 +103,14 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
       setClientUuid(clientData.client_uuid)
 
       // Now create the check-in with the proper client_uuid
+      console.log("DEBUG: Creating check-in with data:", {
+        contact_id: contactId,
+        client_name: clientName,
+        client_uuid: clientData.client_uuid,
+        provider_name: providerName,
+        notes: "",
+      })
+
       const response = await fetch("/api/checkins", {
         method: "POST",
         headers: {
@@ -109,17 +125,25 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
         }),
       })
 
+      console.log("DEBUG: Check-in creation response status:", response.status)
+      console.log("DEBUG: Check-in creation response headers:", Object.fromEntries(response.headers.entries()))
+
       if (!response.ok) {
-        throw new Error("Failed to create check-in")
+        const errorText = await response.text()
+        console.log("DEBUG: Check-in creation error response:", errorText)
+        throw new Error(`Failed to create check-in: ${response.status} - ${errorText}`)
       }
 
       const result = await response.json()
+      console.log("DEBUG: Check-in creation result:", result)
+
       if (result.success) {
         setCheckinId(result.data.id)
       } else {
         throw new Error(result.error?.message || "Failed to create check-in")
       }
     } catch (err) {
+      console.error("DEBUG: Error in fetchClientDataAndCreateCheckin:", err)
       setError(err instanceof Error ? err.message : "Failed to create check-in")
     } finally {
       setCreatingCheckin(false)
@@ -130,17 +154,27 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
     setLoading(true)
     setError(null)
     try {
+      console.log("DEBUG: Fetching goals for client:", clientName)
       const response = await fetch(`/api/goals/${encodeURIComponent(clientName)}`)
+      console.log("DEBUG: Goals fetch response status:", response.status)
+      console.log("DEBUG: Goals fetch response headers:", Object.fromEntries(response.headers.entries()))
+
       if (!response.ok) {
-        throw new Error("Failed to fetch goals")
+        const errorText = await response.text()
+        console.log("DEBUG: Goals fetch error response:", errorText)
+        throw new Error(`Failed to fetch goals: ${response.status} - ${errorText}`)
       }
+
       const result = await response.json()
+      console.log("DEBUG: Goals fetch result:", result)
+
       if (result.success) {
         setGoals(result.data || [])
       } else {
         throw new Error(result.error?.message || "Failed to fetch goals")
       }
     } catch (err) {
+      console.error("DEBUG: Error in fetchGoals:", err)
       setError(err instanceof Error ? err.message : "Failed to fetch goals")
       setGoals([])
     } finally {
@@ -158,25 +192,36 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
     setError(null)
 
     try {
+      const goalData = {
+        client_name: clientName,
+        goal_text: goalText.trim(),
+        target_date: targetDate || null,
+        priority: priority,
+        checkin_id: checkinId, // Associate with current check-in
+      }
+
+      console.log("DEBUG: Creating goal with data:", goalData)
+
       const response = await fetch("/api/goals", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          client_name: clientName,
-          goal_text: goalText.trim(),
-          target_date: targetDate || null,
-          priority: priority,
-          checkin_id: checkinId, // Associate with current check-in
-        }),
+        body: JSON.stringify(goalData),
       })
 
+      console.log("DEBUG: Goal creation response status:", response.status)
+      console.log("DEBUG: Goal creation response headers:", Object.fromEntries(response.headers.entries()))
+
       if (!response.ok) {
-        throw new Error("Failed to save goal")
+        const errorText = await response.text()
+        console.log("DEBUG: Goal creation error response:", errorText)
+        throw new Error(`Failed to save goal: ${response.status} - ${errorText}`)
       }
 
       const result = await response.json()
+      console.log("DEBUG: Goal creation result:", result)
+
       if (result.success) {
         // Add new goal to the list
         setGoals((prev) => [result.data, ...prev])
@@ -191,6 +236,7 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
         throw new Error(result.error?.message || "Failed to save goal")
       }
     } catch (err) {
+      console.error("DEBUG: Error in handleSaveGoal:", err)
       setError(err instanceof Error ? err.message : "Failed to save goal")
     } finally {
       setSavingGoal(false)
@@ -207,22 +253,34 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
     setError(null)
 
     try {
+      const updateData = {
+        notes: notes,
+        status: "Draft",
+      }
+
+      console.log("DEBUG: Saving draft with data:", updateData)
+      console.log("DEBUG: Check-in ID:", checkinId)
+
       const response = await fetch(`/api/checkins/${checkinId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          notes: notes,
-          status: "Draft",
-        }),
+        body: JSON.stringify(updateData),
       })
 
+      console.log("DEBUG: Save draft response status:", response.status)
+      console.log("DEBUG: Save draft response headers:", Object.fromEntries(response.headers.entries()))
+
       if (!response.ok) {
-        throw new Error("Failed to save draft")
+        const errorText = await response.text()
+        console.log("DEBUG: Save draft error response:", errorText)
+        throw new Error(`Failed to save draft: ${response.status} - ${errorText}`)
       }
 
       const result = await response.json()
+      console.log("DEBUG: Save draft result:", result)
+
       if (result.success) {
         setSuccessMessage("Draft saved successfully!")
         setTimeout(() => setSuccessMessage(null), 3000)
@@ -230,6 +288,7 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
         throw new Error(result.error?.message || "Failed to save draft")
       }
     } catch (err) {
+      console.error("DEBUG: Error in handleSaveDraft:", err)
       setError(err instanceof Error ? err.message : "Failed to save draft")
     } finally {
       setSavingCheckin(false)
@@ -246,22 +305,34 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
     setError(null)
 
     try {
+      const updateData = {
+        notes: notes,
+        status: "Completed",
+      }
+
+      console.log("DEBUG: Completing check-in with data:", updateData)
+      console.log("DEBUG: Check-in ID:", checkinId)
+
       const response = await fetch(`/api/checkins/${checkinId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          notes: notes,
-          status: "Completed",
-        }),
+        body: JSON.stringify(updateData),
       })
 
+      console.log("DEBUG: Complete check-in response status:", response.status)
+      console.log("DEBUG: Complete check-in response headers:", Object.fromEntries(response.headers.entries()))
+
       if (!response.ok) {
-        throw new Error("Failed to complete check-in")
+        const errorText = await response.text()
+        console.log("DEBUG: Complete check-in error response:", errorText)
+        throw new Error(`Failed to complete check-in: ${response.status} - ${errorText}`)
       }
 
       const result = await response.json()
+      console.log("DEBUG: Complete check-in result:", result)
+
       if (result.success) {
         setSuccessMessage("Check-in completed successfully!")
         setTimeout(() => {
@@ -272,6 +343,7 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
         throw new Error(result.error?.message || "Failed to complete check-in")
       }
     } catch (err) {
+      console.error("DEBUG: Error in handleCompleteCheckin:", err)
       setError(err instanceof Error ? err.message : "Failed to complete check-in")
     } finally {
       setSavingCheckin(false)
