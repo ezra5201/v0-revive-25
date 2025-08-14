@@ -329,6 +329,7 @@ export default function CmPage() {
         onClose={handleCloseUpdateServicesDialog}
         contactData={selectedContactForUpdate}
         onServicesUpdate={handleServicesUpdated}
+        isFromCMTab={true}
       />
     </div>
   )
