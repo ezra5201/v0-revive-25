@@ -16,7 +16,7 @@ import { useDatabase } from "@/hooks/use-database"
 import { X } from "lucide-react"
 
 type MainTab = "today" | "all" | "client"
-type ClientSection = "basic-info" | "contact-history" | "journey-timeline"
+type ClientSection = "basic-info" | "contact-history" | "journey-timeline" | "ot-goals"
 
 export default function OtPage() {
   const searchParams = useSearchParams()
@@ -109,7 +109,7 @@ export default function OtPage() {
 
   // Client section change handler
   const handleClientSectionChange = useCallback(
-    (section: ClientSection) => {
+    (section: "basic-info" | "contact-history" | "journey-timeline" | "ot-goals") => {
       setActiveClientSection(section)
       if (selectedClient) {
         updateURL("client", selectedClient, section)

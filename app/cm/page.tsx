@@ -16,7 +16,7 @@ import { useDatabase } from "@/hooks/use-database"
 import { X } from "lucide-react"
 
 type MainTab = "today" | "all" | "client"
-type ClientSection = "basic-info" | "contact-history" | "journey-timeline"
+type ClientSection = "basic-info" | "contact-history" | "journey-timeline" | "cm-goals"
 
 export default function CmPage() {
   const searchParams = useSearchParams()
