@@ -35,14 +35,27 @@ export function GoalWidget({ clientName }: GoalWidgetProps) {
 
       try {
         const response = await fetch(`/api/goals/${encodeURIComponent(clientName)}`)
+
+        const contentType = response.headers.get("content-type")
+        if (!contentType || !contentType.includes("application/json")) {
+          // API returned HTML (likely 404) - treat as no goals
+          setGoals([])
+          return
+        }
+
         if (!response.ok) {
           throw new Error("Failed to fetch goals")
         }
+
         const data = await response.json()
         setGoals(data.data || [])
       } catch (err) {
         console.error("Error fetching goals:", err)
-        setError(err instanceof Error ? err.message : "An error occurred")
+        if (err instanceof Error && err.message.includes("Unexpected token")) {
+          setGoals([])
+        } else {
+          setError(err instanceof Error ? err.message : "An error occurred")
+        }
       } finally {
         setIsLoading(false)
       }
