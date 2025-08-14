@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Plus, ArrowLeft, Target, Calendar, AlertCircle, CheckCircle } from "lucide-react"
 
-interface Goal {
+interface OTGoal {
   id: number
   client_name: string
   goal_text: string
@@ -21,18 +21,18 @@ interface Goal {
   updated_at: string
 }
 
-interface CMCheckinModalProps {
+interface OTCheckinModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit?: () => void // Added optional onSubmit callback
+  onSubmit?: () => void
   clientName: string
   contactId: number
 }
 
-export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactId }: CMCheckinModalProps) {
+export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactId }: OTCheckinModalProps) {
   const [currentView, setCurrentView] = useState<"checkin" | "new-goal">("checkin")
   const [notes, setNotes] = useState("")
-  const [goals, setGoals] = useState<Goal[]>([])
+  const [goals, setGoals] = useState<OTGoal[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -86,7 +86,6 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
       console.log("DEBUG: Fetching client data for:", clientName)
       const clientResponse = await fetch(`/api/clients/${encodeURIComponent(clientName)}`)
       console.log("DEBUG: Client API response status:", clientResponse.status)
-      console.log("DEBUG: Client API response headers:", Object.fromEntries(clientResponse.headers.entries()))
 
       if (!clientResponse.ok) {
         const errorText = await clientResponse.text()
@@ -103,8 +102,7 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
 
       setClientUuid(clientData.client_uuid)
 
-      // Now create the check-in with the proper client_uuid
-      console.log("DEBUG: Creating check-in with data:", {
+      console.log("DEBUG: Creating OT check-in with data:", {
         contact_id: contactId,
         client_name: clientName,
         client_uuid: clientData.client_uuid,
@@ -112,7 +110,7 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         notes: "",
       })
 
-      const response = await fetch("/api/checkins", {
+      const response = await fetch("/api/ot-checkins", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -126,26 +124,25 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         }),
       })
 
-      console.log("DEBUG: Check-in creation response status:", response.status)
-      console.log("DEBUG: Check-in creation response headers:", Object.fromEntries(response.headers.entries()))
+      console.log("DEBUG: OT check-in creation response status:", response.status)
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.log("DEBUG: Check-in creation error response:", errorText)
-        throw new Error(`Failed to create check-in: ${response.status} - ${errorText}`)
+        console.log("DEBUG: OT check-in creation error response:", errorText)
+        throw new Error(`Failed to create OT check-in: ${response.status} - ${errorText}`)
       }
 
       const result = await response.json()
-      console.log("DEBUG: Check-in creation result:", result)
+      console.log("DEBUG: OT check-in creation result:", result)
 
       if (result.success) {
         setCheckinId(result.data.id)
       } else {
-        throw new Error(result.error?.message || "Failed to create check-in")
+        throw new Error(result.error?.message || "Failed to create OT check-in")
       }
     } catch (err) {
       console.error("DEBUG: Error in fetchClientDataAndCreateCheckin:", err)
-      setError(err instanceof Error ? err.message : "Failed to create check-in")
+      setError(err instanceof Error ? err.message : "Failed to create OT check-in")
     } finally {
       setCreatingCheckin(false)
     }
@@ -155,51 +152,50 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
     setLoading(true)
     setError(null)
     try {
-      console.log("DEBUG: Fetching goals for client:", clientName)
-      const response = await fetch(`/api/goals/by-client/${encodeURIComponent(clientName)}`)
-      console.log("DEBUG: Goals fetch response status:", response.status)
-      console.log("DEBUG: Goals fetch response headers:", Object.fromEntries(response.headers.entries()))
+      console.log("DEBUG: Fetching OT goals for client:", clientName)
+      const response = await fetch(`/api/ot-goals/by-client/${encodeURIComponent(clientName)}`)
+      console.log("DEBUG: OT goals fetch response status:", response.status)
 
       const contentType = response.headers.get("content-type")
       const isJson = contentType && contentType.includes("application/json")
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.log("DEBUG: Goals fetch error response:", errorText)
+        console.log("DEBUG: OT goals fetch error response:", errorText)
 
         // If we get HTML instead of JSON (like a 404 page), treat as no goals
         if (!isJson && errorText.includes("<!DOCTYPE")) {
-          console.log("DEBUG: Received HTML response, treating as no goals found")
+          console.log("DEBUG: Received HTML response, treating as no OT goals found")
           setGoals([])
           return
         }
 
-        throw new Error(`Failed to fetch goals: ${response.status} - ${errorText}`)
+        throw new Error(`Failed to fetch OT goals: ${response.status} - ${errorText}`)
       }
 
       if (!isJson) {
-        console.log("DEBUG: Response is not JSON, treating as no goals found")
+        console.log("DEBUG: Response is not JSON, treating as no OT goals found")
         setGoals([])
         return
       }
 
       const result = await response.json()
-      console.log("DEBUG: Goals fetch result:", result)
+      console.log("DEBUG: OT goals fetch result:", result)
 
       if (result.success) {
         setGoals(result.data || [])
       } else {
-        throw new Error(result.error?.message || "Failed to fetch goals")
+        throw new Error(result.error?.message || "Failed to fetch OT goals")
       }
     } catch (err) {
       console.error("DEBUG: Error in fetchGoals:", err)
 
       if (err instanceof Error && err.message.includes("Unexpected token")) {
-        console.log("DEBUG: JSON parsing error, treating as no goals found")
+        console.log("DEBUG: JSON parsing error, treating as no OT goals found")
         setGoals([])
         setError(null) // Don't show error for this case
       } else {
-        setError(err instanceof Error ? err.message : "Failed to fetch goals")
+        setError(err instanceof Error ? err.message : "Failed to fetch OT goals")
         setGoals([])
       }
     } finally {
@@ -224,16 +220,16 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
     try {
       const goalData = {
         client_name: clientName,
-        client_uuid: clientUuid, // Add the missing client_uuid field
+        client_uuid: clientUuid,
         goal_text: goalText.trim(),
         target_date: targetDate || null,
         priority: priority,
-        checkin_id: checkinId, // Associate with current check-in
+        checkin_id: checkinId,
       }
 
-      console.log("DEBUG: Creating goal with data:", goalData)
+      console.log("DEBUG: Creating OT goal with data:", goalData)
 
-      const response = await fetch("/api/goals", {
+      const response = await fetch("/api/ot-goals", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -241,17 +237,16 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         body: JSON.stringify(goalData),
       })
 
-      console.log("DEBUG: Goal creation response status:", response.status)
-      console.log("DEBUG: Goal creation response headers:", Object.fromEntries(response.headers.entries()))
+      console.log("DEBUG: OT goal creation response status:", response.status)
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.log("DEBUG: Goal creation error response:", errorText)
-        throw new Error(`Failed to save goal: ${response.status} - ${errorText}`)
+        console.log("DEBUG: OT goal creation error response:", errorText)
+        throw new Error(`Failed to save OT goal: ${response.status} - ${errorText}`)
       }
 
       const result = await response.json()
-      console.log("DEBUG: Goal creation result:", result)
+      console.log("DEBUG: OT goal creation result:", result)
 
       if (result.success) {
         // Add new goal to the list
@@ -261,14 +256,14 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         setTargetDate("")
         setPriority(1)
         setCurrentView("checkin")
-        setSuccessMessage("Goal created successfully!")
+        setSuccessMessage("OT goal created successfully!")
         setTimeout(() => setSuccessMessage(null), 3000)
       } else {
-        throw new Error(result.error?.message || "Failed to save goal")
+        throw new Error(result.error?.message || "Failed to save OT goal")
       }
     } catch (err) {
       console.error("DEBUG: Error in handleSaveGoal:", err)
-      setError(err instanceof Error ? err.message : "Failed to save goal")
+      setError(err instanceof Error ? err.message : "Failed to save OT goal")
     } finally {
       setSavingGoal(false)
     }
@@ -276,7 +271,7 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
 
   const handleSaveDraft = async () => {
     if (!checkinId) {
-      setError("No check-in record found")
+      setError("No OT check-in record found")
       return
     }
 
@@ -289,10 +284,10 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         status: "Draft",
       }
 
-      console.log("DEBUG: Saving draft with data:", updateData)
-      console.log("DEBUG: Check-in ID:", checkinId)
+      console.log("DEBUG: Saving OT draft with data:", updateData)
+      console.log("DEBUG: OT Check-in ID:", checkinId)
 
-      const response = await fetch(`/api/checkins/${checkinId}`, {
+      const response = await fetch(`/api/ot-checkins/${checkinId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -300,27 +295,26 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         body: JSON.stringify(updateData),
       })
 
-      console.log("DEBUG: Save draft response status:", response.status)
-      console.log("DEBUG: Save draft response headers:", Object.fromEntries(response.headers.entries()))
+      console.log("DEBUG: Save OT draft response status:", response.status)
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.log("DEBUG: Save draft error response:", errorText)
-        throw new Error(`Failed to save draft: ${response.status} - ${errorText}`)
+        console.log("DEBUG: Save OT draft error response:", errorText)
+        throw new Error(`Failed to save OT draft: ${response.status} - ${errorText}`)
       }
 
       const result = await response.json()
-      console.log("DEBUG: Save draft result:", result)
+      console.log("DEBUG: Save OT draft result:", result)
 
       if (result.success) {
-        setSuccessMessage("Draft saved successfully!")
+        setSuccessMessage("OT draft saved successfully!")
         setTimeout(() => setSuccessMessage(null), 3000)
       } else {
-        throw new Error(result.error?.message || "Failed to save draft")
+        throw new Error(result.error?.message || "Failed to save OT draft")
       }
     } catch (err) {
       console.error("DEBUG: Error in handleSaveDraft:", err)
-      setError(err instanceof Error ? err.message : "Failed to save draft")
+      setError(err instanceof Error ? err.message : "Failed to save OT draft")
     } finally {
       setSavingCheckin(false)
     }
@@ -328,7 +322,7 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
 
   const handleCompleteCheckin = async () => {
     if (!checkinId) {
-      setError("No check-in record found")
+      setError("No OT check-in record found")
       return
     }
 
@@ -341,10 +335,10 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         status: "Completed",
       }
 
-      console.log("DEBUG: Completing check-in with data:", updateData)
-      console.log("DEBUG: Check-in ID:", checkinId)
+      console.log("DEBUG: Completing OT check-in with data:", updateData)
+      console.log("DEBUG: OT Check-in ID:", checkinId)
 
-      const response = await fetch(`/api/checkins/${checkinId}`, {
+      const response = await fetch(`/api/ot-checkins/${checkinId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -352,20 +346,19 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         body: JSON.stringify(updateData),
       })
 
-      console.log("DEBUG: Complete check-in response status:", response.status)
-      console.log("DEBUG: Complete check-in response headers:", Object.fromEntries(response.headers.entries()))
+      console.log("DEBUG: Complete OT check-in response status:", response.status)
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.log("DEBUG: Complete check-in error response:", errorText)
-        throw new Error(`Failed to complete check-in: ${response.status} - ${errorText}`)
+        console.log("DEBUG: Complete OT check-in error response:", errorText)
+        throw new Error(`Failed to complete OT check-in: ${response.status} - ${errorText}`)
       }
 
       const result = await response.json()
-      console.log("DEBUG: Complete check-in result:", result)
+      console.log("DEBUG: Complete OT check-in result:", result)
 
       if (result.success) {
-        setSuccessMessage("Check-in completed successfully!")
+        setSuccessMessage("OT check-in completed successfully!")
         setTimeout(() => {
           setSuccessMessage(null)
           if (onSubmit) {
@@ -375,11 +368,11 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
           }
         }, 1500)
       } else {
-        throw new Error(result.error?.message || "Failed to complete check-in")
+        throw new Error(result.error?.message || "Failed to complete OT check-in")
       }
     } catch (err) {
       console.error("DEBUG: Error in handleCompleteCheckin:", err)
-      setError(err instanceof Error ? err.message : "Failed to complete check-in")
+      setError(err instanceof Error ? err.message : "Failed to complete OT check-in")
     } finally {
       setSavingCheckin(false)
     }
@@ -411,13 +404,13 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
-            {currentView === "checkin" ? "New CM Check-In" : "New Goal"}
+            {currentView === "checkin" ? "New OT Check-In" : "New OT Goal"}
           </DialogTitle>
         </DialogHeader>
 
         {creatingCheckin && (
           <div className="text-center py-4">
-            <div className="text-sm text-gray-500">Setting up check-in...</div>
+            <div className="text-sm text-gray-500">Setting up OT check-in...</div>
           </div>
         )}
 
@@ -437,7 +430,7 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Enter your check-in notes..."
+                placeholder="Enter your OT check-in notes..."
                 className="min-h-[100px] resize-none"
                 style={{
                   height: "auto",
@@ -455,10 +448,10 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
             {/* Goals Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-medium text-gray-900">Goals</h3>
+                <h3 className="text-base font-medium text-gray-900">OT Goals</h3>
                 <Button variant="outline" size="sm" onClick={() => setCurrentView("new-goal")} className="text-sm">
                   <Plus className="h-4 w-4 mr-1" />
-                  New Goal
+                  New OT Goal
                 </Button>
               </div>
 
@@ -481,7 +474,7 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
               {/* Goals List */}
               {loading ? (
                 <div className="text-center py-4">
-                  <div className="text-sm text-gray-500">Loading goals...</div>
+                  <div className="text-sm text-gray-500">Loading OT goals...</div>
                 </div>
               ) : goals.length > 0 ? (
                 <div className="space-y-3">
@@ -513,8 +506,8 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <Target className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-sm">Client has no CM goals</p>
-                  <p className="text-xs text-gray-400 mt-1">Click "New Goal" to get started.</p>
+                  <p className="text-sm">Client has no OT goals</p>
+                  <p className="text-xs text-gray-400 mt-1">Click "New OT Goal" to get started.</p>
                 </div>
               )}
             </div>
@@ -544,13 +537,13 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="goal-text" className="text-sm font-medium">
-                  Goal Text *
+                  OT Goal Text *
                 </Label>
                 <Textarea
                   id="goal-text"
                   value={goalText}
                   onChange={(e) => setGoalText(e.target.value)}
-                  placeholder="Enter the goal description..."
+                  placeholder="Enter the OT goal description..."
                   className="min-h-[80px]"
                   maxLength={500}
                 />
@@ -604,7 +597,7 @@ export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
                 Cancel
               </Button>
               <Button onClick={handleSaveGoal} disabled={savingGoal || !goalText.trim()}>
-                {savingGoal ? "Saving..." : "Save Goal"}
+                {savingGoal ? "Saving..." : "Save OT Goal"}
               </Button>
             </div>
           </div>

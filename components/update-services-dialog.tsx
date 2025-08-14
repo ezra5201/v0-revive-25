@@ -5,7 +5,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { AlertTriangle, Clock, User } from "lucide-react"
+import { AlertTriangle, Clock, User, Plus, Edit } from "lucide-react"
+import { CMCheckinModal } from "./cm-checkin-modal"
+import { OTCheckinModal } from "./ot-checkin-modal"
 
 interface UpdateServicesDialogProps {
   isOpen: boolean
@@ -22,6 +24,8 @@ interface UpdateServicesDialogProps {
     }>
   } | null
   onServicesUpdate?: () => void
+  isFromCMTab?: boolean
+  isFromOTTab?: boolean
 }
 
 const services = [
@@ -47,19 +51,30 @@ const providers = [
   "Andrea Leflore",
 ]
 
-export function UpdateServicesDialog({ isOpen, onClose, contactData, onServicesUpdate }: UpdateServicesDialogProps) {
+export function UpdateServicesDialog({
+  isOpen,
+  onClose,
+  contactData,
+  onServicesUpdate,
+  isFromCMTab = false,
+  isFromOTTab = false,
+}: UpdateServicesDialogProps) {
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [serviceProviders, setServiceProviders] = useState<{ [key: string]: string }>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [isCMCheckinModalOpen, setIsCMCheckinModalOpen] = useState(false)
+  const [hasCheckinToday, setHasCheckinToday] = useState(false)
+  const [checkingCheckin, setCheckingCheckin] = useState(false)
+  const [isOTCheckinModalOpen, setIsOTCheckinModalOpen] = useState(false)
+  const [hasOTCheckinToday, setHasOTCheckinToday] = useState(false)
+  const [checkingOTCheckin, setCheckingOTCheckin] = useState(false)
 
-  // Initialize selected services when dialog opens
   useEffect(() => {
     if (isOpen && contactData) {
       const currentlyProvided = contactData.servicesProvided.map((sp) => sp.service)
       setSelectedServices(currentlyProvided)
 
-      // Initialize providers for services that need them
       const initialProviders: { [key: string]: string } = {}
       contactData.servicesProvided.forEach((sp) => {
         if (sp.provider && (sp.service === "Case Management" || sp.service === "Occupational")) {
@@ -67,27 +82,86 @@ export function UpdateServicesDialog({ isOpen, onClose, contactData, onServicesU
         }
       })
       setServiceProviders(initialProviders)
+
+      if (isFromCMTab) {
+        checkForTodaysCheckin()
+      }
+      if (isFromOTTab) {
+        checkForTodaysOTCheckin()
+      }
     }
-  }, [isOpen, contactData])
+  }, [isOpen, contactData, isFromCMTab, isFromOTTab])
+
+  const checkForTodaysCheckin = async () => {
+    if (!contactData) return
+
+    setCheckingCheckin(true)
+    try {
+      const response = await fetch(`/api/checkins/by-contact/${contactData.id}`)
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data) {
+          const today = new Date().toDateString()
+          const todaysCheckin = result.data.find((checkin: any) => {
+            const checkinDate = new Date(checkin.created_at).toDateString()
+            return checkinDate === today
+          })
+          setHasCheckinToday(!!todaysCheckin)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check for today's check-in:", error)
+    } finally {
+      setCheckingCheckin(false)
+    }
+  }
+
+  const checkForTodaysOTCheckin = async () => {
+    if (!contactData) return
+
+    setCheckingOTCheckin(true)
+    try {
+      const response = await fetch(`/api/ot-checkins/by-contact/${contactData.id}`)
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data) {
+          const today = new Date().toDateString()
+          const todaysCheckin = result.data.find((checkin: any) => {
+            const checkinDate = new Date(checkin.created_at).toDateString()
+            return checkinDate === today
+          })
+          setHasOTCheckinToday(!!todaysCheckin)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check for today's OT check-in:", error)
+    } finally {
+      setCheckingOTCheckin(false)
+    }
+  }
 
   const handleClose = () => {
     setSelectedServices([])
     setServiceProviders({})
     setIsSubmitting(false)
     setSubmitError(null)
+    setIsCMCheckinModalOpen(false)
+    setHasCheckinToday(false)
+    setCheckingCheckin(false)
+    setIsOTCheckinModalOpen(false)
+    setHasOTCheckinToday(false)
+    setCheckingOTCheckin(false)
     onClose()
   }
 
   const handleServiceChange = (service: string, checked: boolean) => {
     if (checked) {
       setSelectedServices([...selectedServices, service])
-      // Set default provider for CM and OT services
       if ((service === "Case Management" || service === "Occupational") && !serviceProviders[service]) {
         setServiceProviders((prev) => ({ ...prev, [service]: "Andrea Leflore" }))
       }
     } else {
       setSelectedServices(selectedServices.filter((s) => s !== service))
-      // Remove provider when service is unchecked
       if (serviceProviders[service]) {
         const newProviders = { ...serviceProviders }
         delete newProviders[service]
@@ -107,14 +181,12 @@ export function UpdateServicesDialog({ isOpen, onClose, contactData, onServicesU
     setSubmitError(null)
 
     try {
-      // Build the updated services provided array
       const updatedServicesProvided = selectedServices.map((service) => {
         const serviceRecord: any = {
           service,
           completedAt: new Date().toISOString(),
         }
 
-        // Add provider for CM and OT services
         if ((service === "Case Management" || service === "Occupational") && serviceProviders[service]) {
           serviceRecord.provider = serviceProviders[service]
         }
@@ -130,7 +202,7 @@ export function UpdateServicesDialog({ isOpen, onClose, contactData, onServicesU
         body: JSON.stringify({
           contactId: contactData.id,
           servicesProvided: updatedServicesProvided,
-          updatedBy: "Andrea Leflore", // TODO: Get from current user context
+          updatedBy: "Andrea Leflore",
         }),
       })
 
@@ -151,130 +223,231 @@ export function UpdateServicesDialog({ isOpen, onClose, contactData, onServicesU
     }
   }
 
+  const handleCMCheckinClick = () => {
+    setIsCMCheckinModalOpen(true)
+  }
+
+  const handleCMCheckinClose = () => {
+    setIsCMCheckinModalOpen(false)
+    if (isFromCMTab) {
+      checkForTodaysCheckin()
+    }
+  }
+
+  const handleCMCheckinSubmit = () => {
+    if (!selectedServices.includes("Case Management")) {
+      setSelectedServices((prev) => [...prev, "Case Management"])
+      setServiceProviders((prev) => ({ ...prev, "Case Management": "Andrea Leflore" }))
+    }
+
+    setIsCMCheckinModalOpen(false)
+    if (isFromCMTab) {
+      checkForTodaysCheckin()
+    }
+  }
+
+  const handleOTCheckinClick = () => {
+    setIsOTCheckinModalOpen(true)
+  }
+
+  const handleOTCheckinClose = () => {
+    setIsOTCheckinModalOpen(false)
+    if (isFromOTTab) {
+      checkForTodaysOTCheckin()
+    }
+  }
+
+  const handleOTCheckinSubmit = () => {
+    if (!selectedServices.includes("Occupational")) {
+      setSelectedServices((prev) => [...prev, "Occupational"])
+      setServiceProviders((prev) => ({ ...prev, Occupational: "Andrea Leflore" }))
+    }
+
+    setIsOTCheckinModalOpen(false)
+    if (isFromOTTab) {
+      checkForTodaysOTCheckin()
+    }
+  }
+
   if (!contactData) return null
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="dialog-description">
-        <DialogHeader>
-          <DialogTitle>Update Services - {contactData.client}</DialogTitle>
-          <div id="dialog-description" className="sr-only">
-            Update services provided for {contactData.client} on {contactData.date}
-          </div>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Contact Info */}
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="flex items-center space-x-2 text-blue-800">
-              <Clock className="h-4 w-4" />
-              <span className="font-medium">Check-in: {contactData.date}</span>
-            </div>
-            <div className="flex items-center space-x-2 text-blue-700 mt-1">
-              <User className="h-4 w-4" />
-              <span>Client: {contactData.client}</span>
-            </div>
-          </div>
-
-          {/* Services Requested (Read-only) */}
-          {contactData.servicesRequested.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-base font-medium">Services Originally Requested:</Label>
-              <div className="bg-gray-50 p-3 rounded border">
-                <div className="flex flex-wrap gap-2">
-                  {contactData.servicesRequested.map((service) => (
-                    <span
-                      key={service}
-                      className="inline-flex items-center px-2 py-1 bg-gray-200 text-gray-700 text-sm rounded"
-                    >
-                      {service}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Services Provided (Editable) */}
-          <div className="space-y-4">
-            <Label className="text-base font-medium">Services Provided Today:</Label>
-            <div className="grid grid-cols-2 gap-4">
-              {services.map((service) => (
-                <div key={service.value} className="space-y-2 break-inside-avoid">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={service.value}
-                      checked={selectedServices.includes(service.value)}
-                      onCheckedChange={(checked) => handleServiceChange(service.value, checked as boolean)}
-                    />
-                    <Label htmlFor={service.value} className="text-sm font-normal cursor-pointer flex-1">
-                      {service.label}
-                    </Label>
-                  </div>
-
-                  {/* Provider selection for CM and OT services */}
-                  {service.needsProvider && selectedServices.includes(service.value) && (
-                    <div className="ml-6 space-y-2">
-                      <Label className="text-xs text-gray-600">Provider:</Label>
-                      <select
-                        value={serviceProviders[service.value] || ""}
-                        onChange={(e) => handleProviderChange(service.value, e.target.value)}
-                        className="w-full max-w-xs px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select provider...</option>
-                        {providers.map((provider) => (
-                          <option key={provider} value={provider}>
-                            {provider}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+    <>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="dialog-description">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between pr-8">
+              <span>Update Services - {contactData.client}</span>
+              {isFromCMTab && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCMCheckinClick}
+                  disabled={checkingCheckin}
+                  className="ml-4 bg-transparent mr-2"
+                >
+                  {checkingCheckin ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-2" />
+                  ) : hasCheckinToday ? (
+                    <Edit className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Plus className="h-4 w-4 mr-2" />
                   )}
-                </div>
-              ))}
+                  {checkingCheckin ? "Checking..." : hasCheckinToday ? "Edit CM Check-In" : "+ CM Check-In"}
+                </Button>
+              )}
+              {isFromOTTab && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOTCheckinClick}
+                  disabled={checkingOTCheckin}
+                  className="ml-4 bg-transparent mr-2"
+                >
+                  {checkingOTCheckin ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-2" />
+                  ) : hasOTCheckinToday ? (
+                    <Edit className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Plus className="h-4 w-4 mr-2" />
+                  )}
+                  {checkingOTCheckin ? "Checking..." : hasOTCheckinToday ? "Edit OT Check-In" : "+ OT Check-In"}
+                </Button>
+              )}
+            </DialogTitle>
+            <div id="dialog-description" className="sr-only">
+              Update services provided for {contactData.client} on {contactData.date}
             </div>
-          </div>
+          </DialogHeader>
 
-          {/* Warning about CM/OT providers */}
-          <div className="bg-yellow-50 border border-yellow-200 p-3 rounded">
-            <div className="flex items-start space-x-2">
-              <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
-              <div className="text-sm text-yellow-800">
-                <p className="font-medium">Provider Required</p>
-                <p>Case Management and Occupational Therapy services require a provider to be selected.</p>
+          <div className="space-y-6">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="flex items-center space-x-2 text-blue-800">
+                <Clock className="h-4 w-4" />
+                <span className="font-medium">Check-in: {contactData.date}</span>
+              </div>
+              <div className="flex items-center space-x-2 text-blue-700 mt-1">
+                <User className="h-4 w-4" />
+                <span>Client: {contactData.client}</span>
               </div>
             </div>
-          </div>
 
-          {submitError && (
-            <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="text-sm">{submitError}</span>
+            {contactData.servicesRequested.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-base font-medium">Services Originally Requested:</Label>
+                <div className="bg-gray-50 p-3 rounded border">
+                  <div className="flex flex-wrap gap-2">
+                    {contactData.servicesRequested.map((service) => (
+                      <span
+                        key={service}
+                        className="inline-flex items-center px-2 py-1 bg-gray-200 text-gray-700 text-sm rounded"
+                      >
+                        {service}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Services Provided Today:</Label>
+              <div className="grid grid-cols-2 gap-4">
+                {services.map((service) => (
+                  <div key={service.value} className="space-y-2 break-inside-avoid">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={service.value}
+                        checked={selectedServices.includes(service.value)}
+                        onCheckedChange={(checked) => handleServiceChange(service.value, checked as boolean)}
+                      />
+                      <Label htmlFor={service.value} className="text-sm font-normal cursor-pointer flex-1">
+                        {service.label}
+                      </Label>
+                    </div>
+
+                    {service.needsProvider && selectedServices.includes(service.value) && (
+                      <div className="ml-6 space-y-2">
+                        <Label className="text-xs text-gray-600">Provider:</Label>
+                        <select
+                          value={serviceProviders[service.value] || ""}
+                          onChange={(e) => handleProviderChange(service.value, e.target.value)}
+                          className="w-full max-w-xs px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select provider...</option>
+                          {providers.map((provider) => (
+                            <option key={provider} value={provider}>
+                              {provider}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          )}
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              className="flex-1 sm:flex-none bg-transparent"
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} className="flex-1" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Updating...
-                </>
-              ) : (
-                "Update Services"
-              )}
-            </Button>
+            <div className="bg-yellow-50 border border-yellow-200 p-3 rounded">
+              <div className="flex items-start space-x-2">
+                <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                <div className="text-sm text-yellow-800">
+                  <p className="font-medium">Provider Required</p>
+                  <p>Case Management and Occupational Therapy services require a provider to be selected.</p>
+                </div>
+              </div>
+            </div>
+
+            {submitError && (
+              <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="text-sm">{submitError}</span>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={handleClose}
+                className="flex-1 sm:flex-none bg-transparent"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit} className="flex-1" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update Services"
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {isFromCMTab && (
+        <CMCheckinModal
+          isOpen={isCMCheckinModalOpen}
+          onClose={handleCMCheckinClose}
+          onSubmit={handleCMCheckinSubmit}
+          clientName={contactData?.client || ""}
+          contactId={contactData?.id || 0}
+        />
+      )}
+
+      {isFromOTTab && (
+        <OTCheckinModal
+          isOpen={isOTCheckinModalOpen}
+          onClose={handleOTCheckinClose}
+          onSubmit={handleOTCheckinSubmit}
+          clientName={contactData?.client || ""}
+          contactId={contactData?.id || 0}
+        />
+      )}
+    </>
   )
 }

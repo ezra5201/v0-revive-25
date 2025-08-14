@@ -6,11 +6,12 @@ import { ClientBasicInfo } from "./client-basic-info"
 import { ClientContactHistory } from "./client-contact-history"
 import { ClientJourneyTimeline } from "./client-journey-timeline"
 import { GoalWidget } from "./goal-widget"
+import { OTGoalWidget } from "./ot-goal-widget"
 
 interface ClientMasterRecordProps {
   clientName: string
-  activeSection: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals"
-  onSectionChange: (section: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals") => void
+  activeSection: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals"
+  onSectionChange: (section: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals") => void
 }
 
 interface ClientData {
@@ -176,6 +177,16 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
             CM Goals
           </button>
           <button
+            onClick={() => onSectionChange("ot-goals")}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeSection === "ot-goals"
+                ? "border-orange-500 text-orange-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            OT Goals
+          </button>
+          <button
             onClick={() => onSectionChange("contact-history")}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeSection === "contact-history"
@@ -203,6 +214,8 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
         )}
 
         {activeSection === "cm-goals" && <GoalWidget clientName={clientName} />}
+
+        {activeSection === "ot-goals" && <OTGoalWidget clientName={clientName} />}
       </div>
     </div>
   )

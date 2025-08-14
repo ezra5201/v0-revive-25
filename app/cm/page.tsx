@@ -16,7 +16,7 @@ import { useDatabase } from "@/hooks/use-database"
 import { X } from "lucide-react"
 
 type MainTab = "today" | "all" | "client"
-type ClientSection = "basic-info" | "contact-history" | "journey-timeline"
+type ClientSection = "basic-info" | "contact-history" | "journey-timeline" | "cm-goals"
 
 export default function CmPage() {
   const searchParams = useSearchParams()
@@ -224,7 +224,7 @@ export default function CmPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
-              All CM Clients
+              My Caseload
             </button>
 
             {/* Dynamic client tab */}
@@ -329,6 +329,7 @@ export default function CmPage() {
         onClose={handleCloseUpdateServicesDialog}
         contactData={selectedContactForUpdate}
         onServicesUpdate={handleServicesUpdated}
+        isFromCMTab={true}
       />
     </div>
   )
