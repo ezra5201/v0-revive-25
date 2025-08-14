@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { Plus, ArrowLeft, Target, Calendar, AlertCircle } from "lucide-react"
+import { Plus, ArrowLeft, Target, Calendar, AlertCircle, CheckCircle } from "lucide-react"
 
 interface Goal {
   id: number
@@ -34,12 +34,24 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
   const [goals, setGoals] = useState<Goal[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  const [checkinId, setCheckinId] = useState<number | null>(null)
+  const [creatingCheckin, setCreatingCheckin] = useState(false)
+  const [savingCheckin, setSavingCheckin] = useState(false)
+  const providerName = "Andrea Leflore" // Hardcoded as requested
 
   // New goal form state
   const [goalText, setGoalText] = useState("")
   const [targetDate, setTargetDate] = useState("")
   const [priority, setPriority] = useState(1)
   const [savingGoal, setSavingGoal] = useState(false)
+
+  useEffect(() => {
+    if (isOpen && clientName && !checkinId) {
+      createDraftCheckin()
+    }
+  }, [isOpen, clientName])
 
   // Fetch goals when modal opens
   useEffect(() => {
@@ -57,8 +69,46 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
       setTargetDate("")
       setPriority(1)
       setError(null)
+      setSuccessMessage(null)
+      setCheckinId(null)
     }
   }, [isOpen])
+
+  const createDraftCheckin = async () => {
+    setCreatingCheckin(true)
+    setError(null)
+
+    try {
+      const response = await fetch("/api/checkins", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contact_id: contactId,
+          client_name: clientName,
+          client_uuid: null, // Will be handled by API if needed
+          provider_name: providerName,
+          notes: "",
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to create check-in")
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        setCheckinId(result.data.id)
+      } else {
+        throw new Error(result.error?.message || "Failed to create check-in")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create check-in")
+    } finally {
+      setCreatingCheckin(false)
+    }
+  }
 
   const fetchGoals = async () => {
     setLoading(true)
@@ -102,6 +152,7 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
           goal_text: goalText.trim(),
           target_date: targetDate || null,
           priority: priority,
+          checkin_id: checkinId, // Associate with current check-in
         }),
       })
 
@@ -118,6 +169,8 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
         setTargetDate("")
         setPriority(1)
         setCurrentView("checkin")
+        setSuccessMessage("Goal created successfully!")
+        setTimeout(() => setSuccessMessage(null), 3000)
       } else {
         throw new Error(result.error?.message || "Failed to save goal")
       }
@@ -125,6 +178,87 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
       setError(err instanceof Error ? err.message : "Failed to save goal")
     } finally {
       setSavingGoal(false)
+    }
+  }
+
+  const handleSaveDraft = async () => {
+    if (!checkinId) {
+      setError("No check-in record found")
+      return
+    }
+
+    setSavingCheckin(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/checkins/${checkinId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          notes: notes,
+          status: "Draft",
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to save draft")
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        setSuccessMessage("Draft saved successfully!")
+        setTimeout(() => setSuccessMessage(null), 3000)
+      } else {
+        throw new Error(result.error?.message || "Failed to save draft")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save draft")
+    } finally {
+      setSavingCheckin(false)
+    }
+  }
+
+  const handleCompleteCheckin = async () => {
+    if (!checkinId) {
+      setError("No check-in record found")
+      return
+    }
+
+    setSavingCheckin(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/checkins/${checkinId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          notes: notes,
+          status: "Completed",
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to complete check-in")
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        setSuccessMessage("Check-in completed successfully!")
+        setTimeout(() => {
+          setSuccessMessage(null)
+          onClose()
+        }, 1500)
+      } else {
+        throw new Error(result.error?.message || "Failed to complete check-in")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to complete check-in")
+    } finally {
+      setSavingCheckin(false)
     }
   }
 
@@ -158,7 +292,13 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
           </DialogTitle>
         </DialogHeader>
 
-        {currentView === "checkin" ? (
+        {creatingCheckin && (
+          <div className="text-center py-4">
+            <div className="text-sm text-gray-500">Setting up check-in...</div>
+          </div>
+        )}
+
+        {currentView === "checkin" && !creatingCheckin ? (
           <div className="space-y-6">
             {/* Client Name Heading */}
             <div>
@@ -198,6 +338,14 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
                   New Goal
                 </Button>
               </div>
+
+              {/* Success Message */}
+              {successMessage && (
+                <div className="flex items-center space-x-2 text-green-600 bg-green-50 p-3 rounded-md">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="text-sm">{successMessage}</span>
+                </div>
+              )}
 
               {/* Error Display */}
               {error && (
@@ -248,15 +396,19 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
               )}
             </div>
 
-            {/* Action Buttons */}
             <div className="flex justify-end space-x-3 pt-4 border-t">
-              <Button variant="outline" onClick={onClose}>
+              <Button variant="outline" onClick={onClose} disabled={savingCheckin}>
                 Cancel
               </Button>
-              <Button onClick={onClose}>Save Check-In</Button>
+              <Button variant="outline" onClick={handleSaveDraft} disabled={savingCheckin || !checkinId}>
+                {savingCheckin ? "Saving..." : "Save Draft"}
+              </Button>
+              <Button onClick={handleCompleteCheckin} disabled={savingCheckin || !checkinId}>
+                {savingCheckin ? "Completing..." : "Complete Check-In"}
+              </Button>
             </div>
           </div>
-        ) : (
+        ) : currentView === "new-goal" && !creatingCheckin ? (
           /* New Goal Form */
           <div className="space-y-6">
             {/* Back Button */}
@@ -333,7 +485,7 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
               </Button>
             </div>
           </div>
-        )}
+        ) : null}
       </DialogContent>
     </Dialog>
   )
