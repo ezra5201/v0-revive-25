@@ -219,7 +219,7 @@ export function UpdateServicesDialog({
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="dialog-description">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
+            <DialogTitle className="flex items-center justify-between pr-8">
               <span>Update Services - {contactData.client}</span>
               {isFromCMTab && (
                 <Button
@@ -227,7 +227,7 @@ export function UpdateServicesDialog({
                   size="sm"
                   onClick={handleCMCheckinClick}
                   disabled={checkingCheckin}
-                  className="ml-4 bg-transparent"
+                  className="ml-4 bg-transparent mr-2"
                 >
                   {checkingCheckin ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-2" />
