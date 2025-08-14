@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Target, Calendar } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Target, Calendar, CheckCircle, AlertCircle } from "lucide-react"
 
 interface Goal {
   id: number
@@ -24,6 +25,8 @@ export function GoalWidget({ clientName }: GoalWidgetProps) {
   const [goals, setGoals] = useState<Goal[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null)
+  const [updatingGoals, setUpdatingGoals] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     const fetchGoals = async () => {
@@ -49,6 +52,62 @@ export function GoalWidget({ clientName }: GoalWidgetProps) {
       fetchGoals()
     }
   }, [clientName])
+
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null)
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [notification])
+
+  const updateGoalStatus = async (goalId: number, newStatus: Goal["status"]) => {
+    // Optimistic update
+    const previousGoals = [...goals]
+    setGoals(
+      goals.map((goal) =>
+        goal.id === goalId ? { ...goal, status: newStatus, updated_at: new Date().toISOString() } : goal,
+      ),
+    )
+
+    // Track updating state
+    setUpdatingGoals((prev) => new Set(prev).add(goalId))
+
+    try {
+      const response = await fetch(`/api/goals/${goalId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to update goal status")
+      }
+
+      const data = await response.json()
+      if (data.success) {
+        setNotification({ type: "success", message: "Goal status updated successfully" })
+      } else {
+        throw new Error(data.error?.message || "Failed to update goal status")
+      }
+    } catch (err) {
+      // Revert optimistic update on error
+      setGoals(previousGoals)
+      setNotification({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to update goal status",
+      })
+    } finally {
+      setUpdatingGoals((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(goalId)
+        return newSet
+      })
+    }
+  }
 
   const getStatusColor = (status: Goal["status"]) => {
     switch (status) {
@@ -128,6 +187,23 @@ export function GoalWidget({ clientName }: GoalWidgetProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {notification && (
+          <div
+            className={`mb-4 p-3 rounded-lg flex items-center space-x-2 ${
+              notification.type === "success"
+                ? "bg-green-50 text-green-800 border border-green-200"
+                : "bg-red-50 text-red-800 border border-red-200"
+            }`}
+          >
+            {notification.type === "success" ? (
+              <CheckCircle className="h-4 w-4" />
+            ) : (
+              <AlertCircle className="h-4 w-4" />
+            )}
+            <span className="text-sm">{notification.message}</span>
+          </div>
+        )}
+
         {goals.length === 0 ? (
           <div className="text-center py-8">
             <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -148,9 +224,26 @@ export function GoalWidget({ clientName }: GoalWidgetProps) {
                       </div>
                     )}
                   </div>
-                  <Badge className={getStatusColor(goal.status)} variant="secondary">
-                    {goal.status}
-                  </Badge>
+                  <div className="flex items-center space-x-2">
+                    <Select
+                      value={goal.status}
+                      onValueChange={(value) => updateGoalStatus(goal.id, value as Goal["status"])}
+                      disabled={updatingGoals.has(goal.id)}
+                    >
+                      <SelectTrigger className="w-32 h-7 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Not Started">Not Started</SelectItem>
+                        <SelectItem value="In Progress">In Progress</SelectItem>
+                        <SelectItem value="Completed">Completed</SelectItem>
+                        <SelectItem value="Deferred">Deferred</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {updatingGoals.has(goal.id) && (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
