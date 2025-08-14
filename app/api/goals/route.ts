@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from "next/server"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { client_name, goal_text, target_date, priority } = body
+    const { client_name, client_uuid, goal_text, target_date, priority, checkin_id } = body
 
     // Validation
     if (!client_name || typeof client_name !== "string" || client_name.trim().length === 0) {
@@ -15,6 +15,20 @@ export async function POST(request: NextRequest) {
             code: "VALIDATION_ERROR",
             message: "Client name is required",
             details: { field: "client_name", value: client_name },
+          },
+        },
+        { status: 400 },
+      )
+    }
+
+    if (!client_uuid || typeof client_uuid !== "string" || client_uuid.trim().length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Client UUID is required",
+            details: { field: "client_uuid", value: client_uuid },
           },
         },
         { status: 400 },
@@ -63,11 +77,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create the goal
     const result = await sql`
-      INSERT INTO cm_goals (client_name, goal_text, target_date, priority)
-      VALUES (${client_name.trim()}, ${goal_text.trim()}, ${target_date || null}, ${priority || 1})
-      RETURNING id, client_name, goal_text, status, target_date, priority, created_at, updated_at
+      INSERT INTO cm_goals (client_name, client_uuid, goal_text, target_date, priority, checkin_id)
+      VALUES (${client_name.trim()}, ${client_uuid.trim()}, ${goal_text.trim()}, ${target_date || null}, ${priority || 1}, ${checkin_id || null})
+      RETURNING id, client_name, client_uuid, goal_text, status, target_date, priority, checkin_id, created_at, updated_at
     `
 
     const newGoal = result[0]
@@ -78,10 +91,12 @@ export async function POST(request: NextRequest) {
         data: {
           id: newGoal.id,
           client_name: newGoal.client_name,
+          client_uuid: newGoal.client_uuid,
           goal_text: newGoal.goal_text,
           status: newGoal.status,
           target_date: newGoal.target_date,
           priority: newGoal.priority,
+          checkin_id: newGoal.checkin_id,
           created_at: newGoal.created_at,
           updated_at: newGoal.updated_at,
         },
