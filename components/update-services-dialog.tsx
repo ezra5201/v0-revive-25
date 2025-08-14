@@ -198,6 +198,20 @@ export function UpdateServicesDialog({
     }
   }
 
+  const handleCMCheckinSubmit = () => {
+    // Auto-check Case Management service if not already checked
+    if (!selectedServices.includes("Case Management")) {
+      setSelectedServices((prev) => [...prev, "Case Management"])
+      // Set provider to the logged-in user (Andrea Leflore)
+      setServiceProviders((prev) => ({ ...prev, "Case Management": "Andrea Leflore" }))
+    }
+
+    setIsCMCheckinModalOpen(false)
+    if (isFromCMTab) {
+      checkForTodaysCheckin()
+    }
+  }
+
   if (!contactData) return null
 
   return (
@@ -344,6 +358,7 @@ export function UpdateServicesDialog({
         <CMCheckinModal
           isOpen={isCMCheckinModalOpen}
           onClose={handleCMCheckinClose}
+          onSubmit={handleCMCheckinSubmit}
           clientName={contactData?.client || ""}
           contactId={contactData?.id || 0}
         />

@@ -24,11 +24,12 @@ interface Goal {
 interface CMCheckinModalProps {
   isOpen: boolean
   onClose: () => void
+  onSubmit?: () => void // Added optional onSubmit callback
   clientName: string
   contactId: number
 }
 
-export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMCheckinModalProps) {
+export function CMCheckinModal({ isOpen, onClose, onSubmit, clientName, contactId }: CMCheckinModalProps) {
   const [currentView, setCurrentView] = useState<"checkin" | "new-goal">("checkin")
   const [notes, setNotes] = useState("")
   const [goals, setGoals] = useState<Goal[]>([])
@@ -367,7 +368,11 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
         setSuccessMessage("Check-in completed successfully!")
         setTimeout(() => {
           setSuccessMessage(null)
-          onClose()
+          if (onSubmit) {
+            onSubmit()
+          } else {
+            onClose()
+          }
         }, 1500)
       } else {
         throw new Error(result.error?.message || "Failed to complete check-in")
