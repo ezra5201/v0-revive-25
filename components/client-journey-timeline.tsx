@@ -2,7 +2,8 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { Calendar, User, MessageSquare, CheckCircle, Clock, AlertTriangle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Calendar, User, MessageSquare, CheckCircle, Clock, AlertTriangle, Plus } from "lucide-react"
 
 interface ContactRecord {
   id: number
@@ -91,6 +92,11 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
    * ------------------------------------------------------------------- */
   const sortedContacts = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
+  const handleCMCheckIn = (contactId: number) => {
+    // TODO: Implement CM Check-In functionality
+    console.log(`CM Check-In for contact ${contactId}`)
+  }
+
   return (
     <div>
       {/* Heading */}
@@ -139,12 +145,23 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
                             <Badge className={getProviderColor(contact.provider)}>{contact.provider}</Badge>
                           </div>
                         </div>
-                        {contact.hasAlert && (
-                          <div className="flex items-center space-x-1">
-                            <AlertTriangle className="h-4 w-4 text-amber-500" />
-                            <span className="text-xs text-amber-600">Alert</span>
-                          </div>
-                        )}
+                        <div className="flex items-center space-x-2">
+                          {contact.hasAlert && (
+                            <div className="flex items-center space-x-1">
+                              <AlertTriangle className="h-4 w-4 text-amber-500" />
+                              <span className="text-xs text-amber-600">Alert</span>
+                            </div>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCMCheckIn(contact.id)}
+                            className="text-xs"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            CM Check-In
+                          </Button>
+                        </div>
                       </div>
 
                       {/* Services */}
