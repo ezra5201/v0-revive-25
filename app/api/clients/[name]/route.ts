@@ -10,7 +10,7 @@ export async function GET(_request: NextRequest, { params }: { params: { name: s
     const clientName = decodeURIComponent(params.name)
 
     const result = await sql`
-      SELECT name, category, active, created_at, updated_at
+      SELECT name, category, active, created_at, updated_at, client_uuid
       FROM clients
       WHERE name = ${clientName}
       LIMIT 1

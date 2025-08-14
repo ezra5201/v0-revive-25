@@ -39,6 +39,7 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
   const [checkinId, setCheckinId] = useState<number | null>(null)
   const [creatingCheckin, setCreatingCheckin] = useState(false)
   const [savingCheckin, setSavingCheckin] = useState(false)
+  const [clientUuid, setClientUuid] = useState<string | null>(null)
   const providerName = "Andrea Leflore" // Hardcoded as requested
 
   // New goal form state
@@ -49,7 +50,7 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
 
   useEffect(() => {
     if (isOpen && clientName && !checkinId) {
-      createDraftCheckin()
+      fetchClientDataAndCreateCheckin()
     }
   }, [isOpen, clientName])
 
@@ -71,14 +72,29 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
       setError(null)
       setSuccessMessage(null)
       setCheckinId(null)
+      setClientUuid(null)
     }
   }, [isOpen])
 
-  const createDraftCheckin = async () => {
+  const fetchClientDataAndCreateCheckin = async () => {
     setCreatingCheckin(true)
     setError(null)
 
     try {
+      // First, fetch client data to get the UUID
+      const clientResponse = await fetch(`/api/clients/${encodeURIComponent(clientName)}`)
+      if (!clientResponse.ok) {
+        throw new Error("Failed to fetch client data")
+      }
+
+      const clientData = await clientResponse.json()
+      if (!clientData.client_uuid) {
+        throw new Error("Client UUID not found")
+      }
+
+      setClientUuid(clientData.client_uuid)
+
+      // Now create the check-in with the proper client_uuid
       const response = await fetch("/api/checkins", {
         method: "POST",
         headers: {
@@ -87,7 +103,7 @@ export function CMCheckinModal({ isOpen, onClose, clientName, contactId }: CMChe
         body: JSON.stringify({
           contact_id: contactId,
           client_name: clientName,
-          client_uuid: null, // Will be handled by API if needed
+          client_uuid: clientData.client_uuid,
           provider_name: providerName,
           notes: "",
         }),
