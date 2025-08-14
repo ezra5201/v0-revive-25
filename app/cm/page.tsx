@@ -224,7 +224,7 @@ export default function CmPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
-              All CM Clients
+              My Caseload
             </button>
 
             {/* Dynamic client tab */}
