@@ -47,6 +47,7 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
   const [goalText, setGoalText] = useState("")
   const [targetDate, setTargetDate] = useState("")
   const [priority, setPriority] = useState(1)
+  const [status, setStatus] = useState("Not Started")
   const [savingGoal, setSavingGoal] = useState(false)
 
   useEffect(() => {
@@ -70,6 +71,7 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
       setGoalText("")
       setTargetDate("")
       setPriority(1)
+      setStatus("Not Started")
       setError(null)
       setSuccessMessage(null)
       setCheckinId(null)
@@ -224,6 +226,7 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         goal_text: goalText.trim(),
         target_date: targetDate || null,
         priority: priority,
+        status: status,
         checkin_id: checkinId,
       }
 
@@ -255,6 +258,7 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         setGoalText("")
         setTargetDate("")
         setPriority(1)
+        setStatus("Not Started")
         setCurrentView("checkin")
         setSuccessMessage("OT goal created successfully!")
         setTimeout(() => setSuccessMessage(null), 3000)
@@ -550,7 +554,7 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
                 <div className="text-xs text-gray-500 text-right">{goalText.length}/500 characters</div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="target-date" className="text-sm font-medium">
                     Target Date
@@ -578,6 +582,23 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
                     <option value={3}>3 - Medium</option>
                     <option value={4}>4 - Medium High</option>
                     <option value={5}>5 - High</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status" className="text-sm font-medium">
+                    Status
+                  </Label>
+                  <select
+                    id="status"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Not Started">Not Started</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Deferred">Deferred</option>
                   </select>
                 </div>
               </div>
