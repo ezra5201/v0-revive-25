@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { Plus, ArrowLeft, Target, Calendar, AlertCircle, CheckCircle } from "lucide-react"
+import { Plus, ArrowLeft, Target, Calendar, AlertCircle, CheckCircle, ExternalLink } from "lucide-react"
 
 interface OTGoal {
   id: number
@@ -654,7 +654,22 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
                             </div>
                             <div className="text-xs text-blue-600 mt-1">Click to edit and add progress notes</div>
                           </div>
-                          <Badge className={getStatusColor(goal.status)}>{goal.status}</Badge>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation() // Prevent triggering the card click
+                                const url = `/ot?tab=client&name=${encodeURIComponent(clientName)}&section=ot-goals`
+                                window.open(url, "_blank")
+                              }}
+                              title="View in OT Goals tab"
+                            >
+                              <ExternalLink className="h-3 w-3 text-gray-500" />
+                            </Button>
+                            <Badge className={getStatusColor(goal.status)}>{goal.status}</Badge>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
