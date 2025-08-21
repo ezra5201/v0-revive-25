@@ -32,6 +32,8 @@ interface OTCheckinModalProps {
 export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactId }: OTCheckinModalProps) {
   const [currentView, setCurrentView] = useState<"checkin" | "new-goal">("checkin")
   const [notes, setNotes] = useState("")
+  const [checkinType, setCheckinType] = useState("Evaluation")
+  const [serviceType, setServiceType] = useState("Direct")
   const [goals, setGoals] = useState<OTGoal[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -68,6 +70,8 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
     if (!isOpen) {
       setCurrentView("checkin")
       setNotes("")
+      setCheckinType("Evaluation")
+      setServiceType("Direct")
       setGoalText("")
       setTargetDate("")
       setPriority(1)
@@ -110,6 +114,8 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         client_uuid: clientData.client_uuid,
         provider_name: providerName,
         notes: "",
+        checkin_type: checkinType,
+        service_type: serviceType,
       })
 
       const response = await fetch("/api/ot-checkins", {
@@ -123,6 +129,8 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
           client_uuid: clientData.client_uuid,
           provider_name: providerName,
           notes: "",
+          checkin_type: checkinType,
+          service_type: serviceType,
         }),
       })
 
@@ -285,6 +293,8 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
     try {
       const updateData = {
         notes: notes,
+        checkin_type: checkinType,
+        service_type: serviceType,
         status: "Draft",
       }
 
@@ -336,6 +346,8 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
     try {
       const updateData = {
         notes: notes,
+        checkin_type: checkinType,
+        service_type: serviceType,
         status: "Completed",
       }
 
@@ -428,7 +440,7 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
             {/* Notes Field */}
             <div className="space-y-2">
               <Label htmlFor="notes" className="text-sm font-medium">
-                Notes
+                Check-In Notes
               </Label>
               <Textarea
                 id="notes"
@@ -447,6 +459,39 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
                   target.style.height = Math.min(target.scrollHeight, 200) + "px"
                 }}
               />
+            </div>
+
+            {/* Check-In Type and Service Type dropdowns */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="checkin-type" className="text-sm font-medium">
+                  Check-In Type
+                </Label>
+                <select
+                  id="checkin-type"
+                  value={checkinType}
+                  onChange={(e) => setCheckinType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Evaluation">Evaluation</option>
+                  <option value="Follow-UP">Follow-UP</option>
+                  <option value="Reassessment">Reassessment</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="service-type" className="text-sm font-medium">
+                  Service Type
+                </Label>
+                <select
+                  id="service-type"
+                  value={serviceType}
+                  onChange={(e) => setServiceType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Direct">Direct</option>
+                </select>
+              </div>
             </div>
 
             {/* Goals Section */}
