@@ -19,6 +19,7 @@ interface OTGoal {
   priority: number
   created_at: string
   updated_at: string
+  progress_note?: string | null
 }
 
 interface OTCheckinModalProps {
@@ -415,7 +416,7 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
     setEditTargetDate(goal.target_date || "")
     setEditPriority(goal.priority)
     setEditStatus(goal.status)
-    setProgressNotes("")
+    setProgressNotes(goal.progress_note || "")
     setCurrentView("edit-goal")
   }
 
@@ -434,12 +435,12 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
     setError(null)
 
     try {
-      // Update the goal
       const goalUpdateData = {
         goal_text: editGoalText.trim(),
         target_date: editTargetDate || null,
         priority: editPriority,
         status: editStatus,
+        progress_note: progressNotes.trim() || null,
       }
 
       console.log("DEBUG: Updating OT goal with data:", goalUpdateData)
@@ -454,42 +455,18 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
 
       if (!goalResponse.ok) {
         const errorText = await goalResponse.text()
+        console.log("DEBUG: Error in handleSaveGoalUpdate:", errorText)
         throw new Error(`Failed to update goal: ${goalResponse.status} - ${errorText}`)
       }
 
       const goalResult = await goalResponse.json()
       console.log("DEBUG: Goal update result:", goalResult)
 
-      // Save progress notes if provided
-      if (progressNotes.trim()) {
-        const progressData = {
-          goal_id: editingGoal.id,
-          checkin_id: checkinId,
-          notes: progressNotes.trim(),
-          client_name: clientName,
-        }
-
-        console.log("DEBUG: Saving progress notes with data:", progressData)
-
-        const progressResponse = await fetch("/api/ot-goal-progress", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(progressData),
-        })
-
-        if (!progressResponse.ok) {
-          const errorText = await progressResponse.text()
-          throw new Error(`Failed to save progress notes: ${progressResponse.status} - ${errorText}`)
-        }
-
-        const progressResult = await progressResponse.json()
-        console.log("DEBUG: Progress notes save result:", progressResult)
+      if (!goalResult.success) {
+        throw new Error(goalResult.error?.message || "Failed to update goal")
       }
 
-      // Update the goal in the local state
-      setGoals((prev) => prev.map((goal) => (goal.id === editingGoal.id ? { ...goal, ...goalUpdateData } : goal)))
+      setGoals((prev) => prev.map((goal) => (goal.id === editingGoal.id ? { ...goal, ...goalResult.data } : goal)))
 
       // Reset form and return to main view
       setEditingGoal(null)
