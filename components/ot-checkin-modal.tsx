@@ -30,7 +30,7 @@ interface OTCheckinModalProps {
 }
 
 export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactId }: OTCheckinModalProps) {
-  const [currentView, setCurrentView] = useState<"checkin" | "new-goal">("checkin")
+  const [currentView, setCurrentView] = useState<"checkin" | "new-goal" | "edit-goal">("checkin")
   const [notes, setNotes] = useState("")
   const [checkinType, setCheckinType] = useState("Evaluation")
   const [serviceType, setServiceType] = useState("Direct")
@@ -51,6 +51,15 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
   const [priority, setPriority] = useState(1)
   const [status, setStatus] = useState("Not Started")
   const [savingGoal, setSavingGoal] = useState(false)
+
+  // Edit goal form state
+  const [editingGoal, setEditingGoal] = useState<OTGoal | null>(null)
+  const [editGoalText, setEditGoalText] = useState("")
+  const [editTargetDate, setEditTargetDate] = useState("")
+  const [editPriority, setEditPriority] = useState(1)
+  const [editStatus, setEditStatus] = useState("Not Started")
+  const [progressNotes, setProgressNotes] = useState("")
+  const [savingGoalUpdate, setSavingGoalUpdate] = useState(false)
 
   useEffect(() => {
     if (isOpen && clientName && !checkinId) {
@@ -76,6 +85,12 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
       setTargetDate("")
       setPriority(1)
       setStatus("Not Started")
+      setEditingGoal(null)
+      setEditGoalText("")
+      setEditTargetDate("")
+      setEditPriority(1)
+      setEditStatus("Not Started")
+      setProgressNotes("")
       setError(null)
       setSuccessMessage(null)
       setCheckinId(null)
@@ -394,6 +409,106 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
     }
   }
 
+  const handleEditGoal = (goal: OTGoal) => {
+    setEditingGoal(goal)
+    setEditGoalText(goal.goal_text)
+    setEditTargetDate(goal.target_date || "")
+    setEditPriority(goal.priority)
+    setEditStatus(goal.status)
+    setProgressNotes("")
+    setCurrentView("edit-goal")
+  }
+
+  const handleSaveGoalUpdate = async () => {
+    if (!editingGoal || !editGoalText.trim()) {
+      setError("Goal text is required")
+      return
+    }
+
+    if (!checkinId) {
+      setError("No check-in record found")
+      return
+    }
+
+    setSavingGoalUpdate(true)
+    setError(null)
+
+    try {
+      // Update the goal
+      const goalUpdateData = {
+        goal_text: editGoalText.trim(),
+        target_date: editTargetDate || null,
+        priority: editPriority,
+        status: editStatus,
+      }
+
+      console.log("DEBUG: Updating OT goal with data:", goalUpdateData)
+
+      const goalResponse = await fetch(`/api/ot-goals/${editingGoal.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(goalUpdateData),
+      })
+
+      if (!goalResponse.ok) {
+        const errorText = await goalResponse.text()
+        throw new Error(`Failed to update goal: ${goalResponse.status} - ${errorText}`)
+      }
+
+      const goalResult = await goalResponse.json()
+      console.log("DEBUG: Goal update result:", goalResult)
+
+      // Save progress notes if provided
+      if (progressNotes.trim()) {
+        const progressData = {
+          goal_id: editingGoal.id,
+          checkin_id: checkinId,
+          notes: progressNotes.trim(),
+          client_name: clientName,
+        }
+
+        console.log("DEBUG: Saving progress notes with data:", progressData)
+
+        const progressResponse = await fetch("/api/ot-goal-progress", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(progressData),
+        })
+
+        if (!progressResponse.ok) {
+          const errorText = await progressResponse.text()
+          throw new Error(`Failed to save progress notes: ${progressResponse.status} - ${errorText}`)
+        }
+
+        const progressResult = await progressResponse.json()
+        console.log("DEBUG: Progress notes save result:", progressResult)
+      }
+
+      // Update the goal in the local state
+      setGoals((prev) => prev.map((goal) => (goal.id === editingGoal.id ? { ...goal, ...goalUpdateData } : goal)))
+
+      // Reset form and return to main view
+      setEditingGoal(null)
+      setEditGoalText("")
+      setEditTargetDate("")
+      setEditPriority(1)
+      setEditStatus("Not Started")
+      setProgressNotes("")
+      setCurrentView("checkin")
+      setSuccessMessage("Goal updated successfully!")
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err) {
+      console.error("DEBUG: Error in handleSaveGoalUpdate:", err)
+      setError(err instanceof Error ? err.message : "Failed to update goal")
+    } finally {
+      setSavingGoalUpdate(false)
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Completed":
@@ -420,7 +535,11 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
-            {currentView === "checkin" ? "New OT Check-In" : "New OT Goal"}
+            {currentView === "checkin"
+              ? "New OT Check-In"
+              : currentView === "new-goal"
+                ? "New OT Goal"
+                : "Edit OT Goal"}
           </DialogTitle>
         </DialogHeader>
 
@@ -528,7 +647,11 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
               ) : goals.length > 0 ? (
                 <div className="space-y-3">
                   {goals.map((goal) => (
-                    <Card key={goal.id} className="shadow-sm">
+                    <Card
+                      key={goal.id}
+                      className="shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => handleEditGoal(goal)}
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -545,6 +668,7 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
                                 </div>
                               )}
                             </div>
+                            <div className="text-xs text-blue-600 mt-1">Click to edit and add progress notes</div>
                           </div>
                           <Badge className={getStatusColor(goal.status)}>{goal.status}</Badge>
                         </div>
@@ -664,6 +788,119 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
               </Button>
               <Button onClick={handleSaveGoal} disabled={savingGoal || !goalText.trim()}>
                 {savingGoal ? "Saving..." : "Save OT Goal"}
+              </Button>
+            </div>
+          </div>
+        ) : currentView === "edit-goal" && !creatingCheckin ? (
+          /* Edit Goal Form with Progress Notes */
+          <div className="space-y-6">
+            {/* Back Button */}
+            <Button variant="ghost" size="sm" onClick={() => setCurrentView("checkin")} className="text-sm">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to Check-In
+            </Button>
+
+            {/* Edit Goal Form */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-goal-text" className="text-sm font-medium">
+                  OT Goal Text *
+                </Label>
+                <Textarea
+                  id="edit-goal-text"
+                  value={editGoalText}
+                  onChange={(e) => setEditGoalText(e.target.value)}
+                  placeholder="Enter the OT goal description..."
+                  className="min-h-[80px]"
+                  maxLength={500}
+                />
+                <div className="text-xs text-gray-500 text-right">{editGoalText.length}/500 characters</div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-target-date" className="text-sm font-medium">
+                    Target Date
+                  </Label>
+                  <Input
+                    id="edit-target-date"
+                    type="date"
+                    value={editTargetDate}
+                    onChange={(e) => setEditTargetDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-priority" className="text-sm font-medium">
+                    Priority
+                  </Label>
+                  <select
+                    id="edit-priority"
+                    value={editPriority}
+                    onChange={(e) => setEditPriority(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={1}>1 - Low</option>
+                    <option value={2}>2 - Medium Low</option>
+                    <option value={3}>3 - Medium</option>
+                    <option value={4}>4 - Medium High</option>
+                    <option value={5}>5 - High</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status" className="text-sm font-medium">
+                    Status
+                  </Label>
+                  <select
+                    id="edit-status"
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Not Started">Not Started</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Deferred">Deferred</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Progress Notes Section */}
+              <div className="space-y-2 border-t pt-4">
+                <Label htmlFor="progress-notes" className="text-sm font-medium">
+                  Progress Notes for This Check-In
+                </Label>
+                <Textarea
+                  id="progress-notes"
+                  value={progressNotes}
+                  onChange={(e) => setProgressNotes(e.target.value)}
+                  placeholder="Enter progress notes for this specific check-in session..."
+                  className="min-h-[100px]"
+                  maxLength={1000}
+                />
+                <div className="text-xs text-gray-500 text-right">{progressNotes.length}/1000 characters</div>
+                <div className="text-xs text-gray-600">
+                  These notes will be associated with this check-in session and track progress on this goal.
+                </div>
+              </div>
+            </div>
+
+            {/* Error Display */}
+            {error && (
+              <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
+                <AlertCircle className="h-4 w-4" />
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+              <Button variant="outline" onClick={() => setCurrentView("checkin")} disabled={savingGoalUpdate}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveGoalUpdate} disabled={savingGoalUpdate || !editGoalText.trim()}>
+                {savingGoalUpdate ? "Saving..." : "Update Goal"}
               </Button>
             </div>
           </div>
