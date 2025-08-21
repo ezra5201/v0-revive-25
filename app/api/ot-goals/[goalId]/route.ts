@@ -107,6 +107,9 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
       SELECT id, status, goal_text, target_date, priority FROM ot_goals WHERE id = ${goalId}
     `
 
+    console.log("DEBUG: Database query for goalId:", goalId)
+    console.log("DEBUG: existingGoal result:", existingGoal)
+
     if (existingGoal.length === 0) {
       return NextResponse.json(
         {
@@ -121,7 +124,23 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
       )
     }
 
-    const previousStatus = existingGoal[0].status
+    const goalRecord = existingGoal[0]
+    if (!goalRecord || !goalRecord.id) {
+      console.error("DEBUG: Invalid goal record:", goalRecord)
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "DATABASE_ERROR",
+            message: "Invalid goal record retrieved",
+            details: { goalId, record: goalRecord },
+          },
+        },
+        { status: 500 },
+      )
+    }
+
+    const previousStatus = goalRecord.status
 
     const updateFields = []
     const updateValues = []

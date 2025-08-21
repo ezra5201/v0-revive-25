@@ -421,7 +421,12 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
   }
 
   const handleSaveGoalUpdate = async () => {
-    if (!editingGoal || !editGoalText.trim()) {
+    if (!editingGoal) {
+      setError("No goal selected for editing")
+      return
+    }
+
+    if (!editGoalText.trim()) {
       setError("Goal text is required")
       return
     }
@@ -443,6 +448,8 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         progress_note: progressNotes.trim() || null,
       }
 
+      console.log("DEBUG: editingGoal:", editingGoal)
+      console.log("DEBUG: editingGoal.id:", editingGoal.id)
       console.log("DEBUG: Updating OT goal with data:", goalUpdateData)
 
       const goalResponse = await fetch(`/api/ot-goals/${editingGoal.id}`, {
