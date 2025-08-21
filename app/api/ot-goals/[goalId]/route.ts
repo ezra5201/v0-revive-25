@@ -166,17 +166,54 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
     }
 
     updateFields.push("updated_at = CURRENT_TIMESTAMP")
-    updateFields.push("id = $" + (updateValues.length + 1))
+
+    const whereParamIndex = updateValues.length + 1
     updateValues.push(goalId)
 
     const updateQuery = `
       UPDATE ot_goals 
-      SET ${updateFields.slice(0, -1).join(", ")}
-      WHERE ${updateFields[updateFields.length - 1]}
+      SET ${updateFields.join(", ")}
+      WHERE id = $${whereParamIndex}
       RETURNING id, goal_text, target_date, priority, status, updated_at
     `
 
+    console.log("DEBUG: Update query:", updateQuery)
+    console.log("DEBUG: Update values:", updateValues)
+
     const updatedGoal = await sql.unsafe(updateQuery, updateValues)
+
+    console.log("DEBUG: Updated goal result:", updatedGoal)
+
+    if (!updatedGoal || updatedGoal.length === 0) {
+      console.error("DEBUG: No rows returned from update query")
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "DATABASE_ERROR",
+            message: "Failed to update goal - no rows affected",
+            details: { goalId, query: updateQuery, values: updateValues },
+          },
+        },
+        { status: 500 },
+      )
+    }
+
+    const updatedRecord = updatedGoal[0]
+    if (!updatedRecord || !updatedRecord.id) {
+      console.error("DEBUG: Invalid updated record:", updatedRecord)
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "DATABASE_ERROR",
+            message: "Invalid updated record",
+            details: { goalId, record: updatedRecord },
+          },
+        },
+        { status: 500 },
+      )
+    }
 
     // Create progress entry if status changed or progress note provided
     if (progress_note || (status && previousStatus !== status)) {
@@ -189,12 +226,12 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
     return NextResponse.json({
       success: true,
       data: {
-        id: updatedGoal[0].id,
-        goal_text: updatedGoal[0].goal_text,
-        target_date: updatedGoal[0].target_date,
-        priority: updatedGoal[0].priority,
-        status: updatedGoal[0].status,
-        updated_at: updatedGoal[0].updated_at,
+        id: updatedRecord.id,
+        goal_text: updatedRecord.goal_text,
+        target_date: updatedRecord.target_date,
+        priority: updatedRecord.priority,
+        status: updatedRecord.status,
+        updated_at: updatedRecord.updated_at,
       },
     })
   } catch (error) {
