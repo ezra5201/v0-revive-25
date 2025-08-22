@@ -251,28 +251,6 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange,
             {clientData && <Badge className={getCategoryColor(clientData.category)}>{clientData.category}</Badge>}
           </div>
           <div className="flex items-center space-x-2">
-            {context === "clients" && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleOpenInCM}
-                  className="flex items-center space-x-1 bg-transparent"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  <span>Open in CM</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleOpenInOT}
-                  className="flex items-center space-x-1 bg-transparent"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  <span>Open in OT</span>
-                </Button>
-              </>
-            )}
             {(context === "cm" || context === "ot") && (
               <Button
                 variant="outline"
@@ -371,13 +349,31 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange,
                 }`}
                 disabled={sectionCounts.cmCheckins === 0 && !sectionsLoading}
               >
-                {renderSectionHeader("CM Check-ins", sectionCounts.cmCheckins, sectionsLoading)}
-                {(sectionCounts.cmCheckins > 0 || sectionsLoading) &&
-                  (expandedSections["cm-checkins"] ? (
-                    <ChevronDown className="h-5 w-5 text-gray-500" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-500" />
-                  ))}
+                <div className="flex items-center justify-between w-full">
+                  {renderSectionHeader("CM Check-ins", sectionCounts.cmCheckins, sectionsLoading)}
+                  <div className="flex items-center space-x-2">
+                    {context === "clients" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleOpenInCM()
+                        }}
+                        className="flex items-center space-x-1 bg-transparent"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        <span>Open in CM</span>
+                      </Button>
+                    )}
+                    {(sectionCounts.cmCheckins > 0 || sectionsLoading) &&
+                      (expandedSections["cm-checkins"] ? (
+                        <ChevronDown className="h-5 w-5 text-gray-500" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5 text-gray-500" />
+                      ))}
+                  </div>
+                </div>
               </button>
               {expandedSections["cm-checkins"] && sectionCounts.cmCheckins > 0 && (
                 <div className="px-4 pb-4 border-t border-gray-100">
@@ -417,13 +413,31 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange,
                 }`}
                 disabled={sectionCounts.otCheckins === 0 && !sectionsLoading}
               >
-                {renderSectionHeader("OT Check-ins", sectionCounts.otCheckins, sectionsLoading)}
-                {(sectionCounts.otCheckins > 0 || sectionsLoading) &&
-                  (expandedSections["ot-checkins"] ? (
-                    <ChevronDown className="h-5 w-5 text-gray-500" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-500" />
-                  ))}
+                <div className="flex items-center justify-between w-full">
+                  {renderSectionHeader("OT Check-ins", sectionCounts.otCheckins, sectionsLoading)}
+                  <div className="flex items-center space-x-2">
+                    {context === "clients" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleOpenInOT()
+                        }}
+                        className="flex items-center space-x-1 bg-transparent"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        <span>Open in OT</span>
+                      </Button>
+                    )}
+                    {(sectionCounts.otCheckins > 0 || sectionsLoading) &&
+                      (expandedSections["ot-checkins"] ? (
+                        <ChevronDown className="h-5 w-5 text-gray-500" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5 text-gray-500" />
+                      ))}
+                  </div>
+                </div>
               </button>
               {expandedSections["ot-checkins"] && sectionCounts.otCheckins > 0 && (
                 <div className="px-4 pb-4 border-t border-gray-100">
