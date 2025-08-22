@@ -196,18 +196,28 @@ export function ClientOTCheckins({ clientName }: ClientOTCheckinsProps) {
                             <Calendar className="h-4 w-4 text-gray-500" />
                             <span className="font-medium text-gray-900">{formatDate(checkin.created_at)}</span>
                             <span className="text-sm text-gray-500">({formatTimeAgo(checkin.created_at)})</span>
+                            <Badge variant={checkin.status === "Completed" ? "default" : "secondary"}>
+                              {checkin.status}
+                            </Badge>
                           </div>
                           <div className="flex items-center space-x-2">
                             <User className="h-4 w-4 text-gray-500" />
                             <Badge className={getProviderColor(checkin.provider_name)}>{checkin.provider_name}</Badge>
-                            <span className="text-sm font-medium text-gray-700">OT Services Provided</span>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant={checkin.status === "Completed" ? "default" : "secondary"}>
-                            {checkin.status}
-                          </Badge>
-                        </div>
+                        {checkin.status === "Draft" && (
+                          <Button size="sm" variant="ghost" className="text-xs">
+                            <svg className="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                            Edit
+                          </Button>
+                        )}
                       </div>
 
                       {/* Notes */}
@@ -236,7 +246,7 @@ export function ClientOTCheckins({ clientName }: ClientOTCheckinsProps) {
                                 <span className="text-sm text-gray-600">{goal.goal_text}</span>
                               </div>
                             ))}
-                            {checkin.goals.length > 3 && (
+                            {checkin.goals.length > 3 && checkin.status !== "Completed" && (
                               <span className="text-xs text-gray-500">+{checkin.goals.length - 3} more goals</span>
                             )}
                           </div>
