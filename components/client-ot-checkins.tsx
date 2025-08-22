@@ -24,6 +24,8 @@ interface ContactRecord {
   hasAlert?: boolean
   alertDetails?: string
   alertSeverity?: string
+  occupational_therapy_requested?: number
+  occupational_therapy_provided?: number
 }
 
 interface ClientOTCheckinsProps {
@@ -39,9 +41,9 @@ export function ClientOTCheckins({ clientName, contactHistory }: ClientOTCheckin
 
   // Filter for OT check-ins only - contacts that have OT services requested or provided
   const otCheckIns = history.filter((contact) => {
-    const hasOTRequested = contact.servicesRequested?.includes("Occupational Therapy") || false
-    const hasOTProvided =
-      contact.servicesProvided?.some((service) => service.service === "Occupational Therapy") || false
+    // Check boolean columns from database instead of JSON arrays
+    const hasOTRequested = (contact as any).occupational_therapy_requested > 0 || false
+    const hasOTProvided = (contact as any).occupational_therapy_provided > 0 || false
     return hasOTRequested || hasOTProvided
   })
 
@@ -174,43 +176,32 @@ export function ClientOTCheckins({ clientName, contactHistory }: ClientOTCheckin
                       {/* Services */}
                       <div className="space-y-3">
                         {/* Requested */}
-                        {contact.servicesRequested?.filter((srv) => srv === "Occupational Therapy").length ? (
+                        {(contact as any).occupational_therapy_requested > 0 ? (
                           <div>
                             <div className="flex items-center space-x-2 mb-2">
                               <Clock className="h-4 w-4 text-purple-500" />
                               <span className="text-sm font-medium text-gray-700">OT Services Requested</span>
                             </div>
                             <div className="flex flex-wrap gap-1 ml-6">
-                              {contact.servicesRequested
-                                .filter((srv) => srv === "Occupational Therapy")
-                                .map((srv, idx) => (
-                                  <Badge
-                                    key={idx}
-                                    variant="outline"
-                                    className="text-xs bg-purple-50 text-purple-700 border-purple-200"
-                                  >
-                                    {srv}
-                                  </Badge>
-                                ))}
+                              <Badge
+                                variant="outline"
+                                className="text-xs bg-purple-50 text-purple-700 border-purple-200"
+                              >
+                                Occupational Therapy
+                              </Badge>
                             </div>
                           </div>
                         ) : null}
 
                         {/* Provided */}
-                        {contact.servicesProvided?.filter((srv) => srv.service === "Occupational Therapy").length ? (
+                        {(contact as any).occupational_therapy_provided > 0 ? (
                           <div>
                             <div className="flex items-center space-x-2 mb-2">
                               <CheckCircle className="h-4 w-4 text-green-500" />
                               <span className="text-sm font-medium text-gray-700">OT Services Provided</span>
                             </div>
                             <div className="flex flex-wrap gap-1 ml-6">
-                              {contact.servicesProvided
-                                .filter((srv) => srv.service === "Occupational Therapy")
-                                .map((srv, idx) => (
-                                  <Badge key={idx} className="text-xs bg-green-100 text-green-800">
-                                    {srv.service}
-                                  </Badge>
-                                ))}
+                              <Badge className="text-xs bg-green-100 text-green-800">Occupational Therapy</Badge>
                             </div>
                           </div>
                         ) : null}
