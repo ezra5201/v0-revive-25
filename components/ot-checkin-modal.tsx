@@ -31,7 +31,7 @@ interface OTCheckinModalProps {
   editingCheckinId?: number | null
 }
 
-function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, editingCheckinId }: OTCheckinModalProps) {
+function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, editingCheckinId }: OTCheckinModalProps) {
   const [currentView, setCurrentView] = useState<"checkin" | "new-goal" | "edit-goal">("checkin")
   const [notes, setNotes] = useState("")
   const [checkinType, setCheckinType] = useState("Evaluation")
@@ -139,7 +139,7 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, editingCheckin
       setClientUuid(clientData.client_uuid)
 
       console.log("DEBUG: Creating OT check-in with data:", {
-        contact_id: editingCheckinId, // Updated to use editingCheckinId instead of contactId
+        contact_id: contactId,
         client_name: clientName,
         client_uuid: clientData.client_uuid,
         provider_name: providerName,
@@ -154,7 +154,7 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, editingCheckin
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          contact_id: editingCheckinId, // Updated to use editingCheckinId instead of contactId
+          contact_id: contactId,
           client_name: clientName,
           client_uuid: clientData.client_uuid,
           provider_name: providerName,
@@ -325,7 +325,7 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, editingCheckin
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            contact_id: editingCheckinId, // Updated to use editingCheckinId instead of contactId
+            contact_id: contactId,
             client_name: clientName,
             client_uuid: clientUuid,
             provider_name: providerName,
