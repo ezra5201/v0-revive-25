@@ -294,6 +294,7 @@ export default function OtPage() {
             clientName={selectedClient}
             activeSection={activeClientSection}
             onSectionChange={handleClientSectionChange}
+            context="ot"
           />
         </main>
       )}

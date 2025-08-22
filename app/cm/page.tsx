@@ -294,6 +294,7 @@ export default function CmPage() {
             clientName={selectedClient}
             activeSection={activeClientSection}
             onSectionChange={handleClientSectionChange}
+            context="cm"
           />
         </main>
       )}

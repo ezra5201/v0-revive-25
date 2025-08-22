@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { Plus, ArrowLeft, Target, Calendar, AlertCircle, CheckCircle } from "lucide-react"
+import { Plus, ArrowLeft, Target, Calendar, AlertCircle, CheckCircle, ExternalLink, AlertTriangle } from "lucide-react"
 
 interface OTGoal {
   id: number
@@ -19,19 +19,25 @@ interface OTGoal {
   priority: number
   created_at: string
   updated_at: string
+  progress_note?: string | null
 }
 
 interface OTCheckinModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit?: () => void
+  onSuccess?: () => void
   clientName: string
   contactId: number
+  editingCheckinId?: number | null
 }
 
-export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactId }: OTCheckinModalProps) {
-  const [currentView, setCurrentView] = useState<"checkin" | "new-goal">("checkin")
+function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, editingCheckinId }: OTCheckinModalProps) {
+  const [currentView, setCurrentView] = useState<"checkin" | "new-goal" | "edit-goal">("checkin")
   const [notes, setNotes] = useState("")
+  const [checkinType, setCheckinType] = useState("Evaluation")
+  const [serviceType, setServiceType] = useState("Direct")
+  const [checkinDate, setCheckinDate] = useState("")
+  const [originalCheckinDate, setOriginalCheckinDate] = useState("")
   const [goals, setGoals] = useState<OTGoal[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -47,13 +53,31 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
   const [goalText, setGoalText] = useState("")
   const [targetDate, setTargetDate] = useState("")
   const [priority, setPriority] = useState(1)
+  const [status, setStatus] = useState("Not Started")
   const [savingGoal, setSavingGoal] = useState(false)
 
+  // Edit goal form state
+  const [editingGoal, setEditingGoal] = useState<OTGoal | null>(null)
+  const [editGoalText, setEditGoalText] = useState("")
+  const [editTargetDate, setEditTargetDate] = useState("")
+  const [editPriority, setEditPriority] = useState(1)
+  const [editStatus, setEditStatus] = useState("Not Started")
+  const [progressNotes, setProgressNotes] = useState("")
+  const [savingGoalUpdate, setSavingGoalUpdate] = useState(false)
+
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   useEffect(() => {
-    if (isOpen && clientName && !checkinId) {
-      fetchClientDataAndCreateCheckin()
+    if (isOpen && clientName) {
+      if (editingCheckinId) {
+        loadExistingCheckin()
+      } else if (!checkinId) {
+        fetchClientDataAndCreateCheckin()
+      }
     }
-  }, [isOpen, clientName])
+  }, [isOpen, clientName, editingCheckinId])
 
   // Fetch goals when modal opens
   useEffect(() => {
@@ -67,13 +91,25 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
     if (!isOpen) {
       setCurrentView("checkin")
       setNotes("")
+      setCheckinType("Evaluation")
+      setServiceType("Direct")
       setGoalText("")
       setTargetDate("")
       setPriority(1)
+      setStatus("Not Started")
+      setEditingGoal(null)
+      setEditGoalText("")
+      setEditTargetDate("")
+      setEditPriority(1)
+      setEditStatus("Not Started")
+      setProgressNotes("")
       setError(null)
       setSuccessMessage(null)
       setCheckinId(null)
       setClientUuid(null)
+      setShowDeleteConfirm(false)
+      setCheckinDate("")
+      setOriginalCheckinDate("")
     }
   }, [isOpen])
 
@@ -108,6 +144,8 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         client_uuid: clientData.client_uuid,
         provider_name: providerName,
         notes: "",
+        checkin_type: checkinType,
+        service_type: serviceType,
       })
 
       const response = await fetch("/api/ot-checkins", {
@@ -121,6 +159,8 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
           client_uuid: clientData.client_uuid,
           provider_name: providerName,
           notes: "",
+          checkin_type: checkinType,
+          service_type: serviceType,
         }),
       })
 
@@ -203,6 +243,119 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
     }
   }
 
+  const loadExistingCheckin = async () => {
+    if (!editingCheckinId) return
+
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/ot-checkins/${editingCheckinId}`)
+      if (!response.ok) {
+        throw new Error("Failed to fetch OT check-in")
+      }
+
+      const checkin = await response.json()
+      setNotes(checkin.notes || "")
+      const dbDate = new Date(checkin.created_at).toISOString().split("T")[0]
+      setCheckinDate(dbDate)
+      setOriginalCheckinDate(dbDate)
+
+      const goalsResponse = await fetch(`/api/ot-goals?checkin_id=${editingCheckinId}`)
+      if (goalsResponse.ok) {
+        const goalsData = await goalsResponse.json()
+        setGoals(goalsData)
+      }
+    } catch (error) {
+      console.error("Error loading check-in:", error)
+      setError("Failed to load check-in data")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSaveCheckin = async () => {
+    if (!notes.trim()) {
+      setError("Please enter check-in notes")
+      return
+    }
+
+    if (editingCheckinId && checkinDate && originalCheckinDate) {
+      const selectedDate = new Date(checkinDate)
+      const originalDate = new Date(originalCheckinDate)
+      const daysDifference = Math.floor((originalDate.getTime() - selectedDate.getTime()) / (1000 * 60 * 60 * 24))
+
+      if (daysDifference > 45) {
+        setError("Check-in date cannot be more than 45 days before the original date")
+        return
+      }
+    }
+
+    try {
+      setSavingCheckin(true)
+      setError(null)
+
+      if (editingCheckinId) {
+        const response = await fetch(`/api/ot-checkins/${editingCheckinId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            notes: notes.trim(),
+            created_at: checkinDate ? new Date(checkinDate).toISOString() : undefined,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to update OT check-in")
+        }
+
+        setSuccessMessage("OT check-in updated successfully!")
+        setTimeout(() => {
+          setSuccessMessage(null)
+          if (onSuccess) {
+            onSuccess()
+          } else {
+            onClose()
+          }
+        }, 1500)
+      } else {
+        const response = await fetch("/api/ot-checkins", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contact_id: contactId,
+            client_name: clientName,
+            client_uuid: clientUuid,
+            provider_name: providerName,
+            notes: notes.trim(),
+            checkin_type: checkinType,
+            service_type: serviceType,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to create OT check-in")
+        }
+
+        const result = await response.json()
+        if (result.success) {
+          setCheckinId(result.data.id)
+          setSuccessMessage("OT check-in created successfully!")
+          setTimeout(() => setSuccessMessage(null), 3000)
+        } else {
+          throw new Error(result.error?.message || "Failed to create OT check-in")
+        }
+      }
+    } catch (err) {
+      console.error("DEBUG: Error in handleSaveCheckin:", err)
+      setError(err instanceof Error ? err.message : "Failed to save OT check-in")
+    } finally {
+      setSavingCheckin(false)
+    }
+  }
+
   const handleSaveGoal = async () => {
     if (!goalText.trim()) {
       setError("Goal text is required")
@@ -224,6 +377,7 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         goal_text: goalText.trim(),
         target_date: targetDate || null,
         priority: priority,
+        status: status,
         checkin_id: checkinId,
       }
 
@@ -249,12 +403,11 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
       console.log("DEBUG: OT goal creation result:", result)
 
       if (result.success) {
-        // Add new goal to the list
         setGoals((prev) => [result.data, ...prev])
-        // Reset form and return to main view
         setGoalText("")
         setTargetDate("")
         setPriority(1)
+        setStatus("Not Started")
         setCurrentView("checkin")
         setSuccessMessage("OT goal created successfully!")
         setTimeout(() => setSuccessMessage(null), 3000)
@@ -281,6 +434,8 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
     try {
       const updateData = {
         notes: notes,
+        checkin_type: checkinType,
+        service_type: serviceType,
         status: "Draft",
       }
 
@@ -332,6 +487,8 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
     try {
       const updateData = {
         notes: notes,
+        checkin_type: checkinType,
+        service_type: serviceType,
         status: "Completed",
       }
 
@@ -361,8 +518,8 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         setSuccessMessage("OT check-in completed successfully!")
         setTimeout(() => {
           setSuccessMessage(null)
-          if (onSubmit) {
-            onSubmit()
+          if (onSuccess) {
+            onSuccess()
           } else {
             onClose()
           }
@@ -375,6 +532,123 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
       setError(err instanceof Error ? err.message : "Failed to complete OT check-in")
     } finally {
       setSavingCheckin(false)
+    }
+  }
+
+  const handleEditGoal = (goal: OTGoal) => {
+    setEditingGoal(goal)
+    setEditGoalText(goal.goal_text)
+    setEditTargetDate(goal.target_date || "")
+    setEditPriority(goal.priority)
+    setEditStatus(goal.status)
+    setProgressNotes(goal.progress_note || "")
+    setCurrentView("edit-goal")
+  }
+
+  const handleSaveGoalUpdate = async () => {
+    if (!editingGoal) {
+      setError("No goal selected for editing")
+      return
+    }
+
+    if (!editGoalText.trim()) {
+      setError("Goal text is required")
+      return
+    }
+
+    if (!checkinId) {
+      setError("No check-in record found")
+      return
+    }
+
+    setSavingGoalUpdate(true)
+    setError(null)
+
+    try {
+      const goalUpdateData = {
+        goal_text: editGoalText.trim(),
+        target_date: editTargetDate || null,
+        priority: editPriority,
+        status: editStatus,
+        progress_note: progressNotes.trim() || null,
+      }
+
+      console.log("DEBUG: editingGoal:", editingGoal)
+      console.log("DEBUG: editingGoal.id:", editingGoal.id)
+      console.log("DEBUG: Updating OT goal with data:", goalUpdateData)
+
+      const goalResponse = await fetch(`/api/ot-goals/${editingGoal.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(goalUpdateData),
+      })
+
+      if (!goalResponse.ok) {
+        const errorText = await goalResponse.text()
+        console.log("DEBUG: Error in handleSaveGoalUpdate:", errorText)
+        throw new Error(`Failed to update goal: ${goalResponse.status} - ${errorText}`)
+      }
+
+      const goalResult = await goalResponse.json()
+      console.log("DEBUG: Goal update result:", goalResult)
+
+      if (!goalResult.success) {
+        throw new Error(goalResult.error?.message || "Failed to update goal")
+      }
+
+      setGoals((prev) => prev.map((goal) => (goal.id === editingGoal.id ? { ...goal, ...goalResult.data } : goal)))
+
+      setEditingGoal(null)
+      setEditGoalText("")
+      setEditTargetDate("")
+      setEditPriority(1)
+      setEditStatus("Not Started")
+      setProgressNotes("")
+      setCurrentView("checkin")
+      setSuccessMessage("Goal updated successfully!")
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err) {
+      console.error("DEBUG: Error in handleSaveGoalUpdate:", err)
+      setError(err instanceof Error ? err.message : "Failed to update goal")
+    } finally {
+      setSavingGoalUpdate(false)
+    }
+  }
+
+  const handleDeleteCheckin = async () => {
+    if (!editingCheckinId) return
+
+    setDeleting(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/ot-checkins/${editingCheckinId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Failed to delete check-in: ${response.status} - ${errorText}`)
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        setSuccessMessage("Check-in deleted successfully!")
+        setTimeout(() => {
+          setSuccessMessage(null)
+          onClose()
+        }, 1500)
+      } else {
+        throw new Error(result.error?.message || "Failed to delete check-in")
+      }
+    } catch (err) {
+      console.error("Error deleting check-in:", err)
+      setError(err instanceof Error ? err.message : "Failed to delete check-in")
+    } finally {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
     }
   }
 
@@ -404,7 +678,13 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
-            {currentView === "checkin" ? "New OT Check-In" : "New OT Goal"}
+            {currentView === "checkin"
+              ? editingCheckinId
+                ? "Edit OT Check-In"
+                : "New OT Check-In"
+              : currentView === "new-goal"
+                ? "New OT Goal"
+                : "Edit OT Goal"}
           </DialogTitle>
         </DialogHeader>
 
@@ -416,15 +696,29 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
 
         {currentView === "checkin" && !creatingCheckin ? (
           <div className="space-y-6">
-            {/* Client Name Heading */}
             <div>
               <h2 className="text-lg font-medium text-gray-900">{clientName}</h2>
             </div>
 
-            {/* Notes Field */}
+            {editingCheckinId && (
+              <div className="space-y-2">
+                <Label htmlFor="checkin-date" className="text-sm font-medium">
+                  Check-In Date
+                </Label>
+                <Input
+                  id="checkin-date"
+                  type="date"
+                  value={checkinDate}
+                  onChange={(e) => setCheckinDate(e.target.value)}
+                  className="w-full"
+                />
+                <div className="text-xs text-gray-500">Can be back-dated up to 45 days from the original date</div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="notes" className="text-sm font-medium">
-                Notes
+                Check-In Notes
               </Label>
               <Textarea
                 id="notes"
@@ -445,7 +739,38 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
               />
             </div>
 
-            {/* Goals Section */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="checkin-type" className="text-sm font-medium">
+                  Check-In Type
+                </Label>
+                <select
+                  id="checkin-type"
+                  value={checkinType}
+                  onChange={(e) => setCheckinType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Evaluation">Evaluation</option>
+                  <option value="Follow-UP">Follow-UP</option>
+                  <option value="Reassessment">Reassessment</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="service-type" className="text-sm font-medium">
+                  Service Type
+                </Label>
+                <select
+                  id="service-type"
+                  value={serviceType}
+                  onChange={(e) => setServiceType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Direct">Direct</option>
+                </select>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-medium text-gray-900">OT Goals</h3>
@@ -455,7 +780,6 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
                 </Button>
               </div>
 
-              {/* Success Message */}
               {successMessage && (
                 <div className="flex items-center space-x-2 text-green-600 bg-green-50 p-3 rounded-md">
                   <CheckCircle className="h-4 w-4" />
@@ -463,7 +787,6 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
                 </div>
               )}
 
-              {/* Error Display */}
               {error && (
                 <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
                   <AlertCircle className="h-4 w-4" />
@@ -471,7 +794,6 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
                 </div>
               )}
 
-              {/* Goals List */}
               {loading ? (
                 <div className="text-center py-4">
                   <div className="text-sm text-gray-500">Loading OT goals...</div>
@@ -479,7 +801,11 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
               ) : goals.length > 0 ? (
                 <div className="space-y-3">
                   {goals.map((goal) => (
-                    <Card key={goal.id} className="shadow-sm">
+                    <Card
+                      key={goal.id}
+                      className="shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => handleEditGoal(goal)}
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -496,8 +822,24 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
                                 </div>
                               )}
                             </div>
+                            <div className="text-xs text-blue-600 mt-1">Click to edit and add progress notes</div>
                           </div>
-                          <Badge className={getStatusColor(goal.status)}>{goal.status}</Badge>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const url = `/ot?tab=client&name=${encodeURIComponent(clientName)}&section=ot-goals`
+                                window.open(url, "_blank")
+                              }}
+                              title="View in OT Goals tab"
+                            >
+                              <ExternalLink className="h-3 w-3 text-gray-500" />
+                            </Button>
+                            <Badge className={getStatusColor(goal.status)}>{goal.status}</Badge>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -512,10 +854,46 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
               )}
             </div>
 
+            {showDeleteConfirm && (
+              <div className="bg-red-50 border border-red-200 p-4 rounded-md">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-red-800">Delete Check-In</h3>
+                    <p className="text-sm text-red-700 mt-1">
+                      Are you sure you want to delete this OT check-in? This action cannot be undone.
+                    </p>
+                    <div className="flex space-x-3 mt-3">
+                      <Button size="sm" variant="destructive" onClick={handleDeleteCheckin} disabled={deleting}>
+                        {deleting ? "Deleting..." : "Delete"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowDeleteConfirm(false)}
+                        disabled={deleting}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end space-x-3 pt-4 border-t">
               <Button variant="outline" onClick={onClose} disabled={savingCheckin}>
                 Cancel
               </Button>
+              {editingCheckinId && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={savingCheckin || showDeleteConfirm}
+                >
+                  Delete
+                </Button>
+              )}
               <Button variant="outline" onClick={handleSaveDraft} disabled={savingCheckin || !checkinId}>
                 {savingCheckin ? "Saving..." : "Save Draft"}
               </Button>
@@ -525,15 +903,12 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
             </div>
           </div>
         ) : currentView === "new-goal" && !creatingCheckin ? (
-          /* New Goal Form */
           <div className="space-y-6">
-            {/* Back Button */}
             <Button variant="ghost" size="sm" onClick={() => setCurrentView("checkin")} className="text-sm">
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back to Check-In
             </Button>
 
-            {/* Goal Form */}
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="goal-text" className="text-sm font-medium">
@@ -550,7 +925,7 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
                 <div className="text-xs text-gray-500 text-right">{goalText.length}/500 characters</div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="target-date" className="text-sm font-medium">
                     Target Date
@@ -580,10 +955,26 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
                     <option value={5}>5 - High</option>
                   </select>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status" className="text-sm font-medium">
+                    Status
+                  </Label>
+                  <select
+                    id="status"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Not Started">Not Started</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Deferred">Deferred</option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            {/* Error Display */}
             {error && (
               <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
                 <AlertCircle className="h-4 w-4" />
@@ -591,7 +982,6 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="flex justify-end space-x-3 pt-4 border-t">
               <Button variant="outline" onClick={() => setCurrentView("checkin")} disabled={savingGoal}>
                 Cancel
@@ -601,8 +991,118 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
               </Button>
             </div>
           </div>
+        ) : currentView === "edit-goal" && !creatingCheckin ? (
+          <div className="space-y-6">
+            <Button variant="ghost" size="sm" onClick={() => setCurrentView("checkin")} className="text-sm">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to Check-In
+            </Button>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-goal-text" className="text-sm font-medium">
+                  OT Goal Text *
+                </Label>
+                <Textarea
+                  id="edit-goal-text"
+                  value={editGoalText}
+                  onChange={(e) => setEditGoalText(e.target.value)}
+                  placeholder="Enter the OT goal description..."
+                  className="min-h-[80px]"
+                  maxLength={500}
+                />
+                <div className="text-xs text-gray-500 text-right">{editGoalText.length}/500 characters</div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-target-date" className="text-sm font-medium">
+                    Target Date
+                  </Label>
+                  <Input
+                    id="edit-target-date"
+                    type="date"
+                    value={editTargetDate}
+                    onChange={(e) => setEditTargetDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-priority" className="text-sm font-medium">
+                    Priority
+                  </Label>
+                  <select
+                    id="edit-priority"
+                    value={editPriority}
+                    onChange={(e) => setEditPriority(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={1}>1 - Low</option>
+                    <option value={2}>2 - Medium Low</option>
+                    <option value={3}>3 - Medium</option>
+                    <option value={4}>4 - Medium High</option>
+                    <option value={5}>5 - High</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status" className="text-sm font-medium">
+                    Status
+                  </Label>
+                  <select
+                    id="edit-status"
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Not Started">Not Started</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Deferred">Deferred</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2 border-t pt-4">
+                <Label htmlFor="progress-notes" className="text-sm font-medium">
+                  Progress Notes for This Check-In
+                </Label>
+                <Textarea
+                  id="progress-notes"
+                  value={progressNotes}
+                  onChange={(e) => setProgressNotes(e.target.value)}
+                  placeholder="Enter progress notes for this specific check-in session..."
+                  className="min-h-[100px]"
+                  maxLength={1000}
+                />
+                <div className="text-xs text-gray-500 text-right">{progressNotes.length}/1000 characters</div>
+                <div className="text-xs text-gray-600">
+                  These notes will be associated with this check-in session and track progress on this goal.
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
+                <AlertCircle className="h-4 w-4" />
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+              <Button variant="outline" onClick={() => setCurrentView("checkin")} disabled={savingGoalUpdate}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveGoalUpdate} disabled={savingGoalUpdate || !editGoalText.trim()}>
+                {savingGoalUpdate ? "Saving..." : "Update Goal"}
+              </Button>
+            </div>
+          </div>
         ) : null}
       </DialogContent>
     </Dialog>
   )
 }
+
+export { OTCheckinModal }
+export default OTCheckinModal

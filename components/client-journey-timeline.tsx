@@ -35,14 +35,18 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null)
 
-  /* ---------------------------------------------------------------------
-   * Defensive fallback ➜ ensure we always work with an array
-   * ------------------------------------------------------------------- */
   const history: ContactRecord[] = Array.isArray(contactHistory) ? contactHistory : []
 
-  /* ---------------------------------------------------------------------
-   * Helpers
-   * ------------------------------------------------------------------- */
+  const cmCheckIns = history.filter((contact) => {
+    const hasCMRequested =
+      contact.servicesRequested?.some((service) => service === "Case Management" || service === "Housing") || false
+    const hasCMProvided =
+      contact.servicesProvided?.some(
+        (service) => service.service === "Case Management" || service.service === "Housing",
+      ) || false
+    return hasCMRequested || hasCMProvided
+  })
+
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -79,20 +83,14 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
     return "normal"
   }
 
-  /* ---------------------------------------------------------------------
-   * Sort newest ➜ oldest so gaps are easy to calculate
-   * ------------------------------------------------------------------- */
-  const sortedContacts = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  const sortedContacts = [...cmCheckIns].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-  /* ---------------------------------------------------------------------
-   * Early-return states
-   * ------------------------------------------------------------------- */
-  if (history.length === 0) {
+  if (cmCheckIns.length === 0) {
     return (
       <div className="text-center py-12">
         <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No Contact History</h3>
-        <p className="text-gray-600">No interactions have been recorded for {clientName} yet.</p>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No CM Check-Ins</h3>
+        <p className="text-gray-600">No case management interactions have been recorded for {clientName} yet.</p>
       </div>
     )
   }
@@ -111,8 +109,8 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
     <div>
       {/* Heading */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">Client Journey Timeline</h2>
-        <p className="text-gray-600">Visual timeline of all interactions and services for {clientName}</p>
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">CM Check-Ins Timeline</h2>
+        <p className="text-gray-600">Case management interactions and services for {clientName}</p>
       </div>
 
       <div className="relative">
@@ -176,40 +174,45 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
 
                       {/* Services */}
                       <div className="space-y-3">
-                        {/* Requested */}
-                        {contact.servicesRequested?.length ? (
+                        {contact.servicesRequested?.filter((srv) => srv === "Case Management" || srv === "Housing")
+                          .length ? (
                           <div>
                             <div className="flex items-center space-x-2 mb-2">
                               <Clock className="h-4 w-4 text-blue-500" />
-                              <span className="text-sm font-medium text-gray-700">Services Requested</span>
+                              <span className="text-sm font-medium text-gray-700">CM Services Requested</span>
                             </div>
                             <div className="flex flex-wrap gap-1 ml-6">
-                              {contact.servicesRequested.map((srv, idx) => (
-                                <Badge
-                                  key={idx}
-                                  variant="outline"
-                                  className="text-xs bg-blue-50 text-blue-700 border-blue-200"
-                                >
-                                  {srv}
-                                </Badge>
-                              ))}
+                              {contact.servicesRequested
+                                .filter((srv) => srv === "Case Management" || srv === "Housing")
+                                .map((srv, idx) => (
+                                  <Badge
+                                    key={idx}
+                                    variant="outline"
+                                    className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+                                  >
+                                    {srv}
+                                  </Badge>
+                                ))}
                             </div>
                           </div>
                         ) : null}
 
-                        {/* Provided */}
-                        {contact.servicesProvided?.length ? (
+                        {contact.servicesProvided?.filter(
+                          (srv) => srv.service === "Case Management" || srv.service === "Housing",
+                        ).length ? (
                           <div>
                             <div className="flex items-center space-x-2 mb-2">
                               <CheckCircle className="h-4 w-4 text-green-500" />
-                              <span className="text-sm font-medium text-gray-700">Services Provided</span>
+                              <span className="text-sm font-medium text-gray-700">CM Services Provided</span>
                             </div>
                             <div className="flex flex-wrap gap-1 ml-6">
-                              {contact.servicesProvided.map((srv, idx) => (
-                                <Badge key={idx} className="text-xs bg-green-100 text-green-800">
-                                  {srv.service}
-                                </Badge>
-                              ))}
+                              {contact.servicesProvided
+                                .filter((srv) => srv.service === "Case Management" || srv.service === "Housing")
+                                .map((srv, idx) => (
+                                  <Badge key={idx} className="text-xs bg-green-100 text-green-800">
+                                    {srv.service}
+                                  </Badge>
+                                ))}
                             </div>
                           </div>
                         ) : null}
@@ -238,7 +241,6 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
                   </Card>
                 </div>
 
-                {/* Gap label */}
                 {gapWarning !== "normal" && next && (
                   <div className="ml-16 mt-2">
                     <span
@@ -246,7 +248,7 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
                         gapWarning === "long-gap" ? "bg-red-50 text-red-600" : "bg-yellow-50 text-yellow-600"
                       }`}
                     >
-                      {gapWarning === "long-gap" ? "Long gap in engagement" : "Extended gap in contact"}
+                      {gapWarning === "long-gap" ? "Long gap in CM engagement" : "Extended gap in CM contact"}
                     </span>
                   </div>
                 )}
@@ -255,11 +257,10 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
           })}
         </div>
 
-        {/* Start marker */}
         <div className="relative mt-6">
           <div className="absolute left-6 w-4 h-4 bg-gray-300 rounded-full" />
           <div className="ml-16">
-            <span className="text-sm text-gray-500 italic">Client journey started</span>
+            <span className="text-sm text-gray-500 italic">CM services started</span>
           </div>
         </div>
       </div>
