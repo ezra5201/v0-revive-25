@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, User, Clock } from "lucide-react"
-import { ClientOTCheckins } from "./client-ot-checkins"
+// import { ClientOTCheckins } from "./client-ot-checkins"
 
 interface ClientData {
   name: string
@@ -127,12 +127,6 @@ export function ClientBasicInfo({
           </CardContent>
         </Card>
       </div>
-
-      {context === "cm" && (
-        <div className="mt-8">
-          <ClientOTCheckins clientName={clientData.name} contactHistory={contactHistory} />
-        </div>
-      )}
     </div>
   )
 }

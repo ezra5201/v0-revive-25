@@ -2,32 +2,32 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { ContactTable } from "@/components/contact-table"
+import { ClientListView } from "@/components/client-list-view"
 import { QuickCheckinDialog } from "@/components/quick-checkin-dialog"
 import { NewProspectDialog } from "@/components/new-prospect-dialog"
 import { ChangeDateDialog } from "@/components/change-date-dialog"
 import { UpdateServicesDialog } from "@/components/update-services-dialog"
 import { ClientMasterRecord } from "@/components/client-master-record"
+import { ClientVisualizationView } from "@/components/client-visualization-view"
 import { Header } from "@/components/header"
 import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
-import { useOTContacts } from "@/hooks/use-ot-contacts"
+import { useContacts } from "@/hooks/use-contacts"
 import { useDatabase } from "@/hooks/use-database"
 import { X } from "lucide-react"
 
-type MainTab = "today" | "all" | "client"
-type ClientSection = "basic-info" | "contact-history" | "journey-timeline" | "ot-goals"
+type MainTab = "all" | "client"
+type ClientSection = "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-checkins"
+type ViewMode = "list" | "visual"
 
-export default function OtPage() {
+export default function ClientsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  // Enhanced state management
-  const [activeTab, setActiveTab] = useState<MainTab>("today")
+  const [activeTab, setActiveTab] = useState<MainTab>("all")
   const [selectedClient, setSelectedClient] = useState<string | null>(null)
   const [activeClientSection, setActiveClientSection] = useState<ClientSection>("basic-info")
-
-  // Existing state (PRESERVED)
+  const [currentView, setCurrentView] = useState<ViewMode>("list")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isNewProspectDialogOpen, setIsNewProspectDialogOpen] = useState(false)
   const [isChangeDateDialogOpen, setIsChangeDateDialogOpen] = useState(false)
@@ -41,92 +41,114 @@ export default function OtPage() {
   })
   const [prefilledProspectName, setPrefilledProspectName] = useState("")
 
+  const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
+  const {
+    contacts,
+    filterData,
+    isLoading: contactsLoading,
+    error: contactsError,
+    refetch: refetchContacts,
+  } = useContacts("all", filters)
+
   useEffect(() => {
     const tab = searchParams.get("tab")
     const name = searchParams.get("name")
     const section = searchParams.get("section")
+    const view = searchParams.get("view")
 
     if (tab === "client" && name) {
       setActiveTab("client")
       setSelectedClient(name)
       setActiveClientSection((section as ClientSection) || "basic-info")
+      setCurrentView((view as ViewMode) || "list")
     } else if (tab === "all") {
       setActiveTab("all")
-    } else if (tab === "today") {
-      setActiveTab("today")
     } else {
-      // No tab parameter - redirect to today with parameter
-      router.replace("/ot?tab=today")
-      setActiveTab("today")
+      router.replace("/clients?tab=all")
+      setActiveTab("all")
     }
   }, [searchParams, router])
 
-  // Custom hooks for data management - using OT-specific hook
-  const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
-  const {
-    contacts,
-    filterData,
-    loading: contactsLoading,
-    error: contactsError,
-    refetch: refetchContacts,
-  } = useOTContacts(activeTab === "client" ? "all" : activeTab, filters.categories, filters.providers)
-
   const updateURL = useCallback(
-    (tab: MainTab, clientName?: string, section?: ClientSection) => {
+    (tab: MainTab, clientName?: string, section?: ClientSection, view?: ViewMode) => {
       const params = new URLSearchParams()
 
       if (tab === "client" && clientName) {
         params.set("tab", "client")
         params.set("name", clientName)
         params.set("section", section || "basic-info")
+        params.set("view", view || "list")
       } else if (tab === "all") {
         params.set("tab", "all")
-      } else if (tab === "today") {
-        params.set("tab", "today")
       }
 
-      const newURL = `/ot?${params.toString()}`
+      const newURL = `/clients?${params.toString()}`
       router.replace(newURL)
     },
     [router],
   )
 
-  // Client row click handler for "All Clients" tab
   const handleClientRowClick = useCallback(
     (clientName: string) => {
       setActiveTab("client")
       setSelectedClient(clientName)
       setActiveClientSection("basic-info")
-      updateURL("client", clientName, "basic-info")
+      setCurrentView("list")
+      updateURL("client", clientName, "basic-info", "list")
     },
     [updateURL],
   )
 
-  // Close client tab handler
   const handleCloseClientTab = useCallback(() => {
     setActiveTab("all")
     setSelectedClient(null)
     setActiveClientSection("basic-info")
+    setCurrentView("list")
     updateURL("all")
   }, [updateURL])
 
-  // Client section change handler
   const handleClientSectionChange = useCallback(
-    (section: "basic-info" | "contact-history" | "journey-timeline" | "ot-goals") => {
+    (section: ClientSection) => {
       setActiveClientSection(section)
       if (selectedClient) {
-        updateURL("client", selectedClient, section)
+        updateURL("client", selectedClient, section, currentView)
       }
     },
-    [selectedClient, updateURL],
+    [selectedClient, currentView, updateURL],
   )
 
-  // Existing handlers
+  const handleViewChange = useCallback(
+    (view: ViewMode) => {
+      setCurrentView(view)
+      if (selectedClient) {
+        updateURL("client", selectedClient, activeClientSection, view)
+      }
+    },
+    [selectedClient, activeClientSection, updateURL],
+  )
+
+  const handleTabChange = useCallback(
+    (tab: MainTab) => {
+      if (tab === "all") {
+        setActiveTab("all")
+        setSelectedClient(null)
+        setActiveClientSection("basic-info")
+        setCurrentView("list")
+        setSelectedCount(0)
+        setSelectedContactIds([])
+        setFilters({ categories: [], providers: [] })
+        updateURL("all")
+      } else if (tab === "client" && selectedClient) {
+        setActiveTab("client")
+        updateURL(tab, selectedClient, activeClientSection, currentView)
+      }
+    },
+    [updateURL, selectedClient, activeClientSection, currentView],
+  )
+
   const handleClientClick = useCallback((clientName: string, isToday?: boolean) => {
-    if (isToday) {
-      setSelectedClient(clientName)
-      setIsDialogOpen(true)
-    }
+    setSelectedClient(clientName)
+    setIsDialogOpen(true)
   }, [])
 
   const handleClientSearch = useCallback((clientName: string) => {
@@ -138,23 +160,6 @@ export default function OtPage() {
     setPrefilledProspectName(searchedName || "")
     setIsNewProspectDialogOpen(true)
   }, [])
-
-  const handleTabChange = useCallback(
-    (tab: MainTab) => {
-      setActiveTab(tab)
-      setSelectedCount(0)
-      setSelectedContactIds([])
-      setFilters({ categories: [], providers: [] })
-
-      if (tab !== "client") {
-        setSelectedClient(null)
-        setActiveClientSection("basic-info")
-      }
-
-      updateURL(tab)
-    },
-    [updateURL],
-  )
 
   const handleSelectionChange = useCallback((count: number, selectedIds: number[]) => {
     setSelectedCount(count)
@@ -183,12 +188,10 @@ export default function OtPage() {
     setSelectedContactForUpdate(null)
   }, [refetchContacts])
 
-  // Show database setup if not initialized
   if (!isInitialized && !dbLoading) {
     return <DatabaseSetup />
   }
 
-  // Show loading state
   if (dbLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -204,21 +207,9 @@ export default function OtPage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      {/* Enhanced Tab Navigation */}
       <div className="bg-white border-b border-gray-200">
         <div className="px-4 sm:px-6">
           <nav className="flex space-x-8" aria-label="Tabs">
-            {/* OT-specific tabs */}
-            <button
-              onClick={() => handleTabChange("today")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "today"
-                  ? "border-orange-500 text-orange-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Today's OT Check-ins
-            </button>
             <button
               onClick={() => handleTabChange("all")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -227,10 +218,9 @@ export default function OtPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
-              My Caseload
+              All Clients
             </button>
 
-            {/* Dynamic client tab */}
             {selectedClient && activeTab === "client" && (
               <button
                 onClick={() => handleTabChange("client")}
@@ -257,8 +247,7 @@ export default function OtPage() {
         </div>
       </div>
 
-      {/* Conditional Content Rendering */}
-      {activeTab !== "client" && (
+      {activeTab === "all" && (
         <>
           <ActionBar
             activeTab={activeTab}
@@ -276,33 +265,35 @@ export default function OtPage() {
           />
 
           <main className="bg-white">
-            <ContactTable
-              activeTab={activeTab}
+            <ClientListView
               contacts={contacts}
               isLoading={contactsLoading}
               error={contactsError}
-              onClientClick={handleClientClick}
-              onSelectionChange={handleSelectionChange}
-              onUpdateServicesClick={handleUpdateServicesClick}
-              onClientRowClick={handleClientRowClick}
+              onClientClick={handleClientRowClick}
             />
           </main>
         </>
       )}
 
-      {/* Client Master Record */}
       {activeTab === "client" && selectedClient && (
-        <main>
-          <ClientMasterRecord
-            clientName={selectedClient}
-            activeSection={activeClientSection}
-            onSectionChange={handleClientSectionChange}
-            context="ot"
-          />
-        </main>
+        <>
+          <main>
+            <ClientMasterRecord
+              clientName={selectedClient}
+              activeSection={activeClientSection}
+              onSectionChange={handleClientSectionChange}
+              context="clients"
+              currentView={currentView}
+              onViewChange={handleViewChange}
+              showContentOnly={currentView === "visual"}
+            />
+            {currentView === "visual" && (
+              <ClientVisualizationView clientName={selectedClient} activeSection={activeClientSection} />
+            )}
+          </main>
+        </>
       )}
 
-      {/* All existing dialogs */}
       <QuickCheckinDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
@@ -323,7 +314,6 @@ export default function OtPage() {
         onClose={() => setIsChangeDateDialogOpen(false)}
         selectedCount={selectedCount}
         onDateChange={async (newDate: string) => {
-          // Handle date change logic
           handleDataUpdate()
         }}
       />
@@ -333,7 +323,6 @@ export default function OtPage() {
         onClose={handleCloseUpdateServicesDialog}
         contactData={selectedContactForUpdate}
         onServicesUpdate={handleServicesUpdated}
-        isFromOTTab={true}
       />
     </div>
   )
