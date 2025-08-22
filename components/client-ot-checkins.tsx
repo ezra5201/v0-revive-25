@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Calendar, User, MessageSquare, CheckCircle, Clock, AlertTriangle, Plus } from "lucide-react"
-import { CMCheckinModal } from "./cm-checkin-modal"
+import { OTCheckinModal } from "./ot-checkin-modal"
 
 interface ContactRecord {
   id: number
@@ -24,27 +24,27 @@ interface ContactRecord {
   hasAlert?: boolean
   alertDetails?: string
   alertSeverity?: string
+  occupational_therapy_requested?: number
+  occupational_therapy_provided?: number
 }
 
-interface ClientJourneyTimelineProps {
+interface ClientOTCheckinsProps {
   clientName: string
   contactHistory: ContactRecord[] | null | undefined
 }
 
-export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJourneyTimelineProps) {
+export function ClientOTCheckins({ clientName, contactHistory }: ClientOTCheckinsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null)
 
   const history: ContactRecord[] = Array.isArray(contactHistory) ? contactHistory : []
 
-  const cmCheckIns = history.filter((contact) => {
-    const hasCMRequested =
-      contact.servicesRequested?.some((service) => service === "Case Management" || service === "Housing") || false
-    const hasCMProvided =
-      contact.servicesProvided?.some(
-        (service) => service.service === "Case Management" || service.service === "Housing",
-      ) || false
-    return hasCMRequested || hasCMProvided
+  // Filter for OT check-ins only - contacts that have OT services requested or provided
+  const otCheckIns = history.filter((contact) => {
+    // Check boolean columns from database instead of JSON arrays
+    const hasOTRequested = (contact as any).occupational_therapy_requested > 0 || false
+    const hasOTProvided = (contact as any).occupational_therapy_provided > 0 || false
+    return hasOTRequested || hasOTProvided
   })
 
   const formatDate = (dateString: string) =>
@@ -83,19 +83,20 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
     return "normal"
   }
 
-  const sortedContacts = [...cmCheckIns].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  // Sort newest to oldest
+  const sortedContacts = [...otCheckIns].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-  if (cmCheckIns.length === 0) {
+  if (otCheckIns.length === 0) {
     return (
       <div className="text-center py-12">
         <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No CM Check-Ins</h3>
-        <p className="text-gray-600">No case management interactions have been recorded for {clientName} yet.</p>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No OT Check-Ins</h3>
+        <p className="text-gray-600">No occupational therapy interactions have been recorded for {clientName} yet.</p>
       </div>
     )
   }
 
-  const handleCMCheckIn = (contactId: number) => {
+  const handleOTCheckIn = (contactId: number) => {
     setSelectedContactId(contactId)
     setIsModalOpen(true)
   }
@@ -109,8 +110,8 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
     <div>
       {/* Heading */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">CM Check-Ins Timeline</h2>
-        <p className="text-gray-600">Case management interactions and services for {clientName}</p>
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">OT Check-Ins Timeline</h2>
+        <p className="text-gray-600">Occupational therapy interactions and services for {clientName}</p>
       </div>
 
       <div className="relative">
@@ -125,7 +126,7 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
             return (
               <div key={contact.id} className="relative">
                 {/* Dot */}
-                <div className="absolute left-6 w-4 h-4 bg-white border-4 border-blue-500 rounded-full" />
+                <div className="absolute left-6 w-4 h-4 bg-white border-4 border-purple-500 rounded-full" />
 
                 {/* Gap bar */}
                 {gapWarning !== "normal" && next && (
@@ -163,56 +164,44 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleCMCheckIn(contact.id)}
+                            onClick={() => handleOTCheckIn(contact.id)}
                             className="text-xs"
                           >
                             <Plus className="h-3 w-3 mr-1" />
-                            CM Check-In
+                            OT Check-In
                           </Button>
                         </div>
                       </div>
 
                       {/* Services */}
                       <div className="space-y-3">
-                        {contact.servicesRequested?.filter((srv) => srv === "Case Management" || srv === "Housing")
-                          .length ? (
+                        {/* Requested */}
+                        {(contact as any).occupational_therapy_requested > 0 ? (
                           <div>
                             <div className="flex items-center space-x-2 mb-2">
-                              <Clock className="h-4 w-4 text-blue-500" />
-                              <span className="text-sm font-medium text-gray-700">CM Services Requested</span>
+                              <Clock className="h-4 w-4 text-purple-500" />
+                              <span className="text-sm font-medium text-gray-700">OT Services Requested</span>
                             </div>
                             <div className="flex flex-wrap gap-1 ml-6">
-                              {contact.servicesRequested
-                                .filter((srv) => srv === "Case Management" || srv === "Housing")
-                                .map((srv, idx) => (
-                                  <Badge
-                                    key={idx}
-                                    variant="outline"
-                                    className="text-xs bg-blue-50 text-blue-700 border-blue-200"
-                                  >
-                                    {srv}
-                                  </Badge>
-                                ))}
+                              <Badge
+                                variant="outline"
+                                className="text-xs bg-purple-50 text-purple-700 border-purple-200"
+                              >
+                                Occupational Therapy
+                              </Badge>
                             </div>
                           </div>
                         ) : null}
 
-                        {contact.servicesProvided?.filter(
-                          (srv) => srv.service === "Case Management" || srv.service === "Housing",
-                        ).length ? (
+                        {/* Provided */}
+                        {(contact as any).occupational_therapy_provided > 0 ? (
                           <div>
                             <div className="flex items-center space-x-2 mb-2">
                               <CheckCircle className="h-4 w-4 text-green-500" />
-                              <span className="text-sm font-medium text-gray-700">CM Services Provided</span>
+                              <span className="text-sm font-medium text-gray-700">OT Services Provided</span>
                             </div>
                             <div className="flex flex-wrap gap-1 ml-6">
-                              {contact.servicesProvided
-                                .filter((srv) => srv.service === "Case Management" || srv.service === "Housing")
-                                .map((srv, idx) => (
-                                  <Badge key={idx} className="text-xs bg-green-100 text-green-800">
-                                    {srv.service}
-                                  </Badge>
-                                ))}
+                              <Badge className="text-xs bg-green-100 text-green-800">Occupational Therapy</Badge>
                             </div>
                           </div>
                         ) : null}
@@ -241,6 +230,7 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
                   </Card>
                 </div>
 
+                {/* Gap label */}
                 {gapWarning !== "normal" && next && (
                   <div className="ml-16 mt-2">
                     <span
@@ -248,7 +238,7 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
                         gapWarning === "long-gap" ? "bg-red-50 text-red-600" : "bg-yellow-50 text-yellow-600"
                       }`}
                     >
-                      {gapWarning === "long-gap" ? "Long gap in CM engagement" : "Extended gap in CM contact"}
+                      {gapWarning === "long-gap" ? "Long gap in OT engagement" : "Extended gap in OT contact"}
                     </span>
                   </div>
                 )}
@@ -257,16 +247,17 @@ export function ClientJourneyTimeline({ clientName, contactHistory }: ClientJour
           })}
         </div>
 
+        {/* Start marker */}
         <div className="relative mt-6">
           <div className="absolute left-6 w-4 h-4 bg-gray-300 rounded-full" />
           <div className="ml-16">
-            <span className="text-sm text-gray-500 italic">CM services started</span>
+            <span className="text-sm text-gray-500 italic">OT services started</span>
           </div>
         </div>
       </div>
 
-      {/* CM Check-In Modal */}
-      <CMCheckinModal
+      {/* OT Check-In Modal */}
+      <OTCheckinModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         clientName={clientName}

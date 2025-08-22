@@ -225,11 +225,19 @@ export async function isDatabaseInitialized(): Promise<boolean> {
       SELECT 
         (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'contacts') as contacts_table,
         (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'clients') as clients_table,
-        (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'providers') as providers_table
+        (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'providers') as providers_table,
+        (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'ot_checkins') as ot_checkins_table,
+        (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'ot_goals') as ot_goals_table
     `
 
     const tables = tablesCheck[0]
-    if (tables.contacts_table === 0 || tables.clients_table === 0 || tables.providers_table === 0) {
+    if (
+      tables.contacts_table === 0 ||
+      tables.clients_table === 0 ||
+      tables.providers_table === 0 ||
+      tables.ot_checkins_table === 0 ||
+      tables.ot_goals_table === 0
+    ) {
       return false
     }
 
@@ -237,11 +245,19 @@ export async function isDatabaseInitialized(): Promise<boolean> {
       SELECT 
         (SELECT COUNT(*) FROM contacts) as contact_count,
         (SELECT COUNT(*) FROM clients) as client_count,
-        (SELECT COUNT(*) FROM providers) as provider_count
+        (SELECT COUNT(*) FROM providers) as provider_count,
+        (SELECT COUNT(*) FROM ot_checkins) as ot_checkins_count,
+        (SELECT COUNT(*) FROM ot_goals) as ot_goals_count
     `
 
     const data = dataCheck[0]
-    return data.contact_count > 0 && data.client_count > 0 && data.provider_count > 0
+    return (
+      data.contact_count > 0 &&
+      data.client_count > 0 &&
+      data.provider_count > 0 &&
+      data.ot_checkins_count > 0 &&
+      data.ot_goals_count > 0
+    )
   } catch (error) {
     console.error("Database initialization check failed:", error)
     return false
@@ -304,6 +320,35 @@ export async function initializeDatabase(): Promise<boolean> {
       )
     `
 
+    await sql`
+      CREATE TABLE IF NOT EXISTS ot_checkins (
+        id SERIAL PRIMARY KEY,
+        contact_id INTEGER NOT NULL,
+        client_name VARCHAR(255) NOT NULL,
+        client_uuid VARCHAR(255),
+        provider_name VARCHAR(255) NOT NULL,
+        notes TEXT,
+        status VARCHAR(50) DEFAULT 'Draft',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS ot_goals (
+        id SERIAL PRIMARY KEY,
+        client_name VARCHAR(255) NOT NULL,
+        client_uuid VARCHAR(255) NOT NULL,
+        goal_text TEXT NOT NULL,
+        status VARCHAR(50) DEFAULT 'Active',
+        target_date DATE,
+        priority INTEGER DEFAULT 1,
+        checkin_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+
     console.log("✅ Database tables verified/created")
     return true
   } catch (error) {
@@ -324,12 +369,20 @@ export async function seedDatabase(): Promise<boolean> {
       SELECT 
         (SELECT COUNT(*) FROM providers) as provider_count,
         (SELECT COUNT(*) FROM clients) as client_count,
-        (SELECT COUNT(*) FROM contacts) as contact_count
+        (SELECT COUNT(*) FROM contacts) as contact_count,
+        (SELECT COUNT(*) FROM ot_checkins) as ot_checkins_count,
+        (SELECT COUNT(*) FROM ot_goals) as ot_goals_count
     `
 
     const counts = existingData[0]
 
-    if (counts.provider_count > 0 && counts.client_count > 0 && counts.contact_count > 0) {
+    if (
+      counts.provider_count > 0 &&
+      counts.client_count > 0 &&
+      counts.contact_count > 0 &&
+      counts.ot_checkins_count > 0 &&
+      counts.ot_goals_count > 0
+    ) {
       console.log("📊 Database already contains data, skipping seed")
       return true
     }
@@ -401,6 +454,62 @@ export async function seedDatabase(): Promise<boolean> {
       console.log("✅ Sample contacts seeded")
     }
 
+    if (counts.ot_checkins_count === 0) {
+      const checkins = [
+        {
+          contact_id: 1,
+          client_name: "James Smith",
+          client_uuid: "uuid1",
+          provider_name: "Elena Ahmed",
+          notes: "Initial check-in",
+          status: "Completed",
+        },
+        {
+          contact_id: 2,
+          client_name: "Robert Johnson",
+          client_uuid: "uuid2",
+          provider_name: "Sofia Cohen",
+          notes: "Follow-up",
+          status: "Pending",
+        },
+      ]
+
+      for (const checkin of checkins) {
+        await sql`
+          INSERT INTO ot_checkins (contact_id, client_name, client_uuid, provider_name, notes, status)
+          VALUES (${checkin.contact_id}, ${checkin.client_name}, ${checkin.client_uuid}, ${checkin.provider_name}, ${checkin.notes}, ${checkin.status})
+        `
+      }
+      console.log("✅ OT checkins seeded")
+    }
+
+    if (counts.ot_goals_count === 0) {
+      const goals = [
+        {
+          client_name: "James Smith",
+          client_uuid: "uuid1",
+          goal_text: "Improve mobility",
+          target_date: "2025-02-01",
+          priority: 1,
+        },
+        {
+          client_name: "Robert Johnson",
+          client_uuid: "uuid2",
+          goal_text: "Increase independence",
+          target_date: "2025-02-15",
+          priority: 2,
+        },
+      ]
+
+      for (const goal of goals) {
+        await sql`
+          INSERT INTO ot_goals (client_name, client_uuid, goal_text, target_date, priority)
+          VALUES (${goal.client_name}, ${goal.client_uuid}, ${goal.goal_text}, ${goal.target_date}, ${goal.priority})
+        `
+      }
+      console.log("✅ OT goals seeded")
+    }
+
     console.log("✅ Database seeded successfully")
     return true
   } catch (error) {
@@ -421,7 +530,9 @@ export async function getDatabaseStats() {
         (SELECT COUNT(*) FROM contacts) as contacts,
         (SELECT COUNT(*) FROM clients) as clients,
         (SELECT COUNT(DISTINCT name) FROM providers) as providers,
-        (SELECT COUNT(*) FROM alerts WHERE is_read = FALSE) as alerts
+        (SELECT COUNT(*) FROM alerts WHERE is_read = FALSE) as alerts,
+        (SELECT COUNT(*) FROM ot_checkins) as ot_checkins,
+        (SELECT COUNT(*) FROM ot_goals) as ot_goals
     `
 
     // Get unique people count (distinct client names from contacts)
@@ -457,6 +568,8 @@ export async function getDatabaseStats() {
       unique_people: Number(uniquePeople[0].unique_people),
       master_records_gap: Number(masterRecordsGap[0].gap),
       data_consistency_percentage: dataConsistencyPercentage,
+      ot_checkins: Number(basicStats[0].ot_checkins),
+      ot_goals: Number(basicStats[0].ot_goals),
       lastUpdated: new Date().toISOString(),
     }
   } catch (error) {

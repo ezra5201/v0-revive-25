@@ -142,78 +142,57 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
 
     const previousStatus = goalRecord.status
 
-    let updatedGoal
+    // Build update query dynamically based on provided fields
+    const updateFields: string[] = []
+    const updateValues: any[] = []
+    let paramIndex = 1
 
-    if (goal_text !== undefined && target_date !== undefined && priority !== undefined && status !== undefined) {
-      // Full update with all fields
-      updatedGoal = await sql`
-        UPDATE ot_goals 
-        SET goal_text = ${goal_text.trim()}, target_date = ${target_date || null}, priority = ${priority}, status = ${status}, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${goalId}
-        RETURNING id, goal_text, target_date, priority, status, updated_at
-      `
-    } else if (status !== undefined && goal_text === undefined && target_date === undefined && priority === undefined) {
-      // Status-only update
-      updatedGoal = await sql`
-        UPDATE ot_goals 
-        SET status = ${status}, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${goalId}
-        RETURNING id, goal_text, target_date, priority, status, updated_at
-      `
-    } else {
-      // Handle other combinations - for now, just update what's provided
-      if (goal_text !== undefined && status !== undefined) {
-        updatedGoal = await sql`
-          UPDATE ot_goals 
-          SET goal_text = ${goal_text.trim()}, status = ${status}, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${goalId}
-          RETURNING id, goal_text, target_date, priority, status, updated_at
-        `
-      } else if (priority !== undefined && status !== undefined) {
-        updatedGoal = await sql`
-          UPDATE ot_goals 
-          SET priority = ${priority}, status = ${status}, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${goalId}
-          RETURNING id, goal_text, target_date, priority, status, updated_at
-        `
-      } else {
-        // Default to status-only if we can't handle the combination
-        updatedGoal = await sql`
-          UPDATE ot_goals 
-          SET status = ${status || goalRecord.status}, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${goalId}
-          RETURNING id, goal_text, target_date, priority, status, updated_at
-        `
-      }
+    if (goal_text !== undefined) {
+      updateFields.push(`goal_text = $${paramIndex}`)
+      updateValues.push(goal_text.trim())
+      paramIndex++
     }
+    if (target_date !== undefined) {
+      updateFields.push(`target_date = $${paramIndex}`)
+      updateValues.push(target_date || null)
+      paramIndex++
+    }
+    if (priority !== undefined) {
+      updateFields.push(`priority = $${paramIndex}`)
+      updateValues.push(priority)
+      paramIndex++
+    }
+    if (status !== undefined) {
+      updateFields.push(`status = $${paramIndex}`)
+      updateValues.push(status)
+      paramIndex++
+    }
+    updateFields.push(`updated_at = CURRENT_TIMESTAMP`)
+
+    // Add the goalId as the last parameter for WHERE clause
+    updateValues.push(goalId)
+
+    const updateQuery = `
+      UPDATE ot_goals 
+      SET ${updateFields.join(", ")}
+      WHERE id = $${paramIndex}
+      RETURNING id, goal_text, target_date, priority, status, updated_at
+    `
+
+    const result = await sql.query(updateQuery, updateValues)
+    const updatedGoal = result[0]
 
     console.log("DEBUG: Updated goal result:", updatedGoal)
 
-    if (!updatedGoal || updatedGoal.length === 0) {
-      console.error("DEBUG: No rows returned from update query")
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "DATABASE_ERROR",
-            message: "Failed to update goal - no rows affected",
-            details: { goalId },
-          },
-        },
-        { status: 500 },
-      )
-    }
-
-    const updatedRecord = updatedGoal[0]
-    if (!updatedRecord || !updatedRecord.id) {
-      console.error("DEBUG: Invalid updated record:", updatedRecord)
+    if (!updatedGoal || !updatedGoal.id) {
+      console.error("DEBUG: Invalid updated record:", updatedGoal)
       return NextResponse.json(
         {
           success: false,
           error: {
             code: "DATABASE_ERROR",
             message: "Invalid updated record",
-            details: { goalId, record: updatedRecord },
+            details: { goalId, record: updatedGoal },
           },
         },
         { status: 500 },
@@ -231,12 +210,12 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
     return NextResponse.json({
       success: true,
       data: {
-        id: updatedRecord.id,
-        goal_text: updatedRecord.goal_text,
-        target_date: updatedRecord.target_date,
-        priority: updatedRecord.priority,
-        status: updatedRecord.status,
-        updated_at: updatedRecord.updated_at,
+        id: updatedGoal.id,
+        goal_text: updatedGoal.goal_text,
+        target_date: updatedGoal.target_date,
+        priority: updatedGoal.priority,
+        status: updatedGoal.status,
+        updated_at: updatedGoal.updated_at,
       },
     })
   } catch (error) {

@@ -13,7 +13,7 @@ import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
 import { useContacts } from "@/hooks/use-contacts"
 import { useDatabase } from "@/hooks/use-database"
-import { X } from 'lucide-react'
+import { X } from "lucide-react"
 
 type MainTab = "today" | "all" | "client"
 type ClientSection = "basic-info" | "contact-history" | "journey-timeline"
@@ -293,6 +293,7 @@ export default function ContactLogPage() {
             clientName={selectedClient}
             activeSection={activeClientSection}
             onSectionChange={handleClientSectionChange}
+            context="cm"
           />
         </main>
       )}

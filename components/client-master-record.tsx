@@ -5,13 +5,17 @@ import { Badge } from "@/components/ui/badge"
 import { ClientBasicInfo } from "./client-basic-info"
 import { ClientContactHistory } from "./client-contact-history"
 import { ClientJourneyTimeline } from "./client-journey-timeline"
+import { ClientOTCheckins } from "./client-ot-checkins"
 import { GoalWidget } from "./goal-widget"
 import { OTGoalWidget } from "./ot-goal-widget"
 
 interface ClientMasterRecordProps {
   clientName: string
-  activeSection: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals"
-  onSectionChange: (section: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals") => void
+  activeSection: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals" | "ot-checkins"
+  onSectionChange: (
+    section: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals" | "ot-checkins",
+  ) => void
+  context: "cm" | "ot"
 }
 
 interface ClientData {
@@ -41,7 +45,7 @@ interface ContactRecord {
   alertSeverity?: string
 }
 
-export function ClientMasterRecord({ clientName, activeSection, onSectionChange }: ClientMasterRecordProps) {
+export function ClientMasterRecord({ clientName, activeSection, onSectionChange, context }: ClientMasterRecordProps) {
   const [clientData, setClientData] = useState<ClientData | null>(null)
   const [contactHistory, setContactHistory] = useState<ContactRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -104,6 +108,23 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
     }
   }
 
+  const getTabOrder = () => {
+    if (context === "cm") {
+      return ["basic-info", "journey-timeline", "cm-goals", "ot-checkins", "ot-goals", "contact-history"]
+    } else {
+      return ["basic-info", "ot-checkins", "ot-goals", "journey-timeline", "cm-goals", "contact-history"]
+    }
+  }
+
+  const tabConfig = {
+    "basic-info": { label: "Basic Info", section: "basic-info" as const },
+    "journey-timeline": { label: "CM Check-Ins", section: "journey-timeline" as const },
+    "cm-goals": { label: "CM Goals", section: "cm-goals" as const },
+    "ot-checkins": { label: "OT Check-Ins", section: "ot-checkins" as const },
+    "ot-goals": { label: "OT Goals", section: "ot-goals" as const },
+    "contact-history": { label: "Contact History", section: "contact-history" as const },
+  }
+
   if (isLoading) {
     return (
       <div className="bg-white">
@@ -146,63 +167,34 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
       {/* Horizontal sub-tabs */}
       <div className="border-b border-gray-200">
         <nav className="flex space-x-8 px-4 sm:px-6" aria-label="Client sections">
-          <button
-            onClick={() => onSectionChange("basic-info")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeSection === "basic-info"
-                ? "border-orange-500 text-orange-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Basic Info
-          </button>
-          <button
-            onClick={() => onSectionChange("journey-timeline")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeSection === "journey-timeline"
-                ? "border-orange-500 text-orange-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            CM Check-Ins
-          </button>
-          <button
-            onClick={() => onSectionChange("cm-goals")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeSection === "cm-goals"
-                ? "border-orange-500 text-orange-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            CM Goals
-          </button>
-          <button
-            onClick={() => onSectionChange("ot-goals")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeSection === "ot-goals"
-                ? "border-orange-500 text-orange-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            OT Goals
-          </button>
-          <button
-            onClick={() => onSectionChange("contact-history")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeSection === "contact-history"
-                ? "border-orange-500 text-orange-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Contact Log
-          </button>
+          {getTabOrder().map((tabKey) => {
+            const tab = tabConfig[tabKey as keyof typeof tabConfig]
+            return (
+              <button
+                key={tabKey}
+                onClick={() => onSectionChange(tab.section)}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeSection === tab.section
+                    ? "border-orange-500 text-orange-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
         </nav>
       </div>
 
       {/* Content area */}
       <div className="p-4 sm:p-6">
         {activeSection === "basic-info" && clientData && (
-          <ClientBasicInfo clientData={clientData} contactHistoryLength={contactHistory.length} />
+          <ClientBasicInfo
+            clientData={clientData}
+            contactHistoryLength={contactHistory.length}
+            contactHistory={contactHistory}
+            context={context}
+          />
         )}
 
         {activeSection === "contact-history" && (
@@ -216,6 +208,10 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
         {activeSection === "cm-goals" && <GoalWidget clientName={clientName} />}
 
         {activeSection === "ot-goals" && <OTGoalWidget clientName={clientName} />}
+
+        {activeSection === "ot-checkins" && (
+          <ClientOTCheckins clientName={clientName} contactHistory={contactHistory} />
+        )}
       </div>
     </div>
   )
