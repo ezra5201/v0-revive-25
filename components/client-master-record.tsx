@@ -223,52 +223,105 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange,
       </div>
 
       {/* Horizontal sub-tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8 px-4 sm:px-6" aria-label="Client sections">
-          {getTabOrder().map((tabKey) => {
-            const tab = tabConfig[tabKey as keyof typeof tabConfig]
-            return (
-              <button
-                key={tabKey}
-                onClick={() => onSectionChange(tab.section)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeSection === tab.section
-                    ? "border-orange-500 text-orange-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                {tab.label}
-              </button>
-            )
-          })}
-        </nav>
-      </div>
+      {context !== "clients" && (
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-8 px-4 sm:px-6" aria-label="Client sections">
+            {getTabOrder().map((tabKey) => {
+              const tab = tabConfig[tabKey as keyof typeof tabConfig]
+              return (
+                <button
+                  key={tabKey}
+                  onClick={() => onSectionChange(tab.section)}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeSection === tab.section
+                      ? "border-orange-500 text-orange-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+      )}
 
       {/* Content area */}
       <div className="p-4 sm:p-6">
-        {activeSection === "basic-info" && clientData && (
-          <ClientBasicInfo
-            clientData={clientData}
-            contactHistoryLength={contactHistory.length}
-            contactHistory={contactHistory}
-            context={context}
-          />
-        )}
+        {context === "clients" ? (
+          // Comprehensive view showing all sections
+          <div className="space-y-8">
+            {/* Basic Information */}
+            {clientData && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h2>
+                <ClientBasicInfo
+                  clientData={clientData}
+                  contactHistoryLength={contactHistory.length}
+                  contactHistory={contactHistory}
+                  context={context}
+                />
+              </div>
+            )}
 
-        {activeSection === "contact-history" && (
-          <ClientContactHistory clientName={clientName} contactHistory={contactHistory} />
-        )}
+            {/* Contact History */}
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Contact History</h2>
+              <ClientContactHistory clientName={clientName} contactHistory={contactHistory} />
+            </div>
 
-        {activeSection === "journey-timeline" && (
-          <ClientJourneyTimeline clientName={clientName} contactHistory={contactHistory} />
-        )}
+            {/* CM Check-ins */}
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">CM Check-ins</h2>
+              <ClientJourneyTimeline clientName={clientName} contactHistory={contactHistory} />
+            </div>
 
-        {activeSection === "cm-goals" && <GoalWidget clientName={clientName} />}
+            {/* CM Goals */}
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">CM Goals</h2>
+              <GoalWidget clientName={clientName} />
+            </div>
 
-        {activeSection === "ot-goals" && <OTGoalWidget clientName={clientName} />}
+            {/* OT Check-ins */}
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">OT Check-ins</h2>
+              <ClientOTCheckins clientName={clientName} contactHistory={contactHistory} />
+            </div>
 
-        {activeSection === "ot-checkins" && (
-          <ClientOTCheckins clientName={clientName} contactHistory={contactHistory} />
+            {/* OT Goals */}
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">OT Goals</h2>
+              <OTGoalWidget clientName={clientName} />
+            </div>
+          </div>
+        ) : (
+          // Original tabbed view for CM and OT contexts
+          <>
+            {activeSection === "basic-info" && clientData && (
+              <ClientBasicInfo
+                clientData={clientData}
+                contactHistoryLength={contactHistory.length}
+                contactHistory={contactHistory}
+                context={context}
+              />
+            )}
+
+            {activeSection === "contact-history" && (
+              <ClientContactHistory clientName={clientName} contactHistory={contactHistory} />
+            )}
+
+            {activeSection === "journey-timeline" && (
+              <ClientJourneyTimeline clientName={clientName} contactHistory={contactHistory} />
+            )}
+
+            {activeSection === "cm-goals" && <GoalWidget clientName={clientName} />}
+
+            {activeSection === "ot-goals" && <OTGoalWidget clientName={clientName} />}
+
+            {activeSection === "ot-checkins" && (
+              <ClientOTCheckins clientName={clientName} contactHistory={contactHistory} />
+            )}
+          </>
         )}
       </div>
     </div>
