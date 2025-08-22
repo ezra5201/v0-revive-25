@@ -25,24 +25,19 @@ interface OTGoal {
 interface OTCheckinModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit?: () => void
+  onSuccess?: () => void
   clientName: string
   contactId: number
   editingCheckinId?: number | null
 }
 
-export function OTCheckinModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  clientName,
-  contactId,
-  editingCheckinId,
-}: OTCheckinModalProps) {
+function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, editingCheckinId }: OTCheckinModalProps) {
   const [currentView, setCurrentView] = useState<"checkin" | "new-goal" | "edit-goal">("checkin")
   const [notes, setNotes] = useState("")
   const [checkinType, setCheckinType] = useState("Evaluation")
   const [serviceType, setServiceType] = useState("Direct")
+  const [checkinDate, setCheckinDate] = useState("")
+  const [originalCheckinDate, setOriginalCheckinDate] = useState("")
   const [goals, setGoals] = useState<OTGoal[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -113,6 +108,8 @@ export function OTCheckinModal({
       setCheckinId(null)
       setClientUuid(null)
       setShowDeleteConfirm(false)
+      setCheckinDate("")
+      setOriginalCheckinDate("")
     }
   }, [isOpen])
 
@@ -142,7 +139,7 @@ export function OTCheckinModal({
       setClientUuid(clientData.client_uuid)
 
       console.log("DEBUG: Creating OT check-in with data:", {
-        contact_id: contactId,
+        contact_id: editingCheckinId, // Updated to use editingCheckinId instead of contactId
         client_name: clientName,
         client_uuid: clientData.client_uuid,
         provider_name: providerName,
@@ -157,7 +154,7 @@ export function OTCheckinModal({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          contact_id: contactId,
+          contact_id: editingCheckinId, // Updated to use editingCheckinId instead of contactId
           client_name: clientName,
           client_uuid: clientData.client_uuid,
           provider_name: providerName,
@@ -249,31 +246,113 @@ export function OTCheckinModal({
   const loadExistingCheckin = async () => {
     if (!editingCheckinId) return
 
-    setCreatingCheckin(true)
-    setError(null)
-
     try {
+      setLoading(true)
       const response = await fetch(`/api/ot-checkins/${editingCheckinId}`)
       if (!response.ok) {
-        throw new Error("Failed to load check-in data")
+        throw new Error("Failed to fetch OT check-in")
       }
 
-      const result = await response.json()
-      if (result.success) {
-        const checkin = result.data
-        setCheckinId(checkin.id)
-        setNotes(checkin.notes || "")
-        setCheckinType(checkin.checkin_type || "Evaluation")
-        setServiceType(checkin.service_type || "Direct")
-        setClientUuid(checkin.client_uuid)
+      const checkin = await response.json()
+      setNotes(checkin.notes || "")
+      const dbDate = new Date(checkin.created_at).toISOString().split("T")[0]
+      setCheckinDate(dbDate)
+      setOriginalCheckinDate(dbDate)
+
+      const goalsResponse = await fetch(`/api/ot-goals?checkin_id=${editingCheckinId}`)
+      if (goalsResponse.ok) {
+        const goalsData = await goalsResponse.json()
+        setGoals(goalsData)
+      }
+    } catch (error) {
+      console.error("Error loading check-in:", error)
+      setError("Failed to load check-in data")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSaveCheckin = async () => {
+    if (!notes.trim()) {
+      setError("Please enter check-in notes")
+      return
+    }
+
+    if (editingCheckinId && checkinDate && originalCheckinDate) {
+      const selectedDate = new Date(checkinDate)
+      const originalDate = new Date(originalCheckinDate)
+      const daysDifference = Math.floor((originalDate.getTime() - selectedDate.getTime()) / (1000 * 60 * 60 * 24))
+
+      if (daysDifference > 45) {
+        setError("Check-in date cannot be more than 45 days before the original date")
+        return
+      }
+    }
+
+    try {
+      setSavingCheckin(true)
+      setError(null)
+
+      if (editingCheckinId) {
+        const response = await fetch(`/api/ot-checkins/${editingCheckinId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            notes: notes.trim(),
+            created_at: checkinDate ? new Date(checkinDate).toISOString() : undefined,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to update OT check-in")
+        }
+
+        setSuccessMessage("OT check-in updated successfully!")
+        setTimeout(() => {
+          setSuccessMessage(null)
+          if (onSuccess) {
+            onSuccess()
+          } else {
+            onClose()
+          }
+        }, 1500)
       } else {
-        throw new Error(result.error?.message || "Failed to load check-in data")
+        const response = await fetch("/api/ot-checkins", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contact_id: editingCheckinId, // Updated to use editingCheckinId instead of contactId
+            client_name: clientName,
+            client_uuid: clientUuid,
+            provider_name: providerName,
+            notes: notes.trim(),
+            checkin_type: checkinType,
+            service_type: serviceType,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to create OT check-in")
+        }
+
+        const result = await response.json()
+        if (result.success) {
+          setCheckinId(result.data.id)
+          setSuccessMessage("OT check-in created successfully!")
+          setTimeout(() => setSuccessMessage(null), 3000)
+        } else {
+          throw new Error(result.error?.message || "Failed to create OT check-in")
+        }
       }
     } catch (err) {
-      console.error("Error loading existing check-in:", err)
-      setError(err instanceof Error ? err.message : "Failed to load check-in data")
+      console.error("DEBUG: Error in handleSaveCheckin:", err)
+      setError(err instanceof Error ? err.message : "Failed to save OT check-in")
     } finally {
-      setCreatingCheckin(false)
+      setSavingCheckin(false)
     }
   }
 
@@ -324,9 +403,7 @@ export function OTCheckinModal({
       console.log("DEBUG: OT goal creation result:", result)
 
       if (result.success) {
-        // Add new goal to the list
         setGoals((prev) => [result.data, ...prev])
-        // Reset form and return to main view
         setGoalText("")
         setTargetDate("")
         setPriority(1)
@@ -441,8 +518,8 @@ export function OTCheckinModal({
         setSuccessMessage("OT check-in completed successfully!")
         setTimeout(() => {
           setSuccessMessage(null)
-          if (onSubmit) {
-            onSubmit()
+          if (onSuccess) {
+            onSuccess()
           } else {
             onClose()
           }
@@ -523,7 +600,6 @@ export function OTCheckinModal({
 
       setGoals((prev) => prev.map((goal) => (goal.id === editingGoal.id ? { ...goal, ...goalResult.data } : goal)))
 
-      // Reset form and return to main view
       setEditingGoal(null)
       setEditGoalText("")
       setEditTargetDate("")
@@ -620,12 +696,26 @@ export function OTCheckinModal({
 
         {currentView === "checkin" && !creatingCheckin ? (
           <div className="space-y-6">
-            {/* Client Name Heading */}
             <div>
               <h2 className="text-lg font-medium text-gray-900">{clientName}</h2>
             </div>
 
-            {/* Notes Field */}
+            {editingCheckinId && (
+              <div className="space-y-2">
+                <Label htmlFor="checkin-date" className="text-sm font-medium">
+                  Check-In Date
+                </Label>
+                <Input
+                  id="checkin-date"
+                  type="date"
+                  value={checkinDate}
+                  onChange={(e) => setCheckinDate(e.target.value)}
+                  className="w-full"
+                />
+                <div className="text-xs text-gray-500">Can be back-dated up to 45 days from the original date</div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="notes" className="text-sm font-medium">
                 Check-In Notes
@@ -649,7 +739,6 @@ export function OTCheckinModal({
               />
             </div>
 
-            {/* Check-In Type and Service Type dropdowns */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="checkin-type" className="text-sm font-medium">
@@ -682,7 +771,6 @@ export function OTCheckinModal({
               </div>
             </div>
 
-            {/* Goals Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-medium text-gray-900">OT Goals</h3>
@@ -692,7 +780,6 @@ export function OTCheckinModal({
                 </Button>
               </div>
 
-              {/* Success Message */}
               {successMessage && (
                 <div className="flex items-center space-x-2 text-green-600 bg-green-50 p-3 rounded-md">
                   <CheckCircle className="h-4 w-4" />
@@ -700,7 +787,6 @@ export function OTCheckinModal({
                 </div>
               )}
 
-              {/* Error Display */}
               {error && (
                 <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
                   <AlertCircle className="h-4 w-4" />
@@ -708,7 +794,6 @@ export function OTCheckinModal({
                 </div>
               )}
 
-              {/* Goals List */}
               {loading ? (
                 <div className="text-center py-4">
                   <div className="text-sm text-gray-500">Loading OT goals...</div>
@@ -745,7 +830,7 @@ export function OTCheckinModal({
                               size="sm"
                               className="h-6 w-6 p-0 hover:bg-gray-100"
                               onClick={(e) => {
-                                e.stopPropagation() // Prevent triggering the card click
+                                e.stopPropagation()
                                 const url = `/ot?tab=client&name=${encodeURIComponent(clientName)}&section=ot-goals`
                                 window.open(url, "_blank")
                               }}
@@ -769,7 +854,6 @@ export function OTCheckinModal({
               )}
             </div>
 
-            {/* Delete Confirmation Dialog */}
             {showDeleteConfirm && (
               <div className="bg-red-50 border border-red-200 p-4 rounded-md">
                 <div className="flex items-start space-x-3">
@@ -801,7 +885,6 @@ export function OTCheckinModal({
               <Button variant="outline" onClick={onClose} disabled={savingCheckin}>
                 Cancel
               </Button>
-              {/* Delete Button for Editing Mode */}
               {editingCheckinId && (
                 <Button
                   variant="destructive"
@@ -820,15 +903,12 @@ export function OTCheckinModal({
             </div>
           </div>
         ) : currentView === "new-goal" && !creatingCheckin ? (
-          /* New Goal Form */
           <div className="space-y-6">
-            {/* Back Button */}
             <Button variant="ghost" size="sm" onClick={() => setCurrentView("checkin")} className="text-sm">
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back to Check-In
             </Button>
 
-            {/* Goal Form */}
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="goal-text" className="text-sm font-medium">
@@ -895,7 +975,6 @@ export function OTCheckinModal({
               </div>
             </div>
 
-            {/* Error Display */}
             {error && (
               <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
                 <AlertCircle className="h-4 w-4" />
@@ -903,7 +982,6 @@ export function OTCheckinModal({
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="flex justify-end space-x-3 pt-4 border-t">
               <Button variant="outline" onClick={() => setCurrentView("checkin")} disabled={savingGoal}>
                 Cancel
@@ -914,15 +992,12 @@ export function OTCheckinModal({
             </div>
           </div>
         ) : currentView === "edit-goal" && !creatingCheckin ? (
-          /* Edit Goal Form with Progress Notes */
           <div className="space-y-6">
-            {/* Back Button */}
             <Button variant="ghost" size="sm" onClick={() => setCurrentView("checkin")} className="text-sm">
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back to Check-In
             </Button>
 
-            {/* Edit Goal Form */}
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-goal-text" className="text-sm font-medium">
@@ -988,7 +1063,6 @@ export function OTCheckinModal({
                 </div>
               </div>
 
-              {/* Progress Notes Section */}
               <div className="space-y-2 border-t pt-4">
                 <Label htmlFor="progress-notes" className="text-sm font-medium">
                   Progress Notes for This Check-In
@@ -1008,7 +1082,6 @@ export function OTCheckinModal({
               </div>
             </div>
 
-            {/* Error Display */}
             {error && (
               <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
                 <AlertCircle className="h-4 w-4" />
@@ -1016,7 +1089,6 @@ export function OTCheckinModal({
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="flex justify-end space-x-3 pt-4 border-t">
               <Button variant="outline" onClick={() => setCurrentView("checkin")} disabled={savingGoalUpdate}>
                 Cancel
@@ -1031,3 +1103,6 @@ export function OTCheckinModal({
     </Dialog>
   )
 }
+
+export { OTCheckinModal }
+export default OTCheckinModal
