@@ -91,15 +91,11 @@ export default function ContactLogPage() {
     [router],
   )
 
-  // NEW: Client row click handler for "All Clients" tab
   const handleClientRowClick = useCallback(
     (clientName: string) => {
-      setActiveTab("client")
-      setSelectedClient(clientName)
-      setActiveClientSection("basic-info")
-      updateURL("client", clientName, "basic-info")
+      router.push(`/clients?tab=client&name=${encodeURIComponent(clientName)}&section=basic-info`)
     },
-    [updateURL],
+    [router],
   )
 
   // NEW: Close client tab handler
