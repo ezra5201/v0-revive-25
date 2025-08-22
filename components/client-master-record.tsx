@@ -10,7 +10,7 @@ import { ClientJourneyTimeline } from "./client-journey-timeline"
 import { ClientOTCheckins } from "./client-ot-checkins"
 import { GoalWidget } from "./goal-widget"
 import { OTGoalWidget } from "./ot-goal-widget"
-import { ExternalLink, User } from "lucide-react"
+import { ExternalLink, User, ChevronDown, ChevronRight } from "lucide-react"
 
 interface ClientMasterRecordProps {
   clientName: string
@@ -143,6 +143,22 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange,
     router.push(`/clients?tab=client&name=${encodeURIComponent(clientName)}&section=basic-info`)
   }
 
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    "basic-info": true,
+    "contact-history": false,
+    "cm-checkins": false,
+    "cm-goals": false,
+    "ot-checkins": false,
+    "ot-goals": false,
+  })
+
+  const toggleSection = (sectionKey: string) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey],
+    }))
+  }
+
   if (isLoading) {
     return (
       <div className="bg-white">
@@ -249,49 +265,132 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange,
       {/* Content area */}
       <div className="p-4 sm:p-6">
         {context === "clients" ? (
-          // Comprehensive view showing all sections
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* Basic Information */}
             {clientData && (
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h2>
-                <ClientBasicInfo
-                  clientData={clientData}
-                  contactHistoryLength={contactHistory.length}
-                  contactHistory={contactHistory}
-                  context={context}
-                />
+              <div className="border border-gray-200 rounded-lg">
+                <button
+                  onClick={() => toggleSection("basic-info")}
+                  className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+                >
+                  <h2 className="text-lg font-semibold text-gray-900">Basic Information</h2>
+                  {expandedSections["basic-info"] ? (
+                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-gray-500" />
+                  )}
+                </button>
+                {expandedSections["basic-info"] && (
+                  <div className="px-4 pb-4 border-t border-gray-100">
+                    <ClientBasicInfo
+                      clientData={clientData}
+                      contactHistoryLength={contactHistory.length}
+                      contactHistory={contactHistory}
+                      context={context}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
             {/* Contact History */}
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Contact History</h2>
-              <ClientContactHistory clientName={clientName} contactHistory={contactHistory} />
+            <div className="border border-gray-200 rounded-lg">
+              <button
+                onClick={() => toggleSection("contact-history")}
+                className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+              >
+                <h2 className="text-lg font-semibold text-gray-900">Contact History</h2>
+                {expandedSections["contact-history"] ? (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-gray-500" />
+                )}
+              </button>
+              {expandedSections["contact-history"] && (
+                <div className="px-4 pb-4 border-t border-gray-100">
+                  <ClientContactHistory clientName={clientName} contactHistory={contactHistory} />
+                </div>
+              )}
             </div>
 
             {/* CM Check-ins */}
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">CM Check-ins</h2>
-              <ClientJourneyTimeline clientName={clientName} contactHistory={contactHistory} />
+            <div className="border border-gray-200 rounded-lg">
+              <button
+                onClick={() => toggleSection("cm-checkins")}
+                className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+              >
+                <h2 className="text-lg font-semibold text-gray-900">CM Check-ins</h2>
+                {expandedSections["cm-checkins"] ? (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-gray-500" />
+                )}
+              </button>
+              {expandedSections["cm-checkins"] && (
+                <div className="px-4 pb-4 border-t border-gray-100">
+                  <ClientJourneyTimeline clientName={clientName} contactHistory={contactHistory} />
+                </div>
+              )}
             </div>
 
             {/* CM Goals */}
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">CM Goals</h2>
-              <GoalWidget clientName={clientName} />
+            <div className="border border-gray-200 rounded-lg">
+              <button
+                onClick={() => toggleSection("cm-goals")}
+                className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+              >
+                <h2 className="text-lg font-semibold text-gray-900">CM Goals</h2>
+                {expandedSections["cm-goals"] ? (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-gray-500" />
+                )}
+              </button>
+              {expandedSections["cm-goals"] && (
+                <div className="px-4 pb-4 border-t border-gray-100">
+                  <GoalWidget clientName={clientName} />
+                </div>
+              )}
             </div>
 
             {/* OT Check-ins */}
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">OT Check-ins</h2>
-              <ClientOTCheckins clientName={clientName} contactHistory={contactHistory} />
+            <div className="border border-gray-200 rounded-lg">
+              <button
+                onClick={() => toggleSection("ot-checkins")}
+                className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+              >
+                <h2 className="text-lg font-semibold text-gray-900">OT Check-ins</h2>
+                {expandedSections["ot-checkins"] ? (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-gray-500" />
+                )}
+              </button>
+              {expandedSections["ot-checkins"] && (
+                <div className="px-4 pb-4 border-t border-gray-100">
+                  <ClientOTCheckins clientName={clientName} contactHistory={contactHistory} />
+                </div>
+              )}
             </div>
 
             {/* OT Goals */}
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">OT Goals</h2>
-              <OTGoalWidget clientName={clientName} />
+            <div className="border border-gray-200 rounded-lg">
+              <button
+                onClick={() => toggleSection("ot-goals")}
+                className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+              >
+                <h2 className="text-lg font-semibold text-gray-900">OT Goals</h2>
+                {expandedSections["ot-goals"] ? (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-gray-500" />
+                )}
+              </button>
+              {expandedSections["ot-goals"] && (
+                <div className="px-4 pb-4 border-t border-gray-100">
+                  <OTGoalWidget clientName={clientName} />
+                </div>
+              )}
             </div>
           </div>
         ) : (
