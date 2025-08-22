@@ -142,45 +142,27 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
 
     const previousStatus = goalRecord.status
 
-    const updateFields = []
-    const updateValues = []
-
+    const updateParts = []
     if (goal_text !== undefined) {
-      updateFields.push("goal_text = $" + (updateValues.length + 1))
-      updateValues.push(goal_text.trim())
+      updateParts.push(sql`goal_text = ${goal_text.trim()}`)
     }
-
     if (target_date !== undefined) {
-      updateFields.push("target_date = $" + (updateValues.length + 1))
-      updateValues.push(target_date || null)
+      updateParts.push(sql`target_date = ${target_date || null}`)
     }
-
     if (priority !== undefined) {
-      updateFields.push("priority = $" + (updateValues.length + 1))
-      updateValues.push(priority)
+      updateParts.push(sql`priority = ${priority}`)
     }
-
     if (status !== undefined) {
-      updateFields.push("status = $" + (updateValues.length + 1))
-      updateValues.push(status)
+      updateParts.push(sql`status = ${status}`)
     }
+    updateParts.push(sql`updated_at = CURRENT_TIMESTAMP`)
 
-    updateFields.push("updated_at = CURRENT_TIMESTAMP")
-
-    const whereParamIndex = updateValues.length + 1
-    updateValues.push(goalId)
-
-    const updateQuery = `
+    const updatedGoal = await sql`
       UPDATE ot_goals 
-      SET ${updateFields.join(", ")}
-      WHERE id = $${whereParamIndex}
+      SET ${sql.join(updateParts, sql`, `)}
+      WHERE id = ${goalId}
       RETURNING id, goal_text, target_date, priority, status, updated_at
     `
-
-    console.log("DEBUG: Update query:", updateQuery)
-    console.log("DEBUG: Update values:", updateValues)
-
-    const updatedGoal = await sql.unsafe(updateQuery, updateValues)
 
     console.log("DEBUG: Updated goal result:", updatedGoal)
 
@@ -192,7 +174,7 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
           error: {
             code: "DATABASE_ERROR",
             message: "Failed to update goal - no rows affected",
-            details: { goalId, query: updateQuery, values: updateValues },
+            details: { goalId, query: updatedGoal, values: updateParts },
           },
         },
         { status: 500 },
