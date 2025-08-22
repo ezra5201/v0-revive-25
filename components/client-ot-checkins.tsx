@@ -152,7 +152,13 @@ export function ClientOTCheckins({ clientName }: ClientOTCheckinsProps) {
     <div>
       {/* Heading */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">OT Check-Ins Timeline</h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-semibold text-gray-900">OT Check-Ins Timeline</h2>
+          <Button size="sm" variant="outline" onClick={() => handleOTCheckIn(0)} className="text-xs">
+            <Plus className="h-3 w-3 mr-1" />
+            OT Check-In
+          </Button>
+        </div>
         <p className="text-gray-600">Occupational therapy interactions and services for {clientName}</p>
       </div>
 
@@ -194,40 +200,29 @@ export function ClientOTCheckins({ clientName }: ClientOTCheckinsProps) {
                           <div className="flex items-center space-x-2">
                             <User className="h-4 w-4 text-gray-500" />
                             <Badge className={getProviderColor(checkin.provider_name)}>{checkin.provider_name}</Badge>
+                            <span className="text-sm font-medium text-gray-700">OT Services Provided</span>
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge variant={checkin.status === "Completed" ? "default" : "secondary"}>
                             {checkin.status}
                           </Badge>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOTCheckIn(checkin.contact_id)}
-                            className="text-xs"
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            OT Check-In
-                          </Button>
                         </div>
                       </div>
 
-                      {/* Services - Always show OT since this is from ot_checkins table */}
-                      <div className="space-y-3">
-                        <div>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium text-gray-700">OT Services Provided</span>
-                          </div>
-                          <div className="flex flex-wrap gap-1 ml-6">
-                            <Badge className="text-xs bg-green-100 text-green-800">Occupational Therapy</Badge>
+                      {/* Notes */}
+                      {checkin.notes && (
+                        <div className="mb-3 pb-3 border-b border-gray-100">
+                          <div className="flex items-start space-x-2">
+                            <MessageSquare className="h-4 w-4 text-gray-500 mt-0.5" />
+                            <p className="text-sm text-gray-700">{checkin.notes}</p>
                           </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Goals */}
                       {checkin.goals && checkin.goals.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-gray-100">
+                        <div className="mt-3">
                           <div className="flex items-start space-x-2 mb-2">
                             <CheckCircle className="h-4 w-4 text-blue-500 mt-0.5" />
                             <span className="text-sm font-medium text-gray-700">Goals ({checkin.goals.length})</span>
@@ -244,16 +239,6 @@ export function ClientOTCheckins({ clientName }: ClientOTCheckinsProps) {
                             {checkin.goals.length > 3 && (
                               <span className="text-xs text-gray-500">+{checkin.goals.length - 3} more goals</span>
                             )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Notes */}
-                      {checkin.notes && (
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <div className="flex items-start space-x-2">
-                            <MessageSquare className="h-4 w-4 text-gray-500 mt-0.5" />
-                            <p className="text-sm text-gray-700">{checkin.notes}</p>
                           </div>
                         </div>
                       )}
