@@ -41,7 +41,6 @@ export default function ContactLogPage() {
   })
   const [prefilledProspectName, setPrefilledProspectName] = useState("")
 
-  // Initialize state from URL parameters
   useEffect(() => {
     const tab = searchParams.get("tab")
     const name = searchParams.get("name")
@@ -53,10 +52,14 @@ export default function ContactLogPage() {
       setActiveClientSection((section as ClientSection) || "basic-info")
     } else if (tab === "all") {
       setActiveTab("all")
+    } else if (tab === "today") {
+      setActiveTab("today")
     } else {
+      // No tab parameter - redirect to today with parameter
+      router.replace("/contact-log?tab=today")
       setActiveTab("today")
     }
-  }, [searchParams])
+  }, [searchParams, router])
 
   // Custom hooks for data management (PRESERVED)
   const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
@@ -68,7 +71,6 @@ export default function ContactLogPage() {
     refetch: refetchContacts,
   } = useContacts(activeTab === "client" ? "all" : activeTab, filters)
 
-  // URL update helper
   const updateURL = useCallback(
     (tab: MainTab, clientName?: string, section?: ClientSection) => {
       const params = new URLSearchParams()
@@ -79,24 +81,21 @@ export default function ContactLogPage() {
         params.set("section", section || "basic-info")
       } else if (tab === "all") {
         params.set("tab", "all")
+      } else if (tab === "today") {
+        params.set("tab", "today")
       }
-      // For 'today' tab, we don't set any params (default state)
 
-      const newURL = params.toString() ? `/contact-log?${params.toString()}` : "/contact-log"
+      const newURL = `/contact-log?${params.toString()}`
       router.replace(newURL)
     },
     [router],
   )
 
-  // NEW: Client row click handler for "All Clients" tab
   const handleClientRowClick = useCallback(
     (clientName: string) => {
-      setActiveTab("client")
-      setSelectedClient(clientName)
-      setActiveClientSection("basic-info")
-      updateURL("client", clientName, "basic-info")
+      router.push(`/clients?tab=client&name=${encodeURIComponent(clientName)}&section=basic-info`)
     },
-    [updateURL],
+    [router],
   )
 
   // NEW: Close client tab handler
@@ -142,6 +141,11 @@ export default function ContactLogPage() {
       setSelectedCount(0)
       setSelectedContactIds([])
       setFilters({ categories: [], providers: [] })
+
+      if (tab !== "client") {
+        setSelectedClient(null)
+        setActiveClientSection("basic-info")
+      }
 
       if (tab === "client" && selectedClient) {
         updateURL(tab, selectedClient, activeClientSection)
@@ -226,8 +230,8 @@ export default function ContactLogPage() {
               All Clients
             </button>
 
-            {/* NEW: Dynamic client tab */}
-            {selectedClient && (
+            {/* Updated client tab visibility logic to match standardized pattern */}
+            {selectedClient && activeTab === "client" && (
               <button
                 onClick={() => handleTabChange("client")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
@@ -293,7 +297,7 @@ export default function ContactLogPage() {
             clientName={selectedClient}
             activeSection={activeClientSection}
             onSectionChange={handleClientSectionChange}
-            context="cm"
+            context="contact-log"
           />
         </main>
       )}

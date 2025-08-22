@@ -41,7 +41,6 @@ export default function CmPage() {
   })
   const [prefilledProspectName, setPrefilledProspectName] = useState("")
 
-  // Initialize state from URL parameters
   useEffect(() => {
     const tab = searchParams.get("tab")
     const name = searchParams.get("name")
@@ -51,12 +50,16 @@ export default function CmPage() {
       setActiveTab("client")
       setSelectedClient(name)
       setActiveClientSection((section as ClientSection) || "basic-info")
-    } else if (tab === "all") {
+    } else if (tab === "caseload") {
       setActiveTab("all")
+    } else if (tab === "today") {
+      setActiveTab("today")
     } else {
+      // No tab parameter - redirect to today with parameter
+      router.replace("/cm?tab=today")
       setActiveTab("today")
     }
-  }, [searchParams])
+  }, [searchParams, router])
 
   // Custom hooks for data management - using CM-specific hook
   const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
@@ -68,7 +71,6 @@ export default function CmPage() {
     refetch: refetchContacts,
   } = useCMContacts(activeTab === "client" ? "all" : activeTab, filters)
 
-  // URL update helper
   const updateURL = useCallback(
     (tab: MainTab, clientName?: string, section?: ClientSection) => {
       const params = new URLSearchParams()
@@ -78,11 +80,12 @@ export default function CmPage() {
         params.set("name", clientName)
         params.set("section", section || "basic-info")
       } else if (tab === "all") {
-        params.set("tab", "all")
+        params.set("tab", "caseload")
+      } else if (tab === "today") {
+        params.set("tab", "today")
       }
-      // For 'today' tab, we don't set any params (default state)
 
-      const newURL = params.toString() ? `/cm?${params.toString()}` : "/cm"
+      const newURL = `/cm?${params.toString()}`
       router.replace(newURL)
     },
     [router],
@@ -228,7 +231,7 @@ export default function CmPage() {
             </button>
 
             {/* Dynamic client tab */}
-            {selectedClient && (
+            {selectedClient && activeTab === "client" && (
               <button
                 onClick={() => handleTabChange("client")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${

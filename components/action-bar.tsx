@@ -13,7 +13,7 @@ interface Client {
 }
 
 interface ActionBarProps {
-  activeTab: "today" | "all"
+  activeTab: "today" | "all" | "client"
   selectedCount: number
   selectedContactIds?: number[]
   onExport?: () => void
@@ -100,7 +100,7 @@ export function ActionBar({
     if (onFiltersChange) {
       onFiltersChange({ categories: selectedCategories, providers: selectedProviders })
     }
-  }, [selectedCategories, selectedProviders])
+  }, [selectedCategories, selectedProviders]) // Removed onFiltersChange from dependencies
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchValue(e.target.value)
