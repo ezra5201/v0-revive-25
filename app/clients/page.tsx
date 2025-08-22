@@ -135,10 +135,12 @@ export default function ClientsPage() {
       setSelectedContactIds([])
       setFilters({ categories: [], providers: [] })
 
-      if (tab === "client" && selectedClient) {
+      if (tab === "all") {
+        setSelectedClient(null)
+        setActiveClientSection("basic-info")
+        updateURL("all")
+      } else if (tab === "client" && selectedClient) {
         updateURL(tab, selectedClient, activeClientSection)
-      } else {
-        updateURL(tab)
       }
     },
     [updateURL, selectedClient, activeClientSection],
@@ -234,7 +236,7 @@ export default function ClientsPage() {
       </div>
 
       {/* Conditional Content Rendering */}
-      {activeTab !== "client" && (
+      {activeTab === "all" && (
         <>
           <ActionBar
             activeTab={activeTab}
