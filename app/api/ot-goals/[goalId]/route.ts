@@ -142,50 +142,45 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
 
     const previousStatus = goalRecord.status
 
-    let updatedGoal
+    const updateFields = []
+    const updateValues = []
 
-    if (goal_text !== undefined && target_date !== undefined && priority !== undefined && status !== undefined) {
-      // Full update with all fields
-      updatedGoal = await sql`
-        UPDATE ot_goals 
-        SET goal_text = ${goal_text.trim()}, target_date = ${target_date || null}, priority = ${priority}, status = ${status}, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${goalId}
-        RETURNING id, goal_text, target_date, priority, status, updated_at
-      `
-    } else if (status !== undefined && goal_text === undefined && target_date === undefined && priority === undefined) {
-      // Status-only update
-      updatedGoal = await sql`
-        UPDATE ot_goals 
-        SET status = ${status}, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${goalId}
-        RETURNING id, goal_text, target_date, priority, status, updated_at
-      `
-    } else {
-      // Handle other combinations - for now, just update what's provided
-      if (goal_text !== undefined && status !== undefined) {
-        updatedGoal = await sql`
-          UPDATE ot_goals 
-          SET goal_text = ${goal_text.trim()}, status = ${status}, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${goalId}
-          RETURNING id, goal_text, target_date, priority, status, updated_at
-        `
-      } else if (priority !== undefined && status !== undefined) {
-        updatedGoal = await sql`
-          UPDATE ot_goals 
-          SET priority = ${priority}, status = ${status}, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${goalId}
-          RETURNING id, goal_text, target_date, priority, status, updated_at
-        `
-      } else {
-        // Default to status-only if we can't handle the combination
-        updatedGoal = await sql`
-          UPDATE ot_goals 
-          SET status = ${status || goalRecord.status}, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${goalId}
-          RETURNING id, goal_text, target_date, priority, status, updated_at
-        `
-      }
+    if (goal_text !== undefined) {
+      updateFields.push("goal_text = $" + (updateValues.length + 1))
+      updateValues.push(goal_text.trim())
     }
+
+    if (target_date !== undefined) {
+      updateFields.push("target_date = $" + (updateValues.length + 1))
+      updateValues.push(target_date || null)
+    }
+
+    if (priority !== undefined) {
+      updateFields.push("priority = $" + (updateValues.length + 1))
+      updateValues.push(priority)
+    }
+
+    if (status !== undefined) {
+      updateFields.push("status = $" + (updateValues.length + 1))
+      updateValues.push(status)
+    }
+
+    updateFields.push("updated_at = CURRENT_TIMESTAMP")
+
+    const whereParamIndex = updateValues.length + 1
+    updateValues.push(goalId)
+
+    const updateQuery = `
+      UPDATE ot_goals 
+      SET ${updateFields.join(", ")}
+      WHERE id = $${whereParamIndex}
+      RETURNING id, goal_text, target_date, priority, status, updated_at
+    `
+
+    console.log("DEBUG: Update query:", updateQuery)
+    console.log("DEBUG: Update values:", updateValues)
+
+    const updatedGoal = await sql.unsafe(updateQuery, updateValues)
 
     console.log("DEBUG: Updated goal result:", updatedGoal)
 
@@ -197,7 +192,7 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
           error: {
             code: "DATABASE_ERROR",
             message: "Failed to update goal - no rows affected",
-            details: { goalId },
+            details: { goalId, query: updateQuery, values: updateValues },
           },
         },
         { status: 500 },

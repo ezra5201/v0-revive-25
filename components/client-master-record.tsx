@@ -10,8 +10,10 @@ import { OTGoalWidget } from "./ot-goal-widget"
 
 interface ClientMasterRecordProps {
   clientName: string
-  activeSection: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals"
-  onSectionChange: (section: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals") => void
+  activeSection: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals" | "ot-checkins"
+  onSectionChange: (
+    section: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals" | "ot-checkins",
+  ) => void
 }
 
 interface ClientData {
@@ -187,6 +189,16 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
             OT Goals
           </button>
           <button
+            onClick={() => onSectionChange("ot-checkins")}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeSection === "ot-checkins"
+                ? "border-orange-500 text-orange-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            OT Check-Ins
+          </button>
+          <button
             onClick={() => onSectionChange("contact-history")}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeSection === "contact-history"
@@ -194,7 +206,7 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
                 : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
-            Contact Log
+            Contact History
           </button>
         </nav>
       </div>
@@ -216,6 +228,12 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange 
         {activeSection === "cm-goals" && <GoalWidget clientName={clientName} />}
 
         {activeSection === "ot-goals" && <OTGoalWidget clientName={clientName} />}
+
+        {activeSection === "ot-checkins" && (
+          <div className="text-center py-8">
+            <p className="text-gray-500">OT Check-Ins content will be implemented here</p>
+          </div>
+        )}
       </div>
     </div>
   )
