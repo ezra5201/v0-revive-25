@@ -8,6 +8,7 @@ import { NewProspectDialog } from "@/components/new-prospect-dialog"
 import { ChangeDateDialog } from "@/components/change-date-dialog"
 import { UpdateServicesDialog } from "@/components/update-services-dialog"
 import { ClientMasterRecord } from "@/components/client-master-record"
+import { ClientVisualizationView } from "@/components/client-visualization-view"
 import { Header } from "@/components/header"
 import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
@@ -17,6 +18,7 @@ import { X } from "lucide-react"
 
 type MainTab = "all" | "client"
 type ClientSection = "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-checkins"
+type ViewMode = "list" | "visual"
 
 export default function ClientsPage() {
   const searchParams = useSearchParams()
@@ -25,8 +27,7 @@ export default function ClientsPage() {
   const [activeTab, setActiveTab] = useState<MainTab>("all")
   const [selectedClient, setSelectedClient] = useState<string | null>(null)
   const [activeClientSection, setActiveClientSection] = useState<ClientSection>("basic-info")
-
-  // Existing state for dialogs and interactions
+  const [currentView, setCurrentView] = useState<ViewMode>("list")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isNewProspectDialogOpen, setIsNewProspectDialogOpen] = useState(false)
   const [isChangeDateDialogOpen, setIsChangeDateDialogOpen] = useState(false)
@@ -40,24 +41,6 @@ export default function ClientsPage() {
   })
   const [prefilledProspectName, setPrefilledProspectName] = useState("")
 
-  // Initialize state from URL parameters
-  useEffect(() => {
-    const tab = searchParams.get("tab")
-    const name = searchParams.get("name")
-    const section = searchParams.get("section")
-
-    if (tab === "client" && name) {
-      setActiveTab("client")
-      setSelectedClient(name)
-      setActiveClientSection((section as ClientSection) || "basic-info")
-    } else if (tab === "all") {
-      setActiveTab("all")
-    } else {
-      router.replace("/clients?tab=all")
-      setActiveTab("all")
-    }
-  }, [searchParams, router])
-
   const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
   const {
     contacts,
@@ -67,15 +50,34 @@ export default function ClientsPage() {
     refetch: refetchContacts,
   } = useContacts("all", filters)
 
-  // URL update helper
+  useEffect(() => {
+    const tab = searchParams.get("tab")
+    const name = searchParams.get("name")
+    const section = searchParams.get("section")
+    const view = searchParams.get("view")
+
+    if (tab === "client" && name) {
+      setActiveTab("client")
+      setSelectedClient(name)
+      setActiveClientSection((section as ClientSection) || "basic-info")
+      setCurrentView((view as ViewMode) || "list")
+    } else if (tab === "all") {
+      setActiveTab("all")
+    } else {
+      router.replace("/clients?tab=all")
+      setActiveTab("all")
+    }
+  }, [searchParams, router])
+
   const updateURL = useCallback(
-    (tab: MainTab, clientName?: string, section?: ClientSection) => {
+    (tab: MainTab, clientName?: string, section?: ClientSection, view?: ViewMode) => {
       const params = new URLSearchParams()
 
       if (tab === "client" && clientName) {
         params.set("tab", "client")
         params.set("name", clientName)
         params.set("section", section || "basic-info")
+        params.set("view", view || "list")
       } else if (tab === "all") {
         params.set("tab", "all")
       }
@@ -86,37 +88,64 @@ export default function ClientsPage() {
     [router],
   )
 
-  // Client row click handler for "All Clients" tab
   const handleClientRowClick = useCallback(
     (clientName: string) => {
       setActiveTab("client")
       setSelectedClient(clientName)
       setActiveClientSection("basic-info")
-      updateURL("client", clientName, "basic-info")
+      setCurrentView("list")
+      updateURL("client", clientName, "basic-info", "list")
     },
     [updateURL],
   )
 
-  // Close client tab handler
   const handleCloseClientTab = useCallback(() => {
     setActiveTab("all")
     setSelectedClient(null)
     setActiveClientSection("basic-info")
+    setCurrentView("list")
     updateURL("all")
   }, [updateURL])
 
-  // Client section change handler
   const handleClientSectionChange = useCallback(
     (section: ClientSection) => {
       setActiveClientSection(section)
       if (selectedClient) {
-        updateURL("client", selectedClient, section)
+        updateURL("client", selectedClient, section, currentView)
       }
     },
-    [selectedClient, updateURL],
+    [selectedClient, currentView, updateURL],
   )
 
-  // Existing handlers
+  const handleViewChange = useCallback(
+    (view: ViewMode) => {
+      setCurrentView(view)
+      if (selectedClient) {
+        updateURL("client", selectedClient, activeClientSection, view)
+      }
+    },
+    [selectedClient, activeClientSection, updateURL],
+  )
+
+  const handleTabChange = useCallback(
+    (tab: MainTab) => {
+      if (tab === "all") {
+        setActiveTab("all")
+        setSelectedClient(null)
+        setActiveClientSection("basic-info")
+        setCurrentView("list")
+        setSelectedCount(0)
+        setSelectedContactIds([])
+        setFilters({ categories: [], providers: [] })
+        updateURL("all")
+      } else if (tab === "client" && selectedClient) {
+        setActiveTab("client")
+        updateURL(tab, selectedClient, activeClientSection, currentView)
+      }
+    },
+    [updateURL, selectedClient, activeClientSection, currentView],
+  )
+
   const handleClientClick = useCallback((clientName: string, isToday?: boolean) => {
     setSelectedClient(clientName)
     setIsDialogOpen(true)
@@ -131,26 +160,6 @@ export default function ClientsPage() {
     setPrefilledProspectName(searchedName || "")
     setIsNewProspectDialogOpen(true)
   }, [])
-
-  const handleTabChange = useCallback(
-    (tab: MainTab) => {
-      if (tab === "all") {
-        // Clear all client-related state when switching to "All Clients"
-        setActiveTab("all")
-        setSelectedClient(null)
-        setActiveClientSection("basic-info")
-        setSelectedCount(0)
-        setSelectedContactIds([])
-        setFilters({ categories: [], providers: [] })
-        updateURL("all")
-      } else if (tab === "client" && selectedClient) {
-        // Only switch to client tab if we have a selected client
-        setActiveTab("client")
-        updateURL(tab, selectedClient, activeClientSection)
-      }
-    },
-    [updateURL, selectedClient, activeClientSection],
-  )
 
   const handleSelectionChange = useCallback((count: number, selectedIds: number[]) => {
     setSelectedCount(count)
@@ -179,12 +188,10 @@ export default function ClientsPage() {
     setSelectedContactForUpdate(null)
   }, [refetchContacts])
 
-  // Show database setup if not initialized
   if (!isInitialized && !dbLoading) {
     return <DatabaseSetup />
   }
 
-  // Show loading state
   if (dbLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -214,7 +221,6 @@ export default function ClientsPage() {
               All Clients
             </button>
 
-            {/* Dynamic client tab - only show when we have a selected client AND we're on client tab */}
             {selectedClient && activeTab === "client" && (
               <button
                 onClick={() => handleTabChange("client")}
@@ -241,7 +247,6 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      {/* Conditional Content Rendering */}
       {activeTab === "all" && (
         <>
           <ActionBar
@@ -271,17 +276,29 @@ export default function ClientsPage() {
       )}
 
       {activeTab === "client" && selectedClient && (
-        <main>
-          <ClientMasterRecord
-            clientName={selectedClient}
-            activeSection={activeClientSection}
-            onSectionChange={handleClientSectionChange}
-            context="clients"
+        <>
+          <ActionBar
+            activeTab={activeTab}
+            selectedCount={0}
+            currentView={currentView}
+            onViewChange={handleViewChange}
           />
-        </main>
+
+          <main>
+            {currentView === "list" ? (
+              <ClientMasterRecord
+                clientName={selectedClient}
+                activeSection={activeClientSection}
+                onSectionChange={handleClientSectionChange}
+                context="clients"
+              />
+            ) : (
+              <ClientVisualizationView clientName={selectedClient} activeSection={activeClientSection} />
+            )}
+          </main>
+        </>
       )}
 
-      {/* All existing dialogs */}
       <QuickCheckinDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
