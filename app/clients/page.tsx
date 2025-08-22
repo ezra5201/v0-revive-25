@@ -278,16 +278,16 @@ export default function ClientsPage() {
       {activeTab === "client" && selectedClient && (
         <>
           <main>
-            {currentView === "list" ? (
-              <ClientMasterRecord
-                clientName={selectedClient}
-                activeSection={activeClientSection}
-                onSectionChange={handleClientSectionChange}
-                context="clients"
-                currentView={currentView}
-                onViewChange={handleViewChange}
-              />
-            ) : (
+            <ClientMasterRecord
+              clientName={selectedClient}
+              activeSection={activeClientSection}
+              onSectionChange={handleClientSectionChange}
+              context="clients"
+              currentView={currentView}
+              onViewChange={handleViewChange}
+              showContentOnly={currentView === "visual"}
+            />
+            {currentView === "visual" && (
               <ClientVisualizationView clientName={selectedClient} activeSection={activeClientSection} />
             )}
           </main>
