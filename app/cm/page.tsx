@@ -13,19 +13,17 @@ import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
 import { useCMContacts } from "@/hooks/use-cm-contacts"
 import { useDatabase } from "@/hooks/use-database"
-import { X } from "lucide-react"
 
-type MainTab = "today" | "all" | "client"
-type ClientSection = "basic-info" | "contact-history" | "journey-timeline" | "cm-goals"
+type MainTab = "client"
+type ClientSection = "cm-goals"
 
 export default function CmPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  // Enhanced state management
-  const [activeTab, setActiveTab] = useState<MainTab>("today")
+  const [activeTab, setActiveTab] = useState<MainTab>("client")
   const [selectedClient, setSelectedClient] = useState<string | null>(null)
-  const [activeClientSection, setActiveClientSection] = useState<ClientSection>("basic-info")
+  const [activeClientSection, setActiveClientSection] = useState<ClientSection>("cm-goals")
 
   // Existing state (PRESERVED)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -49,15 +47,12 @@ export default function CmPage() {
     if (tab === "client" && name) {
       setActiveTab("client")
       setSelectedClient(name)
-      setActiveClientSection((section as ClientSection) || "basic-info")
-    } else if (tab === "caseload") {
-      setActiveTab("all")
-    } else if (tab === "today") {
-      setActiveTab("today")
+      setActiveClientSection("cm-goals")
     } else {
-      // No tab parameter - redirect to today with parameter
-      router.replace("/cm?tab=today")
-      setActiveTab("today")
+      // Default to first available client or show empty state
+      setActiveTab("client")
+      setSelectedClient(null)
+      setActiveClientSection("cm-goals")
     }
   }, [searchParams, router])
 
@@ -75,14 +70,10 @@ export default function CmPage() {
     (tab: MainTab, clientName?: string, section?: ClientSection) => {
       const params = new URLSearchParams()
 
-      if (tab === "client" && clientName) {
+      if (clientName) {
         params.set("tab", "client")
         params.set("name", clientName)
-        params.set("section", section || "basic-info")
-      } else if (tab === "all") {
-        params.set("tab", "caseload")
-      } else if (tab === "today") {
-        params.set("tab", "today")
+        params.set("section", "cm-goals")
       }
 
       const newURL = `/cm?${params.toString()}`
@@ -91,34 +82,14 @@ export default function CmPage() {
     [router],
   )
 
-  // Client row click handler for "All Clients" tab
   const handleClientRowClick = useCallback(
     (clientName: string) => {
       setActiveTab("client")
       setSelectedClient(clientName)
-      setActiveClientSection("basic-info")
-      updateURL("client", clientName, "basic-info")
+      setActiveClientSection("cm-goals")
+      updateURL("client", clientName, "cm-goals")
     },
     [updateURL],
-  )
-
-  // Close client tab handler
-  const handleCloseClientTab = useCallback(() => {
-    setActiveTab("all")
-    setSelectedClient(null)
-    setActiveClientSection("basic-info")
-    updateURL("all")
-  }, [updateURL])
-
-  // Client section change handler
-  const handleClientSectionChange = useCallback(
-    (section: ClientSection) => {
-      setActiveClientSection(section)
-      if (selectedClient) {
-        updateURL("client", selectedClient, section)
-      }
-    },
-    [selectedClient, updateURL],
   )
 
   // Existing handlers
@@ -138,23 +109,6 @@ export default function CmPage() {
     setPrefilledProspectName(searchedName || "")
     setIsNewProspectDialogOpen(true)
   }, [])
-
-  const handleTabChange = useCallback(
-    (tab: MainTab) => {
-      setActiveTab(tab)
-      setSelectedCount(0)
-      setSelectedContactIds([])
-      setFilters({ categories: [], providers: [] })
-
-      if (tab !== "client") {
-        setSelectedClient(null)
-        setActiveClientSection("basic-info")
-      }
-
-      updateURL(tab)
-    },
-    [updateURL],
-  )
 
   const handleSelectionChange = useCallback((count: number, selectedIds: number[]) => {
     setSelectedCount(count)
@@ -204,58 +158,33 @@ export default function CmPage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      {/* Enhanced Tab Navigation */}
       <div className="bg-white border-b border-gray-200">
         <div className="px-4 sm:px-6">
           <nav className="flex space-x-8" aria-label="Tabs">
-            {/* CM-specific tabs */}
-            <button
-              onClick={() => handleTabChange("today")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "today"
-                  ? "border-orange-500 text-orange-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Today's CM Check-ins
+            <button className="py-4 px-1 border-b-2 font-medium text-sm border-orange-500 text-orange-600">
+              CM Check-Ins
             </button>
-            <button
-              onClick={() => handleTabChange("all")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "all"
-                  ? "border-orange-500 text-orange-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              My Caseload
+            <button className="py-4 px-1 border-b-2 font-medium text-sm border-orange-500 text-orange-600">
+              CM Goals
             </button>
-
-            {/* Dynamic client tab */}
-            {selectedClient && activeTab === "client" && (
-              <button
-                onClick={() => handleTabChange("client")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                  activeTab === "client"
-                    ? "border-orange-500 text-orange-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <span>{selectedClient}</span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleCloseClientTab()
-                  }}
-                  className="ml-2 p-1 rounded-full hover:bg-gray-200 transition-colors"
-                  aria-label="Close client tab"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </button>
-            )}
           </nav>
         </div>
       </div>
+
+      <main>
+        {selectedClient ? (
+          <ClientMasterRecord
+            clientName={selectedClient}
+            activeSection="cm-goals"
+            onSectionChange={() => {}} // No section changes needed
+            context="cm"
+          />
+        ) : (
+          <div className="p-8 text-center text-gray-500">
+            <p>Select a client to view CM check-ins and goals</p>
+          </div>
+        )}
+      </main>
 
       {/* Conditional Content Rendering */}
       {activeTab !== "client" && (
@@ -288,18 +217,6 @@ export default function CmPage() {
             />
           </main>
         </>
-      )}
-
-      {/* Client Master Record */}
-      {activeTab === "client" && selectedClient && (
-        <main>
-          <ClientMasterRecord
-            clientName={selectedClient}
-            activeSection={activeClientSection}
-            onSectionChange={handleClientSectionChange}
-            context="cm"
-          />
-        </main>
       )}
 
       {/* All existing dialogs */}
