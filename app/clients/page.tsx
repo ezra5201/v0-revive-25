@@ -277,13 +277,6 @@ export default function ClientsPage() {
 
       {activeTab === "client" && selectedClient && (
         <>
-          <ActionBar
-            activeTab={activeTab}
-            selectedCount={0}
-            currentView={currentView}
-            onViewChange={handleViewChange}
-          />
-
           <main>
             {currentView === "list" ? (
               <ClientMasterRecord
@@ -291,6 +284,8 @@ export default function ClientsPage() {
                 activeSection={activeClientSection}
                 onSectionChange={handleClientSectionChange}
                 context="clients"
+                currentView={currentView}
+                onViewChange={handleViewChange}
               />
             ) : (
               <ClientVisualizationView clientName={selectedClient} activeSection={activeClientSection} />

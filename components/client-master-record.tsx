@@ -10,7 +10,7 @@ import { ClientJourneyTimeline } from "./client-journey-timeline"
 import { ClientOTCheckins } from "./client-ot-checkins"
 import { GoalWidget } from "./goal-widget"
 import { OTGoalWidget } from "./ot-goal-widget"
-import { ExternalLink, User, ChevronDown, ChevronRight } from "lucide-react"
+import { ExternalLink, User, ChevronDown, ChevronRight, List, BarChart3 } from "lucide-react"
 
 interface ClientMasterRecordProps {
   clientName: string
@@ -19,6 +19,8 @@ interface ClientMasterRecordProps {
     section: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals" | "ot-checkins",
   ) => void
   context: "cm" | "ot" | "clients"
+  currentView?: "list" | "visual"
+  onViewChange?: (view: "list" | "visual") => void
 }
 
 interface ClientData {
@@ -48,7 +50,14 @@ interface ContactRecord {
   alertSeverity?: string
 }
 
-export function ClientMasterRecord({ clientName, activeSection, onSectionChange, context }: ClientMasterRecordProps) {
+export function ClientMasterRecord({
+  clientName,
+  activeSection,
+  onSectionChange,
+  context,
+  currentView = "list",
+  onViewChange,
+}: ClientMasterRecordProps) {
   const [clientData, setClientData] = useState<ClientData | null>(null)
   const [contactHistory, setContactHistory] = useState<ContactRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -251,6 +260,28 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange,
             {clientData && <Badge className={getCategoryColor(clientData.category)}>{clientData.category}</Badge>}
           </div>
           <div className="flex items-center space-x-2">
+            {context === "clients" && onViewChange && (
+              <div className="flex items-center bg-gray-100 rounded-lg p-1 mr-2">
+                <button
+                  onClick={() => onViewChange("list")}
+                  className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    currentView === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  <List className="h-4 w-4 mr-1.5" />
+                  List View
+                </button>
+                <button
+                  onClick={() => onViewChange("visual")}
+                  className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    currentView === "visual" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  <BarChart3 className="h-4 w-4 mr-1.5" />
+                  Visual View
+                </button>
+              </div>
+            )}
             {(context === "cm" || context === "ot") && (
               <Button
                 variant="outline"

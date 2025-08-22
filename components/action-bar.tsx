@@ -3,18 +3,7 @@
 import type React from "react"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import {
-  Download,
-  Utensils,
-  ChevronDown,
-  X,
-  UserPlus,
-  Calendar,
-  CalendarDays,
-  SlidersHorizontal,
-  List,
-  BarChart3,
-} from "lucide-react"
+import { Download, Utensils, ChevronDown, X, UserPlus, Calendar, CalendarDays, SlidersHorizontal } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -36,8 +25,6 @@ interface ActionBarProps {
   onFiltersChange?: (filters: { categories: string[]; providers: string[] }) => void
   onServiceCompleted?: () => void
   onDateChangeClick?: () => void
-  currentView?: "list" | "visual"
-  onViewChange?: (view: "list" | "visual") => void
 }
 
 // Helper function to properly capitalize names
@@ -65,8 +52,6 @@ export function ActionBar({
   onFiltersChange,
   onServiceCompleted,
   onDateChangeClick,
-  currentView = "list",
-  onViewChange,
 }: ActionBarProps) {
   const [searchValue, setSearchValue] = useState("")
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -397,29 +382,6 @@ export function ActionBar({
                 </div>
               )}
             </div>
-
-            {activeTab === "client" && onViewChange && (
-              <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => onViewChange("list")}
-                  className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    currentView === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
-                  }`}
-                >
-                  <List className="h-4 w-4 mr-1.5" />
-                  List View
-                </button>
-                <button
-                  onClick={() => onViewChange("visual")}
-                  className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    currentView === "visual" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
-                  }`}
-                >
-                  <BarChart3 className="h-4 w-4 mr-1.5" />
-                  Visual View
-                </button>
-              </div>
-            )}
 
             {/* New Prospect Button - Only show when search has no matches for Today's workflow */}
             {activeTab === "today" && showNewProspectButton && (
