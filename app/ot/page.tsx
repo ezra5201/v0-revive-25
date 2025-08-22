@@ -2,18 +2,20 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
+import { ContactTable } from "@/components/contact-table"
 import { QuickCheckinDialog } from "@/components/quick-checkin-dialog"
 import { NewProspectDialog } from "@/components/new-prospect-dialog"
 import { ChangeDateDialog } from "@/components/change-date-dialog"
 import { UpdateServicesDialog } from "@/components/update-services-dialog"
 import { ClientMasterRecord } from "@/components/client-master-record"
 import { Header } from "@/components/header"
+import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
 import { useOTContacts } from "@/hooks/use-ot-contacts"
 import { useDatabase } from "@/hooks/use-database"
 import { X } from "lucide-react"
 
-type MainTab = "ot-checkins" | "ot-goals" | "client"
+type MainTab = "today" | "all" | "client"
 type ClientSection = "basic-info" | "contact-history" | "journey-timeline" | "ot-goals"
 
 export default function OtPage() {
@@ -21,7 +23,7 @@ export default function OtPage() {
   const router = useRouter()
 
   // Enhanced state management
-  const [activeTab, setActiveTab] = useState<MainTab>("ot-checkins")
+  const [activeTab, setActiveTab] = useState<MainTab>("today")
   const [selectedClient, setSelectedClient] = useState<string | null>(null)
   const [activeClientSection, setActiveClientSection] = useState<ClientSection>("basic-info")
 
@@ -48,13 +50,14 @@ export default function OtPage() {
       setActiveTab("client")
       setSelectedClient(name)
       setActiveClientSection((section as ClientSection) || "basic-info")
-    } else if (tab === "ot-goals") {
-      setActiveTab("ot-goals")
-    } else if (tab === "ot-checkins") {
-      setActiveTab("ot-checkins")
+    } else if (tab === "all") {
+      setActiveTab("all")
+    } else if (tab === "today") {
+      setActiveTab("today")
     } else {
-      router.replace("/ot?tab=ot-checkins")
-      setActiveTab("ot-checkins")
+      // No tab parameter - redirect to today with parameter
+      router.replace("/ot?tab=today")
+      setActiveTab("today")
     }
   }, [searchParams, router])
 
@@ -76,10 +79,10 @@ export default function OtPage() {
         params.set("tab", "client")
         params.set("name", clientName)
         params.set("section", section || "basic-info")
-      } else if (tab === "ot-goals") {
-        params.set("tab", "ot-goals")
-      } else if (tab === "ot-checkins") {
-        params.set("tab", "ot-checkins")
+      } else if (tab === "all") {
+        params.set("tab", "all")
+      } else if (tab === "today") {
+        params.set("tab", "today")
       }
 
       const newURL = `/ot?${params.toString()}`
@@ -101,10 +104,10 @@ export default function OtPage() {
 
   // Close client tab handler
   const handleCloseClientTab = useCallback(() => {
-    setActiveTab("ot-checkins")
+    setActiveTab("all")
     setSelectedClient(null)
     setActiveClientSection("basic-info")
-    updateURL("ot-checkins")
+    updateURL("all")
   }, [updateURL])
 
   // Client section change handler
@@ -207,24 +210,24 @@ export default function OtPage() {
           <nav className="flex space-x-8" aria-label="Tabs">
             {/* OT-specific tabs */}
             <button
-              onClick={() => handleTabChange("ot-checkins")}
+              onClick={() => handleTabChange("today")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "ot-checkins"
+                activeTab === "today"
                   ? "border-orange-500 text-orange-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
-              OT Check-Ins
+              Today's OT Check-ins
             </button>
             <button
-              onClick={() => handleTabChange("ot-goals")}
+              onClick={() => handleTabChange("all")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "ot-goals"
+                activeTab === "all"
                   ? "border-orange-500 text-orange-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
-              OT Goals
+              My Caseload
             </button>
 
             {/* Dynamic client tab */}
@@ -256,11 +259,35 @@ export default function OtPage() {
 
       {/* Conditional Content Rendering */}
       {activeTab !== "client" && (
-        <main>
-          <div className="p-6 text-center text-gray-500">
-            <p>Please select a client to view {activeTab === "ot-checkins" ? "OT check-ins" : "OT goals"}.</p>
-          </div>
-        </main>
+        <>
+          <ActionBar
+            activeTab={activeTab}
+            selectedCount={selectedCount}
+            selectedContactIds={selectedContactIds}
+            onExport={() => console.log("Export")}
+            clients={filterData.clients}
+            onClientSelect={handleClientSearch}
+            onNewProspect={handleNewProspectClick}
+            providers={filterData.providers}
+            categories={filterData.categories}
+            onFiltersChange={setFilters}
+            onServiceCompleted={handleDataUpdate}
+            onDateChangeClick={() => setIsChangeDateDialogOpen(true)}
+          />
+
+          <main className="bg-white">
+            <ContactTable
+              activeTab={activeTab}
+              contacts={contacts}
+              isLoading={contactsLoading}
+              error={contactsError}
+              onClientClick={handleClientClick}
+              onSelectionChange={handleSelectionChange}
+              onUpdateServicesClick={handleUpdateServicesClick}
+              onClientRowClick={handleClientRowClick}
+            />
+          </main>
+        </>
       )}
 
       {/* Client Master Record */}
