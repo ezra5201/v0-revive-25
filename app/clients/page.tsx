@@ -130,16 +130,18 @@ export default function ClientsPage() {
 
   const handleTabChange = useCallback(
     (tab: MainTab) => {
-      setActiveTab(tab)
-      setSelectedCount(0)
-      setSelectedContactIds([])
-      setFilters({ categories: [], providers: [] })
-
       if (tab === "all") {
+        // Clear all client-related state when switching to "All Clients"
+        setActiveTab("all")
         setSelectedClient(null)
         setActiveClientSection("basic-info")
+        setSelectedCount(0)
+        setSelectedContactIds([])
+        setFilters({ categories: [], providers: [] })
         updateURL("all")
       } else if (tab === "client" && selectedClient) {
+        // Only switch to client tab if we have a selected client
+        setActiveTab("client")
         updateURL(tab, selectedClient, activeClientSection)
       }
     },
@@ -208,8 +210,8 @@ export default function ClientsPage() {
               All Clients
             </button>
 
-            {/* Dynamic client tab */}
-            {selectedClient && (
+            {/* Dynamic client tab - only show when we have a selected client AND we're on client tab */}
+            {selectedClient && activeTab === "client" && (
               <button
                 onClick={() => handleTabChange("client")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
