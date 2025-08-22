@@ -50,10 +50,13 @@ export default function ClientsPage() {
       setActiveTab("client")
       setSelectedClient(name)
       setActiveClientSection((section as ClientSection) || "basic-info")
+    } else if (tab === "all") {
+      setActiveTab("all")
     } else {
+      router.replace("/clients?tab=all")
       setActiveTab("all")
     }
-  }, [searchParams])
+  }, [searchParams, router])
 
   const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
   const {
@@ -73,10 +76,11 @@ export default function ClientsPage() {
         params.set("tab", "client")
         params.set("name", clientName)
         params.set("section", section || "basic-info")
+      } else if (tab === "all") {
+        params.set("tab", "all")
       }
-      // For 'all' tab, we don't set any params (default state)
 
-      const newURL = params.toString() ? `/clients?${params.toString()}` : "/clients"
+      const newURL = `/clients?${params.toString()}`
       router.replace(newURL)
     },
     [router],

@@ -41,7 +41,6 @@ export default function ContactLogPage() {
   })
   const [prefilledProspectName, setPrefilledProspectName] = useState("")
 
-  // Initialize state from URL parameters
   useEffect(() => {
     const tab = searchParams.get("tab")
     const name = searchParams.get("name")
@@ -53,10 +52,14 @@ export default function ContactLogPage() {
       setActiveClientSection((section as ClientSection) || "basic-info")
     } else if (tab === "all") {
       setActiveTab("all")
+    } else if (tab === "today") {
+      setActiveTab("today")
     } else {
+      // No tab parameter - redirect to today with parameter
+      router.replace("/contact-log?tab=today")
       setActiveTab("today")
     }
-  }, [searchParams])
+  }, [searchParams, router])
 
   // Custom hooks for data management (PRESERVED)
   const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
@@ -68,7 +71,6 @@ export default function ContactLogPage() {
     refetch: refetchContacts,
   } = useContacts(activeTab === "client" ? "all" : activeTab, filters)
 
-  // URL update helper
   const updateURL = useCallback(
     (tab: MainTab, clientName?: string, section?: ClientSection) => {
       const params = new URLSearchParams()
@@ -79,10 +81,11 @@ export default function ContactLogPage() {
         params.set("section", section || "basic-info")
       } else if (tab === "all") {
         params.set("tab", "all")
+      } else if (tab === "today") {
+        params.set("tab", "today")
       }
-      // For 'today' tab, we don't set any params (default state)
 
-      const newURL = params.toString() ? `/contact-log?${params.toString()}` : "/contact-log"
+      const newURL = `/contact-log?${params.toString()}`
       router.replace(newURL)
     },
     [router],
