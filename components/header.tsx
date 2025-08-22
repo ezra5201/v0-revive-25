@@ -12,7 +12,6 @@ import Image from "next/image"
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false)
-  const [logoError, setLogoError] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
 
@@ -41,21 +40,14 @@ export function Header() {
           {/* Left side - Logo and Navigation */}
           <div className="flex items-center space-x-4 sm:space-x-8">
             <div className="flex items-center">
-              {!logoError ? (
-                <Image
-                  src="/revive-impact-logo.png"
-                  alt="ReVive IMPACT"
-                  width={160}
-                  height={40}
-                  className="h-8 sm:h-10 w-auto"
-                  onError={() => setLogoError(true)}
-                  priority
-                />
-              ) : (
-                <div className="h-8 sm:h-10 px-4 flex items-center bg-orange-500 text-white font-bold text-sm rounded">
-                  ReVive IMPACT
-                </div>
-              )}
+              <Image
+                src="/revive-impact-logo.png"
+                alt="ReVive IMPACT"
+                width={160}
+                height={40}
+                className="h-8 sm:h-10 w-auto"
+                priority
+              />
             </div>
 
             {/* Desktop Navigation */}
