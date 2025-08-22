@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { ClientBasicInfo } from "./client-basic-info"
 import { ClientContactHistory } from "./client-contact-history"
 import { ClientJourneyTimeline } from "./client-journey-timeline"
+import { ClientOTCheckins } from "./client-ot-checkins"
 import { GoalWidget } from "./goal-widget"
 import { OTGoalWidget } from "./ot-goal-widget"
 
@@ -188,7 +189,12 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange,
       {/* Content area */}
       <div className="p-4 sm:p-6">
         {activeSection === "basic-info" && clientData && (
-          <ClientBasicInfo clientData={clientData} contactHistoryLength={contactHistory.length} />
+          <ClientBasicInfo
+            clientData={clientData}
+            contactHistoryLength={contactHistory.length}
+            contactHistory={contactHistory}
+            context={context}
+          />
         )}
 
         {activeSection === "contact-history" && (
@@ -204,9 +210,7 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange,
         {activeSection === "ot-goals" && <OTGoalWidget clientName={clientName} />}
 
         {activeSection === "ot-checkins" && (
-          <div className="text-center py-8">
-            <p className="text-gray-500">OT Check-Ins content will be implemented here</p>
-          </div>
+          <ClientOTCheckins clientName={clientName} contactHistory={contactHistory} />
         )}
       </div>
     </div>

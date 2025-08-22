@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, User, Clock } from "lucide-react"
+import { ClientOTCheckins } from "./client-ot-checkins"
 
 interface ClientData {
   name: string
@@ -12,12 +13,38 @@ interface ClientData {
   updated_at: string
 }
 
+interface ContactRecord {
+  id: number
+  date: string
+  daysAgo: number
+  provider: string
+  client: string
+  category: string
+  servicesRequested?: string[]
+  servicesProvided?: Array<{
+    service: string
+    provider: string
+    completedAt: string
+  }>
+  comments?: string
+  hasAlert?: boolean
+  alertDetails?: string
+  alertSeverity?: string
+}
+
 interface ClientBasicInfoProps {
   clientData: ClientData
   contactHistoryLength: number
+  contactHistory?: ContactRecord[]
+  context?: "cm" | "ot"
 }
 
-export function ClientBasicInfo({ clientData, contactHistoryLength }: ClientBasicInfoProps) {
+export function ClientBasicInfo({
+  clientData,
+  contactHistoryLength,
+  contactHistory = [],
+  context = "cm",
+}: ClientBasicInfoProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -100,6 +127,12 @@ export function ClientBasicInfo({ clientData, contactHistoryLength }: ClientBasi
           </CardContent>
         </Card>
       </div>
+
+      {context === "cm" && (
+        <div className="mt-8">
+          <ClientOTCheckins clientName={clientData.name} contactHistory={contactHistory} />
+        </div>
+      )}
     </div>
   )
 }
