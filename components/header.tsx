@@ -1,16 +1,18 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Menu, User, Settings } from 'lucide-react'
+import { Menu, User, Settings } from "lucide-react"
 import { useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { AlertHeaderIndicator } from "./alert-header-indicator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DatabaseStatsModal } from "./database-stats-modal"
+import Image from "next/image"
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false)
+  const [logoError, setLogoError] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
 
@@ -39,7 +41,21 @@ export function Header() {
           {/* Left side - Logo and Navigation */}
           <div className="flex items-center space-x-4 sm:space-x-8">
             <div className="flex items-center">
-              <img src="/revive-impact-logo.png" alt="ReVive IMPACT" className="h-8 sm:h-10 w-auto" />
+              {!logoError ? (
+                <Image
+                  src="/revive-impact-logo.png"
+                  alt="ReVive IMPACT"
+                  width={160}
+                  height={40}
+                  className="h-8 sm:h-10 w-auto"
+                  onError={() => setLogoError(true)}
+                  priority
+                />
+              ) : (
+                <div className="h-8 sm:h-10 px-4 flex items-center bg-orange-500 text-white font-bold text-sm rounded">
+                  ReVive IMPACT
+                </div>
+              )}
             </div>
 
             {/* Desktop Navigation */}
