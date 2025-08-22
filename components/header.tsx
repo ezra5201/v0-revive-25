@@ -41,7 +41,7 @@ export function Header() {
           <div className="flex items-center space-x-4 sm:space-x-8">
             <div className="flex items-center">
               <Image
-                src="/revive-impact-logo.png"
+                src="/ReVive-IMPACT-Logo.png"
                 alt="ReVive IMPACT"
                 width={160}
                 height={40}
