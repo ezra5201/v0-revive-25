@@ -231,8 +231,8 @@ export default function ContactLogPage() {
               All Clients
             </button>
 
-            {/* NEW: Dynamic client tab */}
-            {selectedClient && (
+            {/* Updated client tab visibility logic to match standardized pattern */}
+            {selectedClient && activeTab === "client" && (
               <button
                 onClick={() => handleTabChange("client")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
@@ -298,7 +298,7 @@ export default function ContactLogPage() {
             clientName={selectedClient}
             activeSection={activeClientSection}
             onSectionChange={handleClientSectionChange}
-            context="cm"
+            context="contact-log"
           />
         </main>
       )}

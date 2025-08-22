@@ -228,7 +228,7 @@ export default function CmPage() {
             </button>
 
             {/* Dynamic client tab */}
-            {selectedClient && (
+            {selectedClient && activeTab === "client" && (
               <button
                 onClick={() => handleTabChange("client")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
