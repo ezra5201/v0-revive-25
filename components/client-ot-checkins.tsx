@@ -1,51 +1,69 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar, User, MessageSquare, CheckCircle, Clock, AlertTriangle, Plus } from "lucide-react"
+import { Calendar, User, MessageSquare, CheckCircle, AlertTriangle, Plus } from "lucide-react"
 import { OTCheckinModal } from "./ot-checkin-modal"
 
-interface ContactRecord {
+interface OTCheckinRecord {
   id: number
-  date: string
-  daysAgo: number
-  provider: string
-  client: string
-  category: string
-  servicesRequested?: string[]
-  servicesProvided?: Array<{
-    service: string
-    provider: string
-    completedAt: string
+  contact_id: number
+  client_name: string
+  client_uuid: string | null
+  provider_name: string
+  notes: string | null
+  status: string
+  created_at: string
+  updated_at: string
+  goals: Array<{
+    id: number
+    goal_text: string
+    status: string
+    target_date: string | null
+    priority: number
+    created_at: string
   }>
-  comments?: string
-  hasAlert?: boolean
-  alertDetails?: string
-  alertSeverity?: string
-  occupational_therapy_requested?: number
-  occupational_therapy_provided?: number
 }
 
 interface ClientOTCheckinsProps {
   clientName: string
-  contactHistory: ContactRecord[] | null | undefined
+  contactHistory?: any[] // Keep for backward compatibility but won't be used
 }
 
-export function ClientOTCheckins({ clientName, contactHistory }: ClientOTCheckinsProps) {
+export function ClientOTCheckins({ clientName }: ClientOTCheckinsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null)
+  const [editingCheckinId, setEditingCheckinId] = useState<number | null>(null)
+  const [otCheckins, setOtCheckins] = useState<OTCheckinRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const history: ContactRecord[] = Array.isArray(contactHistory) ? contactHistory : []
+  useEffect(() => {
+    const fetchOTCheckins = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(`/api/ot-checkins/by-client/${encodeURIComponent(clientName)}`)
+        const result = await response.json()
 
-  // Filter for OT check-ins only - contacts that have OT services requested or provided
-  const otCheckIns = history.filter((contact) => {
-    // Check boolean columns from database instead of JSON arrays
-    const hasOTRequested = (contact as any).occupational_therapy_requested > 0 || false
-    const hasOTProvided = (contact as any).occupational_therapy_provided > 0 || false
-    return hasOTRequested || hasOTProvided
-  })
+        if (result.success) {
+          setOtCheckins(result.data)
+        } else {
+          setError(result.error?.message || "Failed to fetch OT check-ins")
+        }
+      } catch (err) {
+        setError("Failed to fetch OT check-ins")
+        console.error("Error fetching OT check-ins:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (clientName) {
+      fetchOTCheckins()
+    }
+  }, [clientName])
 
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("en-US", {
@@ -54,7 +72,12 @@ export function ClientOTCheckins({ clientName, contactHistory }: ClientOTCheckin
       day: "numeric",
     })
 
-  const formatTimeAgo = (daysAgo: number) => {
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMs = now.getTime() - date.getTime()
+    const daysAgo = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
+
     if (daysAgo === 0) return "Today"
     if (daysAgo === 1) return "Yesterday"
     if (daysAgo < 7) return `${daysAgo} days ago`
@@ -76,17 +99,37 @@ export function ClientOTCheckins({ clientName, contactHistory }: ClientOTCheckin
     return providerColorMap[hash % providerColorMap.length]
   }
 
-  const getEngagementGapWarning = (currentDays: number, previousDays: number) => {
-    const gap = previousDays - currentDays
+  const getEngagementGapWarning = (currentDate: string, previousDate: string) => {
+    const current = new Date(currentDate)
+    const previous = new Date(previousDate)
+    const diffInMs = previous.getTime() - current.getTime()
+    const gap = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
+
     if (gap > 30) return "long-gap"
     if (gap > 14) return "medium-gap"
     return "normal"
   }
 
-  // Sort newest to oldest
-  const sortedContacts = [...otCheckIns].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading OT check-ins...</p>
+      </div>
+    )
+  }
 
-  if (otCheckIns.length === 0) {
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading OT Check-Ins</h3>
+        <p className="text-red-600">{error}</p>
+      </div>
+    )
+  }
+
+  if (otCheckins.length === 0) {
     return (
       <div className="text-center py-12">
         <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -98,19 +141,47 @@ export function ClientOTCheckins({ clientName, contactHistory }: ClientOTCheckin
 
   const handleOTCheckIn = (contactId: number) => {
     setSelectedContactId(contactId)
+    setEditingCheckinId(null)
+    setIsModalOpen(true)
+  }
+
+  const handleEditCheckin = (checkin: OTCheckinRecord) => {
+    setSelectedContactId(checkin.contact_id)
+    setEditingCheckinId(checkin.id)
     setIsModalOpen(true)
   }
 
   const handleCloseModal = () => {
     setIsModalOpen(false)
     setSelectedContactId(null)
+    setEditingCheckinId(null)
+    if (clientName) {
+      const fetchOTCheckins = async () => {
+        try {
+          const response = await fetch(`/api/ot-checkins/by-client/${encodeURIComponent(clientName)}`)
+          const result = await response.json()
+          if (result.success) {
+            setOtCheckins(result.data)
+          }
+        } catch (err) {
+          console.error("Error refreshing OT check-ins:", err)
+        }
+      }
+      fetchOTCheckins()
+    }
   }
 
   return (
     <div>
       {/* Heading */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">OT Check-Ins Timeline</h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-semibold text-gray-900">OT Check-Ins Timeline</h2>
+          <Button size="sm" variant="outline" onClick={() => handleOTCheckIn(0)} className="text-xs">
+            <Plus className="h-3 w-3 mr-1" />
+            OT Check-In
+          </Button>
+        </div>
         <p className="text-gray-600">Occupational therapy interactions and services for {clientName}</p>
       </div>
 
@@ -119,12 +190,12 @@ export function ClientOTCheckins({ clientName, contactHistory }: ClientOTCheckin
         <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200" />
 
         <div className="space-y-6">
-          {sortedContacts.map((contact, index) => {
-            const next = sortedContacts[index + 1]
-            const gapWarning = next ? getEngagementGapWarning(contact.daysAgo, next.daysAgo) : "normal"
+          {otCheckins.map((checkin, index) => {
+            const next = otCheckins[index + 1]
+            const gapWarning = next ? getEngagementGapWarning(checkin.created_at, next.created_at) : "normal"
 
             return (
-              <div key={contact.id} className="relative">
+              <div key={checkin.id} className="relative">
                 {/* Dot */}
                 <div className="absolute left-6 w-4 h-4 bg-white border-4 border-purple-500 rounded-full" />
 
@@ -146,83 +217,66 @@ export function ClientOTCheckins({ clientName, contactHistory }: ClientOTCheckin
                         <div>
                           <div className="flex items-center space-x-2 mb-1">
                             <Calendar className="h-4 w-4 text-gray-500" />
-                            <span className="font-medium text-gray-900">{formatDate(contact.date)}</span>
-                            <span className="text-sm text-gray-500">({formatTimeAgo(contact.daysAgo)})</span>
+                            <span className="font-medium text-gray-900">{formatDate(checkin.created_at)}</span>
+                            <span className="text-sm text-gray-500">({formatTimeAgo(checkin.created_at)})</span>
+                            <Badge variant={checkin.status === "Completed" ? "default" : "secondary"}>
+                              {checkin.status}
+                            </Badge>
                           </div>
                           <div className="flex items-center space-x-2">
                             <User className="h-4 w-4 text-gray-500" />
-                            <Badge className={getProviderColor(contact.provider)}>{contact.provider}</Badge>
+                            <Badge className={getProviderColor(checkin.provider_name)}>{checkin.provider_name}</Badge>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          {contact.hasAlert && (
-                            <div className="flex items-center space-x-1">
-                              <AlertTriangle className="h-4 w-4 text-amber-500" />
-                              <span className="text-xs text-amber-600">Alert</span>
-                            </div>
-                          )}
+                        {checkin.status === "Draft" && (
                           <Button
                             size="sm"
-                            variant="outline"
-                            onClick={() => handleOTCheckIn(contact.id)}
+                            variant="ghost"
                             className="text-xs"
+                            onClick={() => handleEditCheckin(checkin)}
                           >
-                            <Plus className="h-3 w-3 mr-1" />
-                            OT Check-In
+                            <svg className="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                            Edit
                           </Button>
-                        </div>
+                        )}
                       </div>
 
-                      {/* Services */}
-                      <div className="space-y-3">
-                        {/* Requested */}
-                        {(contact as any).occupational_therapy_requested > 0 ? (
-                          <div>
-                            <div className="flex items-center space-x-2 mb-2">
-                              <Clock className="h-4 w-4 text-purple-500" />
-                              <span className="text-sm font-medium text-gray-700">OT Services Requested</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1 ml-6">
-                              <Badge
-                                variant="outline"
-                                className="text-xs bg-purple-50 text-purple-700 border-purple-200"
-                              >
-                                Occupational Therapy
-                              </Badge>
-                            </div>
-                          </div>
-                        ) : null}
-
-                        {/* Provided */}
-                        {(contact as any).occupational_therapy_provided > 0 ? (
-                          <div>
-                            <div className="flex items-center space-x-2 mb-2">
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                              <span className="text-sm font-medium text-gray-700">OT Services Provided</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1 ml-6">
-                              <Badge className="text-xs bg-green-100 text-green-800">Occupational Therapy</Badge>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-
-                      {/* Comments */}
-                      {contact.comments && (
-                        <div className="mt-3 pt-3 border-t border-gray-100">
+                      {/* Notes */}
+                      {checkin.notes && (
+                        <div className="mb-3 pb-3 border-b border-gray-100">
                           <div className="flex items-start space-x-2">
                             <MessageSquare className="h-4 w-4 text-gray-500 mt-0.5" />
-                            <p className="text-sm text-gray-700">{contact.comments}</p>
+                            <p className="text-sm text-gray-700">{checkin.notes}</p>
                           </div>
                         </div>
                       )}
 
-                      {/* Alert Details */}
-                      {contact.hasAlert && contact.alertDetails && (
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <div className="flex items-start space-x-2">
-                            <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
-                            <p className="text-sm text-amber-700">{contact.alertDetails}</p>
+                      {/* Goals */}
+                      {checkin.goals && checkin.goals.length > 0 && (
+                        <div className="mt-3">
+                          <div className="flex items-start space-x-2 mb-2">
+                            <CheckCircle className="h-4 w-4 text-blue-500 mt-0.5" />
+                            <span className="text-sm font-medium text-gray-700">Goals ({checkin.goals.length})</span>
+                          </div>
+                          <div className="ml-6 space-y-1">
+                            {checkin.goals.slice(0, 3).map((goal) => (
+                              <div key={goal.id} className="flex items-center space-x-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {goal.status}
+                                </Badge>
+                                <span className="text-sm text-gray-600">{goal.goal_text}</span>
+                              </div>
+                            ))}
+                            {checkin.goals.length > 3 && checkin.status !== "Completed" && (
+                              <span className="text-xs text-gray-500">+{checkin.goals.length - 3} more goals</span>
+                            )}
                           </div>
                         </div>
                       )}
@@ -262,6 +316,7 @@ export function ClientOTCheckins({ clientName, contactHistory }: ClientOTCheckin
         onClose={handleCloseModal}
         clientName={clientName}
         contactId={selectedContactId || 0}
+        editingCheckinId={editingCheckinId}
       />
     </div>
   )
