@@ -1,6 +1,6 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 
 interface ClientVisualizationViewProps {
   clientName: string
@@ -9,21 +9,12 @@ interface ClientVisualizationViewProps {
 
 export function ClientVisualizationView({ clientName, activeSection }: ClientVisualizationViewProps) {
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-gray-900">Visualization View - Coming Soon</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-lg text-gray-700">
-                Client: <span className="font-semibold text-blue-600">{clientName}</span>
-              </p>
-              <p className="text-sm text-gray-600">
-                Active Section: <span className="font-medium">{activeSection}</span>
-              </p>
-              <div className="mt-8 p-8 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg border-2 border-dashed border-blue-300">
+    <div className="w-full min-h-screen bg-gray-50">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <Card className="w-full">
+          <CardContent className="p-8">
+            <div className="w-full h-[600px] sm:h-[700px] lg:h-[800px] bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg border-2 border-dashed border-blue-300">
+              <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <div className="w-16 h-16 mx-auto mb-4 bg-blue-200 rounded-full flex items-center justify-center">
                     <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
