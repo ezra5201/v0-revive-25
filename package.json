@@ -43,8 +43,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "latest",
-    "d3": "latest",
-    "d3-sankey": "latest",
     "date-fns": "4.1.0",
     "embla-carousel-react": "latest",
     "fs": "latest",
