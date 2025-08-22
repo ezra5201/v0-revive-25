@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { ContactTable } from "@/components/contact-table"
+import { ClientListView } from "@/components/client-list-view"
 import { QuickCheckinDialog } from "@/components/quick-checkin-dialog"
 import { NewProspectDialog } from "@/components/new-prospect-dialog"
 import { ChangeDateDialog } from "@/components/change-date-dialog"
@@ -252,15 +252,11 @@ export default function ClientsPage() {
           />
 
           <main className="bg-white">
-            <ContactTable
-              activeTab={activeTab}
+            <ClientListView
               contacts={contacts}
               isLoading={contactsLoading}
               error={contactsError}
-              onClientClick={handleClientClick}
-              onSelectionChange={handleSelectionChange}
-              onUpdateServicesClick={handleUpdateServicesClick}
-              onClientRowClick={handleClientRowClick}
+              onClientClick={handleClientRowClick}
             />
           </main>
         </>
