@@ -1,13 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { ClientBasicInfo } from "./client-basic-info"
 import { ClientContactHistory } from "./client-contact-history"
 import { ClientJourneyTimeline } from "./client-journey-timeline"
 import { ClientOTCheckins } from "./client-ot-checkins"
 import { GoalWidget } from "./goal-widget"
 import { OTGoalWidget } from "./ot-goal-widget"
+import { ExternalLink, User } from "lucide-react"
 
 interface ClientMasterRecordProps {
   clientName: string
@@ -15,7 +18,7 @@ interface ClientMasterRecordProps {
   onSectionChange: (
     section: "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals" | "ot-checkins",
   ) => void
-  context: "cm" | "ot"
+  context: "cm" | "ot" | "clients"
 }
 
 interface ClientData {
@@ -50,6 +53,7 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange,
   const [contactHistory, setContactHistory] = useState<ContactRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   // Fetch client data and contact history
   useEffect(() => {
@@ -111,8 +115,10 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange,
   const getTabOrder = () => {
     if (context === "cm") {
       return ["basic-info", "journey-timeline", "cm-goals", "ot-checkins", "ot-goals", "contact-history"]
-    } else {
+    } else if (context === "ot") {
       return ["basic-info", "ot-checkins", "ot-goals", "journey-timeline", "cm-goals", "contact-history"]
+    } else {
+      return ["basic-info", "contact-history", "journey-timeline", "cm-goals", "ot-goals", "ot-checkins"]
     }
   }
 
@@ -123,6 +129,18 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange,
     "ot-checkins": { label: "OT Check-Ins", section: "ot-checkins" as const },
     "ot-goals": { label: "OT Goals", section: "ot-goals" as const },
     "contact-history": { label: "Contact History", section: "contact-history" as const },
+  }
+
+  const handleOpenInCM = () => {
+    router.push(`/cm?tab=client&name=${encodeURIComponent(clientName)}&section=basic-info`)
+  }
+
+  const handleOpenInOT = () => {
+    router.push(`/ot?tab=client&name=${encodeURIComponent(clientName)}&section=basic-info`)
+  }
+
+  const handleViewFullProfile = () => {
+    router.push(`/clients?tab=client&name=${encodeURIComponent(clientName)}&section=basic-info`)
   }
 
   if (isLoading) {
@@ -159,8 +177,48 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange,
       {/* Client name title */}
       <div className="px-4 sm:px-6 py-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">{clientName}</h1>
-          {clientData && <Badge className={getCategoryColor(clientData.category)}>{clientData.category}</Badge>}
+          <div className="flex items-center space-x-4">
+            <h1 className="text-2xl font-bold text-gray-900">{clientName}</h1>
+            {clientData && <Badge className={getCategoryColor(clientData.category)}>{clientData.category}</Badge>}
+          </div>
+
+          {/* Cross-section navigation buttons */}
+          <div className="flex items-center space-x-2">
+            {context === "clients" && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenInCM}
+                  className="flex items-center space-x-1 bg-transparent"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>Open in CM</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenInOT}
+                  className="flex items-center space-x-1 bg-transparent"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>Open in OT</span>
+                </Button>
+              </>
+            )}
+
+            {(context === "cm" || context === "ot") && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleViewFullProfile}
+                className="flex items-center space-x-1 bg-transparent"
+              >
+                <User className="h-4 w-4" />
+                <span>View Full Profile</span>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
