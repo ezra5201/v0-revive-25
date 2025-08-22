@@ -112,24 +112,24 @@ export function ClientMasterRecord({ clientName, activeSection, onSectionChange,
 
       setSectionsLoading(true)
       try {
-        const cmResponse = await fetch(`/api/cm-contacts?client=${encodeURIComponent(clientName)}`)
+        const cmResponse = await fetch(`/api/contacts?client=${encodeURIComponent(clientName)}&serviceFilter=cm`)
         const cmData = cmResponse.ok ? await cmResponse.json() : { contacts: [] }
 
-        const otResponse = await fetch(`/api/ot-contacts?client=${encodeURIComponent(clientName)}`)
+        const otResponse = await fetch(`/api/contacts?client=${encodeURIComponent(clientName)}&serviceFilter=ot`)
         const otData = otResponse.ok ? await otResponse.json() : { contacts: [] }
 
-        const cmGoalsResponse = await fetch(`/api/goals?client=${encodeURIComponent(clientName)}`)
-        const cmGoalsData = cmGoalsResponse.ok ? await cmGoalsResponse.json() : []
+        const cmGoalsResponse = await fetch(`/api/goals/by-client/${encodeURIComponent(clientName)}`)
+        const cmGoalsData = cmGoalsResponse.ok ? await cmGoalsResponse.json() : { data: [] }
 
-        const otGoalsResponse = await fetch(`/api/ot-goals?client=${encodeURIComponent(clientName)}`)
-        const otGoalsData = otGoalsResponse.ok ? await otGoalsResponse.json() : []
+        const otGoalsResponse = await fetch(`/api/ot-goals/by-client/${encodeURIComponent(clientName)}`)
+        const otGoalsData = otGoalsResponse.ok ? await otGoalsResponse.json() : { data: [] }
 
         setSectionCounts({
           contactHistory: contactHistory.length,
           cmCheckins: cmData.contacts?.length || 0,
-          cmGoals: Array.isArray(cmGoalsData) ? cmGoalsData.length : 0,
+          cmGoals: cmGoalsData.data?.length || 0,
           otCheckins: otData.contacts?.length || 0,
-          otGoals: Array.isArray(otGoalsData) ? otGoalsData.length : 0,
+          otGoals: otGoalsData.data?.length || 0,
         })
       } catch (error) {
         console.error("Error fetching section counts:", error)
