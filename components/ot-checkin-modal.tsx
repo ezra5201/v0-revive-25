@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { Plus, ArrowLeft, Target, Calendar, AlertCircle, CheckCircle, ExternalLink } from "lucide-react"
+import { Plus, ArrowLeft, Target, Calendar, AlertCircle, CheckCircle, ExternalLink, AlertTriangle } from "lucide-react"
 
 interface OTGoal {
   id: number
@@ -28,9 +28,17 @@ interface OTCheckinModalProps {
   onSubmit?: () => void
   clientName: string
   contactId: number
+  editingCheckinId?: number | null
 }
 
-export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactId }: OTCheckinModalProps) {
+export function OTCheckinModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  clientName,
+  contactId,
+  editingCheckinId,
+}: OTCheckinModalProps) {
   const [currentView, setCurrentView] = useState<"checkin" | "new-goal" | "edit-goal">("checkin")
   const [notes, setNotes] = useState("")
   const [checkinType, setCheckinType] = useState("Evaluation")
@@ -62,11 +70,19 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
   const [progressNotes, setProgressNotes] = useState("")
   const [savingGoalUpdate, setSavingGoalUpdate] = useState(false)
 
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   useEffect(() => {
-    if (isOpen && clientName && !checkinId) {
-      fetchClientDataAndCreateCheckin()
+    if (isOpen && clientName) {
+      if (editingCheckinId) {
+        loadExistingCheckin()
+      } else if (!checkinId) {
+        fetchClientDataAndCreateCheckin()
+      }
     }
-  }, [isOpen, clientName])
+  }, [isOpen, clientName, editingCheckinId])
 
   // Fetch goals when modal opens
   useEffect(() => {
@@ -96,6 +112,7 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
       setSuccessMessage(null)
       setCheckinId(null)
       setClientUuid(null)
+      setShowDeleteConfirm(false)
     }
   }, [isOpen])
 
@@ -226,6 +243,37 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadExistingCheckin = async () => {
+    if (!editingCheckinId) return
+
+    setCreatingCheckin(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/ot-checkins/${editingCheckinId}`)
+      if (!response.ok) {
+        throw new Error("Failed to load check-in data")
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        const checkin = result.data
+        setCheckinId(checkin.id)
+        setNotes(checkin.notes || "")
+        setCheckinType(checkin.checkin_type || "Evaluation")
+        setServiceType(checkin.service_type || "Direct")
+        setClientUuid(checkin.client_uuid)
+      } else {
+        throw new Error(result.error?.message || "Failed to load check-in data")
+      }
+    } catch (err) {
+      console.error("Error loading existing check-in:", err)
+      setError(err instanceof Error ? err.message : "Failed to load check-in data")
+    } finally {
+      setCreatingCheckin(false)
     }
   }
 
@@ -493,6 +541,41 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
     }
   }
 
+  const handleDeleteCheckin = async () => {
+    if (!editingCheckinId) return
+
+    setDeleting(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/ot-checkins/${editingCheckinId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Failed to delete check-in: ${response.status} - ${errorText}`)
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        setSuccessMessage("Check-in deleted successfully!")
+        setTimeout(() => {
+          setSuccessMessage(null)
+          onClose()
+        }, 1500)
+      } else {
+        throw new Error(result.error?.message || "Failed to delete check-in")
+      }
+    } catch (err) {
+      console.error("Error deleting check-in:", err)
+      setError(err instanceof Error ? err.message : "Failed to delete check-in")
+    } finally {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Completed":
@@ -520,7 +603,9 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
             {currentView === "checkin"
-              ? "New OT Check-In"
+              ? editingCheckinId
+                ? "Edit OT Check-In"
+                : "New OT Check-In"
               : currentView === "new-goal"
                 ? "New OT Goal"
                 : "Edit OT Goal"}
@@ -684,10 +769,48 @@ export function OTCheckinModal({ isOpen, onClose, onSubmit, clientName, contactI
               )}
             </div>
 
+            {/* Delete Confirmation Dialog */}
+            {showDeleteConfirm && (
+              <div className="bg-red-50 border border-red-200 p-4 rounded-md">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-red-800">Delete Check-In</h3>
+                    <p className="text-sm text-red-700 mt-1">
+                      Are you sure you want to delete this OT check-in? This action cannot be undone.
+                    </p>
+                    <div className="flex space-x-3 mt-3">
+                      <Button size="sm" variant="destructive" onClick={handleDeleteCheckin} disabled={deleting}>
+                        {deleting ? "Deleting..." : "Delete"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowDeleteConfirm(false)}
+                        disabled={deleting}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end space-x-3 pt-4 border-t">
               <Button variant="outline" onClick={onClose} disabled={savingCheckin}>
                 Cancel
               </Button>
+              {/* Delete Button for Editing Mode */}
+              {editingCheckinId && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={savingCheckin || showDeleteConfirm}
+                >
+                  Delete
+                </Button>
+              )}
               <Button variant="outline" onClick={handleSaveDraft} disabled={savingCheckin || !checkinId}>
                 {savingCheckin ? "Saving..." : "Save Draft"}
               </Button>

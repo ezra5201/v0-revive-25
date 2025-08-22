@@ -35,6 +35,7 @@ interface ClientOTCheckinsProps {
 export function ClientOTCheckins({ clientName }: ClientOTCheckinsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null)
+  const [editingCheckinId, setEditingCheckinId] = useState<number | null>(null)
   const [otCheckins, setOtCheckins] = useState<OTCheckinRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -140,12 +141,34 @@ export function ClientOTCheckins({ clientName }: ClientOTCheckinsProps) {
 
   const handleOTCheckIn = (contactId: number) => {
     setSelectedContactId(contactId)
+    setEditingCheckinId(null)
+    setIsModalOpen(true)
+  }
+
+  const handleEditCheckin = (checkin: OTCheckinRecord) => {
+    setSelectedContactId(checkin.contact_id)
+    setEditingCheckinId(checkin.id)
     setIsModalOpen(true)
   }
 
   const handleCloseModal = () => {
     setIsModalOpen(false)
     setSelectedContactId(null)
+    setEditingCheckinId(null)
+    if (clientName) {
+      const fetchOTCheckins = async () => {
+        try {
+          const response = await fetch(`/api/ot-checkins/by-client/${encodeURIComponent(clientName)}`)
+          const result = await response.json()
+          if (result.success) {
+            setOtCheckins(result.data)
+          }
+        } catch (err) {
+          console.error("Error refreshing OT check-ins:", err)
+        }
+      }
+      fetchOTCheckins()
+    }
   }
 
   return (
@@ -206,7 +229,12 @@ export function ClientOTCheckins({ clientName }: ClientOTCheckinsProps) {
                           </div>
                         </div>
                         {checkin.status === "Draft" && (
-                          <Button size="sm" variant="ghost" className="text-xs">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs"
+                            onClick={() => handleEditCheckin(checkin)}
+                          >
                             <svg className="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path
                                 strokeLinecap="round"
@@ -288,6 +316,7 @@ export function ClientOTCheckins({ clientName }: ClientOTCheckinsProps) {
         onClose={handleCloseModal}
         clientName={clientName}
         contactId={selectedContactId || 0}
+        editingCheckinId={editingCheckinId}
       />
     </div>
   )

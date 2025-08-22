@@ -13,6 +13,67 @@ const VALID_STATUS_TRANSITIONS = {
   Cancelled: [],
 } as const
 
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  if (!sql) {
+    return NextResponse.json({ error: "Database not available" }, { status: 500 })
+  }
+
+  try {
+    const checkinId = Number.parseInt(params.id)
+    if (isNaN(checkinId)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid check-in ID",
+            details: { field: "id", value: params.id },
+          },
+        },
+        { status: 400 },
+      )
+    }
+
+    const result = await sql`
+      SELECT id, contact_id, client_name, client_uuid, provider_name, notes, status, checkin_type, service_type, created_at, updated_at
+      FROM ot_checkins 
+      WHERE id = ${checkinId}
+    `
+
+    if (result.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "NOT_FOUND",
+            message: "OT check-in not found",
+            details: { id: checkinId },
+          },
+        },
+        { status: 404 },
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: result[0],
+    })
+  } catch (error) {
+    console.error("Failed to fetch OT check-in:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "DATABASE_ERROR",
+          message: "Failed to fetch OT check-in",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
+      },
+      { status: 500 },
+    )
+  }
+}
+
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   if (!sql) {
     return NextResponse.json({ error: "Database not available" }, { status: 500 })
@@ -164,6 +225,80 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         error: {
           code: "DATABASE_ERROR",
           message: "Failed to update OT check-in",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
+      },
+      { status: 500 },
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  if (!sql) {
+    return NextResponse.json({ error: "Database not available" }, { status: 500 })
+  }
+
+  try {
+    const checkinId = Number.parseInt(params.id)
+    if (isNaN(checkinId)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid check-in ID",
+            details: { field: "id", value: params.id },
+          },
+        },
+        { status: 400 },
+      )
+    }
+
+    // Check if the check-in exists
+    const existingCheckin = await sql`
+      SELECT id, status FROM ot_checkins WHERE id = ${checkinId}
+    `
+
+    if (existingCheckin.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "NOT_FOUND",
+            message: "OT check-in not found",
+            details: { id: checkinId },
+          },
+        },
+        { status: 404 },
+      )
+    }
+
+    // Delete associated goals first (if any)
+    await sql`
+      DELETE FROM ot_goals WHERE checkin_id = ${checkinId}
+    `
+
+    // Delete the check-in
+    const result = await sql`
+      DELETE FROM ot_checkins WHERE id = ${checkinId}
+      RETURNING id
+    `
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: result[0].id,
+        message: "OT check-in and associated goals deleted successfully",
+      },
+    })
+  } catch (error) {
+    console.error("Failed to delete OT check-in:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "DATABASE_ERROR",
+          message: "Failed to delete OT check-in",
           details: error instanceof Error ? error.message : "Unknown error",
         },
       },
