@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     const result = await sql`
-      SELECT id, contact_id, client_name, client_uuid, provider_name, notes, status, checkin_type, service_type, created_at, updated_at
+      SELECT id, contact_id, client_name, client_uuid, provider_name, notes, status, created_at, updated_at
       FROM ot_checkins 
       WHERE id = ${checkinId}
     `
