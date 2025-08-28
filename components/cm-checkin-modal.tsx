@@ -42,7 +42,7 @@ export function CMCheckinModal({
   const [currentView, setCurrentView] = useState<"checkin" | "new-goal" | "edit-goal">("checkin")
   const [notes, setNotes] = useState("")
   const [checkinType, setCheckinType] = useState("Initial Assessment")
-  const [serviceType, setServiceType] = useState("Case Management")
+  const [serviceType, setServiceType] = useState<string[]>(["Case Management"])
   const [checkinDate, setCheckinDate] = useState("")
   const [originalCheckinDate, setOriginalCheckinDate] = useState("")
   const [goals, setGoals] = useState<Goal[]>([])
@@ -60,14 +60,14 @@ export function CMCheckinModal({
   const [goalText, setGoalText] = useState("")
   const [targetDate, setTargetDate] = useState("")
   const [priority, setPriority] = useState(1)
-  const [status, setStatus] = useState("Not Started")
+  const [status, setStatus] = useState("In Progress")
   const [savingGoal, setSavingGoal] = useState(false)
 
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
   const [editGoalText, setEditGoalText] = useState("")
   const [editTargetDate, setEditTargetDate] = useState("")
   const [editPriority, setEditPriority] = useState(1)
-  const [editStatus, setEditStatus] = useState("Not Started")
+  const [editStatus, setEditStatus] = useState("In Progress")
   const [progressNotes, setProgressNotes] = useState("")
   const [savingGoalUpdate, setSavingGoalUpdate] = useState(false)
 
@@ -96,16 +96,16 @@ export function CMCheckinModal({
       setCurrentView("checkin")
       setNotes("")
       setCheckinType("Initial Assessment")
-      setServiceType("Case Management")
+      setServiceType(["Case Management"])
       setGoalText("")
       setTargetDate("")
       setPriority(1)
-      setStatus("Not Started")
+      setStatus("In Progress")
       setEditingGoal(null)
       setEditGoalText("")
       setEditTargetDate("")
       setEditPriority(1)
-      setEditStatus("Not Started")
+      setEditStatus("In Progress")
       setProgressNotes("")
       setError(null)
       setSuccessMessage(null)
@@ -328,7 +328,7 @@ export function CMCheckinModal({
         setGoalText("")
         setTargetDate("")
         setPriority(1)
-        setStatus("Not Started")
+        setStatus("In Progress")
         setCurrentView("checkin")
         setSuccessMessage("Goal created successfully!")
         setTimeout(() => setSuccessMessage(null), 3000)
@@ -356,7 +356,7 @@ export function CMCheckinModal({
       const updateData = {
         notes: notes,
         checkin_type: checkinType,
-        service_type: serviceType,
+        service_type: serviceType.join(", "),
         status: "Draft",
       }
 
@@ -410,7 +410,7 @@ export function CMCheckinModal({
       const updateData = {
         notes: notes,
         checkin_type: checkinType,
-        service_type: serviceType,
+        service_type: serviceType.join(", "),
         status: "Completed",
       }
 
@@ -516,7 +516,7 @@ export function CMCheckinModal({
       setEditGoalText("")
       setEditTargetDate("")
       setEditPriority(1)
-      setEditStatus("Not Started")
+      setEditStatus("In Progress")
       setProgressNotes("")
       setCurrentView("checkin")
       setSuccessMessage("Goal updated successfully!")
@@ -610,7 +610,7 @@ export function CMCheckinModal({
           <div className="space-y-6">
             {/* Client Name Heading */}
             <div>
-              <h2 className="text-lg font-medium text-gray-900">{clientName}</h2>
+              <h2 className="text-lg font-medium bg-black text-white px-3 py-2 rounded">{clientName}</h2>
             </div>
 
             {editingCheckinId && (
@@ -629,7 +629,55 @@ export function CMCheckinModal({
               </div>
             )}
 
-            {/* Notes Field */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="checkin-type" className="text-sm font-medium">
+                  Check-In Type
+                </Label>
+                <select
+                  id="checkin-type"
+                  value={checkinType}
+                  onChange={(e) => setCheckinType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Initial Assessment">Initial Assessment</option>
+                  <option value="Follow-Up">Follow-Up</option>
+                  <option value="Reassessment">Reassessment</option>
+                  <option value="Crisis Intervention">Crisis Intervention</option>
+                </select>
+              </div>
+
+              {/* Service Type checkboxes */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Service Type</Label>
+                <div className="space-y-2">
+                  {["Case Management", "Housing Support", "Benefits Assistance"].map((service) => (
+                    <div key={service} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`service-${service.replace(/\s+/g, "-").toLowerCase()}`}
+                        checked={serviceType.includes(service)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setServiceType((prev) => [...prev, service])
+                          } else {
+                            setServiceType((prev) => prev.filter((s) => s !== service))
+                          }
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <Label
+                        htmlFor={`service-${service.replace(/\s+/g, "-").toLowerCase()}`}
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        {service}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="notes" className="text-sm font-medium">
                 Check-In Notes
@@ -653,45 +701,10 @@ export function CMCheckinModal({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="checkin-type" className="text-sm font-medium">
-                  Check-In Type
-                </Label>
-                <select
-                  id="checkin-type"
-                  value={checkinType}
-                  onChange={(e) => setCheckinType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Initial Assessment">Initial Assessment</option>
-                  <option value="Follow-Up">Follow-Up</option>
-                  <option value="Reassessment">Reassessment</option>
-                  <option value="Crisis Intervention">Crisis Intervention</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="service-type" className="text-sm font-medium">
-                  Service Type
-                </Label>
-                <select
-                  id="service-type"
-                  value={serviceType}
-                  onChange={(e) => setServiceType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Case Management">Case Management</option>
-                  <option value="Housing Support">Housing Support</option>
-                  <option value="Benefits Assistance">Benefits Assistance</option>
-                </select>
-              </div>
-            </div>
-
             {/* Goals Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-medium text-gray-900">CM Goals</h3>
+                <h3 className="text-base font-medium text-gray-900">Client CM Goals</h3>
                 <Button variant="outline" size="sm" onClick={() => setCurrentView("new-goal")} className="text-sm">
                   <Plus className="h-4 w-4 mr-1" />
                   New CM Goal
@@ -832,6 +845,11 @@ export function CMCheckinModal({
               Back to Check-In
             </Button>
 
+            {/* Client Name Heading */}
+            <div>
+              <h2 className="text-lg font-medium bg-black text-white px-3 py-2 rounded">{clientName}</h2>
+            </div>
+
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="goal-text" className="text-sm font-medium">
@@ -871,11 +889,9 @@ export function CMCheckinModal({
                     onChange={(e) => setPriority(Number(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value={1}>1 - Low</option>
-                    <option value={2}>2 - Medium Low</option>
-                    <option value={3}>3 - Medium</option>
-                    <option value={4}>4 - Medium High</option>
-                    <option value={5}>5 - High</option>
+                    <option value={1}>1 - High</option>
+                    <option value={2}>2 - Medium</option>
+                    <option value={3}>3 - Low</option>
                   </select>
                 </div>
 
@@ -889,7 +905,6 @@ export function CMCheckinModal({
                     onChange={(e) => setStatus(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="Not Started">Not Started</option>
                     <option value="In Progress">In Progress</option>
                     <option value="Completed">Completed</option>
                     <option value="Deferred">Deferred</option>
@@ -921,6 +936,11 @@ export function CMCheckinModal({
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back to Check-In
             </Button>
+
+            {/* Client Name Heading */}
+            <div>
+              <h2 className="text-lg font-medium bg-black text-white px-3 py-2 rounded">{clientName}</h2>
+            </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
@@ -961,11 +981,9 @@ export function CMCheckinModal({
                     onChange={(e) => setEditPriority(Number(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value={1}>1 - Low</option>
-                    <option value={2}>2 - Medium Low</option>
-                    <option value={3}>3 - Medium</option>
-                    <option value={4}>4 - Medium High</option>
-                    <option value={5}>5 - High</option>
+                    <option value={1}>1 - High</option>
+                    <option value={2}>2 - Medium</option>
+                    <option value={3}>3 - Low</option>
                   </select>
                 </div>
 
@@ -979,7 +997,6 @@ export function CMCheckinModal({
                     onChange={(e) => setEditStatus(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="Not Started">Not Started</option>
                     <option value="In Progress">In Progress</option>
                     <option value="Completed">Completed</option>
                     <option value="Deferred">Deferred</option>
