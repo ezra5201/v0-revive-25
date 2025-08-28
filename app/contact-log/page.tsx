@@ -15,7 +15,7 @@ import { useContacts } from "@/hooks/use-contacts"
 import { useDatabase } from "@/hooks/use-database"
 import { X } from "lucide-react"
 
-type MainTab = "today" | "all" | "client"
+type MainTab = "today" | "client"
 type ClientSection = "basic-info" | "contact-history" | "journey-timeline"
 
 export default function ContactLogPage() {
@@ -50,8 +50,6 @@ export default function ContactLogPage() {
       setActiveTab("client")
       setSelectedClient(name)
       setActiveClientSection((section as ClientSection) || "basic-info")
-    } else if (tab === "all") {
-      setActiveTab("all")
     } else if (tab === "today") {
       setActiveTab("today")
     } else {
@@ -79,8 +77,6 @@ export default function ContactLogPage() {
         params.set("tab", "client")
         params.set("name", clientName)
         params.set("section", section || "basic-info")
-      } else if (tab === "all") {
-        params.set("tab", "all")
       } else if (tab === "today") {
         params.set("tab", "today")
       }
@@ -100,10 +96,10 @@ export default function ContactLogPage() {
 
   // NEW: Close client tab handler
   const handleCloseClientTab = useCallback(() => {
-    setActiveTab("all")
+    setActiveTab("today")
     setSelectedClient(null)
     setActiveClientSection("basic-info")
-    updateURL("all")
+    updateURL("today")
   }, [updateURL])
 
   // NEW: Client section change handler
@@ -218,16 +214,6 @@ export default function ContactLogPage() {
               }`}
             >
               Today's Check-ins
-            </button>
-            <button
-              onClick={() => handleTabChange("all")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "all"
-                  ? "border-orange-500 text-orange-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              All Clients
             </button>
 
             {/* Updated client tab visibility logic to match standardized pattern */}
