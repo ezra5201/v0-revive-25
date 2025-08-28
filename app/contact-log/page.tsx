@@ -8,6 +8,7 @@ import { NewProspectDialog } from "@/components/new-prospect-dialog"
 import { ChangeDateDialog } from "@/components/change-date-dialog"
 import { UpdateServicesDialog } from "@/components/update-services-dialog"
 import { ClientMasterRecord } from "@/components/client-master-record"
+import { ClientVisualizationView } from "@/components/client-visualization-view"
 import { Header } from "@/components/header"
 import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
@@ -16,7 +17,8 @@ import { useDatabase } from "@/hooks/use-database"
 import { X } from "lucide-react"
 
 type MainTab = "today" | "client"
-type ClientSection = "basic-info" | "contact-history" | "journey-timeline"
+type ClientSection = "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-checkins"
+type ViewMode = "list" | "visual"
 
 export default function ContactLogPage() {
   const searchParams = useSearchParams()
@@ -26,6 +28,7 @@ export default function ContactLogPage() {
   const [activeTab, setActiveTab] = useState<MainTab>("today")
   const [selectedClient, setSelectedClient] = useState<string | null>(null)
   const [activeClientSection, setActiveClientSection] = useState<ClientSection>("basic-info")
+  const [currentView, setCurrentView] = useState<ViewMode>("list")
 
   // Existing state (PRESERVED)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -45,15 +48,16 @@ export default function ContactLogPage() {
     const tab = searchParams.get("tab")
     const name = searchParams.get("name")
     const section = searchParams.get("section")
+    const view = searchParams.get("view")
 
     if (tab === "client" && name) {
       setActiveTab("client")
       setSelectedClient(name)
       setActiveClientSection((section as ClientSection) || "basic-info")
+      setCurrentView((view as ViewMode) || "list")
     } else if (tab === "today") {
       setActiveTab("today")
     } else {
-      // No tab parameter - redirect to today with parameter
       router.replace("/contact-log?tab=today")
       setActiveTab("today")
     }
@@ -70,13 +74,14 @@ export default function ContactLogPage() {
   } = useContacts(activeTab === "client" ? "all" : activeTab, filters)
 
   const updateURL = useCallback(
-    (tab: MainTab, clientName?: string, section?: ClientSection) => {
+    (tab: MainTab, clientName?: string, section?: ClientSection, view?: ViewMode) => {
       const params = new URLSearchParams()
 
       if (tab === "client" && clientName) {
         params.set("tab", "client")
         params.set("name", clientName)
         params.set("section", section || "basic-info")
+        params.set("view", view || "list")
       } else if (tab === "today") {
         params.set("tab", "today")
       }
@@ -99,6 +104,7 @@ export default function ContactLogPage() {
     setActiveTab("today")
     setSelectedClient(null)
     setActiveClientSection("basic-info")
+    setCurrentView("list")
     updateURL("today")
   }, [updateURL])
 
@@ -107,10 +113,20 @@ export default function ContactLogPage() {
     (section: ClientSection) => {
       setActiveClientSection(section)
       if (selectedClient) {
-        updateURL("client", selectedClient, section)
+        updateURL("client", selectedClient, section, currentView)
       }
     },
-    [selectedClient, updateURL],
+    [selectedClient, currentView, updateURL],
+  )
+
+  const handleViewChange = useCallback(
+    (view: ViewMode) => {
+      setCurrentView(view)
+      if (selectedClient) {
+        updateURL("client", selectedClient, activeClientSection, view)
+      }
+    },
+    [selectedClient, activeClientSection, updateURL],
   )
 
   // PRESERVED: Existing handlers
@@ -141,15 +157,16 @@ export default function ContactLogPage() {
       if (tab !== "client") {
         setSelectedClient(null)
         setActiveClientSection("basic-info")
+        setCurrentView("list")
       }
 
       if (tab === "client" && selectedClient) {
-        updateURL(tab, selectedClient, activeClientSection)
+        updateURL(tab, selectedClient, activeClientSection, currentView)
       } else {
         updateURL(tab)
       }
     },
-    [updateURL, selectedClient, activeClientSection],
+    [updateURL, selectedClient, activeClientSection, currentView],
   )
 
   const handleSelectionChange = useCallback((count: number, selectedIds: number[]) => {
@@ -270,22 +287,30 @@ export default function ContactLogPage() {
               onClientClick={handleClientClick}
               onSelectionChange={handleSelectionChange}
               onUpdateServicesClick={handleUpdateServicesClick}
-              onClientRowClick={handleClientRowClick} // NEW: Pass client row click handler
+              onClientRowClick={handleClientRowClick}
             />
           </main>
         </>
       )}
 
-      {/* NEW: Client Master Record */}
+      {/* Enhanced Client Master Record with full clients page functionality */}
       {activeTab === "client" && selectedClient && (
-        <main>
-          <ClientMasterRecord
-            clientName={selectedClient}
-            activeSection={activeClientSection}
-            onSectionChange={handleClientSectionChange}
-            context="contact-log"
-          />
-        </main>
+        <>
+          <main>
+            <ClientMasterRecord
+              clientName={selectedClient}
+              activeSection={activeClientSection}
+              onSectionChange={handleClientSectionChange}
+              context="contact-log"
+              currentView={currentView}
+              onViewChange={handleViewChange}
+              showContentOnly={currentView === "visual"}
+            />
+            {currentView === "visual" && (
+              <ClientVisualizationView clientName={selectedClient} activeSection={activeClientSection} />
+            )}
+          </main>
+        </>
       )}
 
       {/* PRESERVED: All existing dialogs */}
@@ -309,7 +334,6 @@ export default function ContactLogPage() {
         onClose={() => setIsChangeDateDialogOpen(false)}
         selectedCount={selectedCount}
         onDateChange={async (newDate: string) => {
-          // Handle date change logic
           handleDataUpdate()
         }}
       />
