@@ -42,7 +42,7 @@ export function CMCheckinModal({
   const [currentView, setCurrentView] = useState<"checkin" | "new-goal" | "edit-goal">("checkin")
   const [notes, setNotes] = useState("")
   const [checkinType, setCheckinType] = useState("Initial Assessment")
-  const [serviceType, setServiceType] = useState("Case Management")
+  const [serviceType, setServiceType] = useState<string[]>(["Case Management"])
   const [checkinDate, setCheckinDate] = useState("")
   const [originalCheckinDate, setOriginalCheckinDate] = useState("")
   const [goals, setGoals] = useState<Goal[]>([])
@@ -96,7 +96,7 @@ export function CMCheckinModal({
       setCurrentView("checkin")
       setNotes("")
       setCheckinType("Initial Assessment")
-      setServiceType("Case Management")
+      setServiceType(["Case Management"])
       setGoalText("")
       setTargetDate("")
       setPriority(1)
@@ -356,7 +356,7 @@ export function CMCheckinModal({
       const updateData = {
         notes: notes,
         checkin_type: checkinType,
-        service_type: serviceType,
+        service_type: serviceType.join(", "),
         status: "Draft",
       }
 
@@ -410,7 +410,7 @@ export function CMCheckinModal({
       const updateData = {
         notes: notes,
         checkin_type: checkinType,
-        service_type: serviceType,
+        service_type: serviceType.join(", "),
         status: "Completed",
       }
 
@@ -610,7 +610,7 @@ export function CMCheckinModal({
           <div className="space-y-6">
             {/* Client Name Heading */}
             <div>
-              <h2 className="text-lg font-medium text-gray-900">{clientName}</h2>
+              <h2 className="text-lg font-medium bg-black text-white px-3 py-2 rounded">{clientName}</h2>
             </div>
 
             {editingCheckinId && (
@@ -671,20 +671,34 @@ export function CMCheckinModal({
                 </select>
               </div>
 
+              {/* Service Type checkboxes */}
               <div className="space-y-2">
-                <Label htmlFor="service-type" className="text-sm font-medium">
-                  Service Type
-                </Label>
-                <select
-                  id="service-type"
-                  value={serviceType}
-                  onChange={(e) => setServiceType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Case Management">Case Management</option>
-                  <option value="Housing Support">Housing Support</option>
-                  <option value="Benefits Assistance">Benefits Assistance</option>
-                </select>
+                <Label className="text-sm font-medium">Service Type</Label>
+                <div className="space-y-2">
+                  {["Case Management", "Housing Support", "Benefits Assistance"].map((service) => (
+                    <div key={service} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`service-${service.replace(/\s+/g, "-").toLowerCase()}`}
+                        checked={serviceType.includes(service)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setServiceType((prev) => [...prev, service])
+                          } else {
+                            setServiceType((prev) => prev.filter((s) => s !== service))
+                          }
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label
+                        htmlFor={`service-${service.replace(/\s+/g, "-").toLowerCase()}`}
+                        className="text-sm text-gray-700"
+                      >
+                        {service}
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
