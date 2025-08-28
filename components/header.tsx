@@ -7,7 +7,37 @@ import { useRouter, usePathname } from "next/navigation"
 import { AlertHeaderIndicator } from "./alert-header-indicator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DatabaseStatsModal } from "./database-stats-modal"
-import Image from "next/image"
+
+const ReViveLogo = () => (
+  <svg width="160" height="40" viewBox="0 0 320 80" className="h-8 sm:h-10 w-auto">
+    {/* Blue geometric icon */}
+    <g transform="translate(10, 20)">
+      <circle cx="20" cy="20" r="18" fill="#1e40af" opacity="0.1" />
+      <circle cx="20" cy="20" r="12" fill="#1e40af" opacity="0.2" />
+      <circle cx="20" cy="20" r="6" fill="#1e40af" />
+      <polygon points="20,8 28,16 20,24 12,16" fill="#3b82f6" />
+      <polygon points="20,4 32,20 20,36 8,20" fill="#60a5fa" opacity="0.6" />
+    </g>
+
+    {/* ReVive text */}
+    <text x="60" y="35" fontFamily="Arial, sans-serif" fontSize="24" fontWeight="bold" fill="#1e40af">
+      ReVive
+    </text>
+
+    {/* IMPACT text */}
+    <text
+      x="160"
+      y="35"
+      fontFamily="Arial, sans-serif"
+      fontSize="24"
+      fontWeight="bold"
+      fill="#f97316"
+      fontStyle="italic"
+    >
+      IMPACT
+    </text>
+  </svg>
+)
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -40,14 +70,7 @@ export function Header() {
           {/* Left side - Logo and Navigation */}
           <div className="flex items-center space-x-4 sm:space-x-8">
             <div className="flex items-center">
-              <Image
-                src="/ReVive-IMPACT-Logo.png"
-                alt="ReVive IMPACT"
-                width={160}
-                height={40}
-                className="h-8 sm:h-10 w-auto"
-                priority
-              />
+              <ReViveLogo />
             </div>
 
             {/* Desktop Navigation */}
