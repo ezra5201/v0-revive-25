@@ -34,8 +34,8 @@ interface OTCheckinModalProps {
 function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, editingCheckinId }: OTCheckinModalProps) {
   const [currentView, setCurrentView] = useState<"checkin" | "new-goal" | "edit-goal">("checkin")
   const [notes, setNotes] = useState("")
-  const [checkinType, setCheckinType] = useState("Evaluation")
-  const [serviceType, setServiceType] = useState("Direct")
+  const [checkinType, setCheckinType] = useState("Direct")
+  const [serviceType, setServiceType] = useState<string[]>(["Evaluation"])
   const [checkinDate, setCheckinDate] = useState("")
   const [originalCheckinDate, setOriginalCheckinDate] = useState("")
   const [goals, setGoals] = useState<OTGoal[]>([])
@@ -91,8 +91,8 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
     if (!isOpen) {
       setCurrentView("checkin")
       setNotes("")
-      setCheckinType("Evaluation")
-      setServiceType("Direct")
+      setCheckinType("Direct")
+      setServiceType(["Evaluation"])
       setGoalText("")
       setTargetDate("")
       setPriority(1)
@@ -697,7 +697,7 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
         {currentView === "checkin" && !creatingCheckin ? (
           <div className="space-y-6">
             <div>
-              <h2 className="text-lg font-medium text-gray-900">{clientName}</h2>
+              <h2 className="bg-black text-white px-3 py-2 rounded text-lg font-medium">{clientName}</h2>
             </div>
 
             {editingCheckinId && (
@@ -715,6 +715,56 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
                 <div className="text-xs text-gray-500">Can be back-dated up to 45 days from the original date</div>
               </div>
             )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Check-In Type</Label>
+                <div className="space-y-2">
+                  {["Direct", "Indirect", "Advocacy"].map((type) => (
+                    <div key={type} className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id={`checkin-${type.toLowerCase()}`}
+                        name="checkin-type"
+                        value={type}
+                        checked={checkinType === type}
+                        onChange={(e) => setCheckinType(e.target.value)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <Label htmlFor={`checkin-${type.toLowerCase()}`} className="text-sm">
+                        {type}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Service Type</Label>
+                <div className="space-y-2">
+                  {["Evaluation", "Follow-Up", "Reassessment", "Healthcare Support"].map((service) => (
+                    <div key={service} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`service-${service.toLowerCase().replace(/\s+/g, "-")}`}
+                        checked={serviceType.includes(service)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setServiceType([...serviceType, service])
+                          } else {
+                            setServiceType(serviceType.filter((s) => s !== service))
+                          }
+                        }}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <Label htmlFor={`service-${service.toLowerCase().replace(/\s+/g, "-")}`} className="text-sm">
+                        {service}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="notes" className="text-sm font-medium">
@@ -739,41 +789,9 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="checkin-type" className="text-sm font-medium">
-                  Check-In Type
-                </Label>
-                <select
-                  id="checkin-type"
-                  value={checkinType}
-                  onChange={(e) => setCheckinType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Evaluation">Evaluation</option>
-                  <option value="Follow-UP">Follow-UP</option>
-                  <option value="Reassessment">Reassessment</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="service-type" className="text-sm font-medium">
-                  Service Type
-                </Label>
-                <select
-                  id="service-type"
-                  value={serviceType}
-                  onChange={(e) => setServiceType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Direct">Direct</option>
-                </select>
-              </div>
-            </div>
-
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-medium text-gray-900">OT Goals</h3>
+                <h3 className="text-base font-medium text-gray-900">Client OT Goals</h3>
                 <Button variant="outline" size="sm" onClick={() => setCurrentView("new-goal")} className="text-sm">
                   <Plus className="h-4 w-4 mr-1" />
                   New OT Goal
@@ -909,6 +927,10 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
               Back to Check-In
             </Button>
 
+            <div>
+              <h2 className="bg-black text-white px-3 py-2 rounded text-lg font-medium">{clientName}</h2>
+            </div>
+
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="goal-text" className="text-sm font-medium">
@@ -997,6 +1019,10 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back to Check-In
             </Button>
+
+            <div>
+              <h2 className="bg-black text-white px-3 py-2 rounded text-lg font-medium">{clientName}</h2>
+            </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
