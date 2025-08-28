@@ -697,7 +697,7 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
         {currentView === "checkin" && !creatingCheckin ? (
           <div className="space-y-6">
             <div>
-              <h2 className="text-lg font-medium text-gray-900">{clientName}</h2>
+              <h2 className="bg-black text-white px-3 py-2 rounded text-lg font-medium">{clientName}</h2>
             </div>
 
             {editingCheckinId && (
@@ -773,7 +773,7 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-medium text-gray-900">OT Goals</h3>
+                <h3 className="text-base font-medium text-gray-900">Client OT Goals</h3>
                 <Button variant="outline" size="sm" onClick={() => setCurrentView("new-goal")} className="text-sm">
                   <Plus className="h-4 w-4 mr-1" />
                   New OT Goal
@@ -909,6 +909,10 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
               Back to Check-In
             </Button>
 
+            <div>
+              <h2 className="bg-black text-white px-3 py-2 rounded text-lg font-medium">{clientName}</h2>
+            </div>
+
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="goal-text" className="text-sm font-medium">
@@ -997,6 +1001,10 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back to Check-In
             </Button>
+
+            <div>
+              <h2 className="bg-black text-white px-3 py-2 rounded text-lg font-medium">{clientName}</h2>
+            </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
