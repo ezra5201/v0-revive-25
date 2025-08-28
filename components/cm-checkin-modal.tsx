@@ -701,59 +701,10 @@ export function CMCheckinModal({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="checkin-type" className="text-sm font-medium">
-                  Check-In Type
-                </Label>
-                <select
-                  id="checkin-type"
-                  value={checkinType}
-                  onChange={(e) => setCheckinType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Initial Assessment">Initial Assessment</option>
-                  <option value="Follow-Up">Follow-Up</option>
-                  <option value="Reassessment">Reassessment</option>
-                  <option value="Crisis Intervention">Crisis Intervention</option>
-                </select>
-              </div>
-
-              {/* Service Type checkboxes */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Service Type</Label>
-                <div className="space-y-2">
-                  {["Case Management", "Housing Support", "Benefits Assistance"].map((service) => (
-                    <div key={service} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`service-${service.replace(/\s+/g, "-").toLowerCase()}`}
-                        checked={serviceType.includes(service)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setServiceType((prev) => [...prev, service])
-                          } else {
-                            setServiceType((prev) => prev.filter((s) => s !== service))
-                          }
-                        }}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <Label
-                        htmlFor={`service-${service.replace(/\s+/g, "-").toLowerCase()}`}
-                        className="text-sm font-medium cursor-pointer"
-                      >
-                        {service}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
             {/* Goals Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-medium text-gray-900">CM Goals</h3>
+                <h3 className="text-base font-medium text-gray-900">Client CM Goals</h3>
                 <Button variant="outline" size="sm" onClick={() => setCurrentView("new-goal")} className="text-sm">
                   <Plus className="h-4 w-4 mr-1" />
                   New CM Goal
