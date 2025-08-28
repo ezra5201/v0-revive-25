@@ -61,10 +61,13 @@ export function useOTContacts(
 
       const params = new URLSearchParams({
         tab,
-        serviceFilter: "ot", // This is the key difference from CM
         sortColumn,
         sortDirection,
       })
+
+      if (tab !== "today") {
+        params.set("serviceFilter", "ot") // Only filter by OT services for "all" tab
+      }
 
       if (categories.length > 0) {
         params.append("categories", categories.join(","))
@@ -83,8 +86,8 @@ export function useOTContacts(
 
       setContacts(data.contacts || [])
 
-      // For filter data, we need to fetch all OT contacts to get proper filter options
-      const filterResponse = await fetch("/api/filters?serviceFilter=ot")
+      const filterParams = tab !== "today" ? "?serviceFilter=ot" : ""
+      const filterResponse = await fetch(`/api/filters${filterParams}`)
       if (filterResponse.ok) {
         const filterData = await filterResponse.json()
         setFilterData(filterData)

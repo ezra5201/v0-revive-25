@@ -52,7 +52,10 @@ export function useCMContacts(activeTab: "today" | "all", filters: Filters) {
     try {
       const params = new URLSearchParams()
       params.set("tab", activeTab)
-      params.set("serviceFilter", "cm") // Always add CM filter
+
+      if (activeTab !== "today") {
+        params.set("serviceFilter", "cm") // Only filter by CM services for "all" tab
+      }
 
       if (activeTab === "all") {
         if (filters.categories.length) {
