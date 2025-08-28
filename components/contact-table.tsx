@@ -276,6 +276,7 @@ export function ContactTable({
             servicesRequested={contact.servicesRequested || []}
             servicesProvided={contact.servicesProvided || []}
             className="text-sm"
+            variant="badges"
           />
         </div>
       )}
@@ -414,6 +415,7 @@ export function ContactTable({
                       <ServicesDisplay
                         servicesRequested={row.servicesRequested || []}
                         servicesProvided={row.servicesProvided || []}
+                        variant="badges"
                       />
                     </td>
                     <td className="px-3 py-4 text-sm text-gray-600 max-w-xs" onClick={(e) => e.stopPropagation()}>
