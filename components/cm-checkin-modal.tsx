@@ -60,14 +60,14 @@ export function CMCheckinModal({
   const [goalText, setGoalText] = useState("")
   const [targetDate, setTargetDate] = useState("")
   const [priority, setPriority] = useState(1)
-  const [status, setStatus] = useState("Not Started")
+  const [status, setStatus] = useState("In Progress")
   const [savingGoal, setSavingGoal] = useState(false)
 
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
   const [editGoalText, setEditGoalText] = useState("")
   const [editTargetDate, setEditTargetDate] = useState("")
   const [editPriority, setEditPriority] = useState(1)
-  const [editStatus, setEditStatus] = useState("Not Started")
+  const [editStatus, setEditStatus] = useState("In Progress")
   const [progressNotes, setProgressNotes] = useState("")
   const [savingGoalUpdate, setSavingGoalUpdate] = useState(false)
 
@@ -100,12 +100,12 @@ export function CMCheckinModal({
       setGoalText("")
       setTargetDate("")
       setPriority(1)
-      setStatus("Not Started")
+      setStatus("In Progress")
       setEditingGoal(null)
       setEditGoalText("")
       setEditTargetDate("")
       setEditPriority(1)
-      setEditStatus("Not Started")
+      setEditStatus("In Progress")
       setProgressNotes("")
       setError(null)
       setSuccessMessage(null)
@@ -328,7 +328,7 @@ export function CMCheckinModal({
         setGoalText("")
         setTargetDate("")
         setPriority(1)
-        setStatus("Not Started")
+        setStatus("In Progress")
         setCurrentView("checkin")
         setSuccessMessage("Goal created successfully!")
         setTimeout(() => setSuccessMessage(null), 3000)
@@ -516,7 +516,7 @@ export function CMCheckinModal({
       setEditGoalText("")
       setEditTargetDate("")
       setEditPriority(1)
-      setEditStatus("Not Started")
+      setEditStatus("In Progress")
       setProgressNotes("")
       setCurrentView("checkin")
       setSuccessMessage("Goal updated successfully!")
@@ -846,6 +846,11 @@ export function CMCheckinModal({
               Back to Check-In
             </Button>
 
+            {/* Client Name Heading */}
+            <div>
+              <h2 className="text-lg font-medium bg-black text-white px-3 py-2 rounded">{clientName}</h2>
+            </div>
+
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="goal-text" className="text-sm font-medium">
@@ -885,11 +890,9 @@ export function CMCheckinModal({
                     onChange={(e) => setPriority(Number(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value={1}>1 - Low</option>
-                    <option value={2}>2 - Medium Low</option>
-                    <option value={3}>3 - Medium</option>
-                    <option value={4}>4 - Medium High</option>
-                    <option value={5}>5 - High</option>
+                    <option value={1}>1 - High</option>
+                    <option value={2}>2 - Medium</option>
+                    <option value={3}>3 - Low</option>
                   </select>
                 </div>
 
@@ -903,7 +906,6 @@ export function CMCheckinModal({
                     onChange={(e) => setStatus(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="Not Started">Not Started</option>
                     <option value="In Progress">In Progress</option>
                     <option value="Completed">Completed</option>
                     <option value="Deferred">Deferred</option>
@@ -935,6 +937,11 @@ export function CMCheckinModal({
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back to Check-In
             </Button>
+
+            {/* Client Name Heading */}
+            <div>
+              <h2 className="text-lg font-medium bg-black text-white px-3 py-2 rounded">{clientName}</h2>
+            </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
@@ -975,11 +982,9 @@ export function CMCheckinModal({
                     onChange={(e) => setEditPriority(Number(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value={1}>1 - Low</option>
-                    <option value={2}>2 - Medium Low</option>
-                    <option value={3}>3 - Medium</option>
-                    <option value={4}>4 - Medium High</option>
-                    <option value={5}>5 - High</option>
+                    <option value={1}>1 - High</option>
+                    <option value={2}>2 - Medium</option>
+                    <option value={3}>3 - Low</option>
                   </select>
                 </div>
 
@@ -993,7 +998,6 @@ export function CMCheckinModal({
                     onChange={(e) => setEditStatus(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="Not Started">Not Started</option>
                     <option value="In Progress">In Progress</option>
                     <option value="Completed">Completed</option>
                     <option value="Deferred">Deferred</option>
