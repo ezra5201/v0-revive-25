@@ -5,7 +5,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ServicesDisplay } from "./services-display"
 import { ServiceTooltip } from "./service-tooltip"
 import { Button } from "@/components/ui/button"
-import { MessageSquare, AlertTriangle, UserX, Calendar, Tag } from "lucide-react"
+import { MessageSquare, AlertTriangle, UserX, Calendar, Tag, Settings } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface Contact {
   id: number
@@ -53,6 +54,7 @@ export function ContactTable({
   const [sortColumn, setSortColumn] = useState<string>("date")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const [clearingAlert, setClearingAlert] = useState<string | null>(null)
+  const [servicesVariant, setServicesVariant] = useState<"default" | "badges" | "dots" | "cards" | "progress">("badges")
 
   const handleSort = useCallback(
     (column: string) => {
@@ -128,59 +130,13 @@ export function ContactTable({
     [onUpdateServicesClick],
   )
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="bg-white">
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mx-auto mb-4" />
-            <p className="text-gray-600">Loading contacts...</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="bg-white">
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-              <div className="h-6 w-6 text-red-600">⚠</div>
-            </div>
-            <p className="text-red-600 font-medium">Error loading contacts</p>
-            <p className="text-gray-600 text-sm mt-1">{error}</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Empty state
-  if (safeContacts.length === 0) {
-    return (
-      <div className="bg-white">
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-              <div className="h-6 w-6 text-blue-600">👋</div>
-            </div>
-            <p className="text-gray-900 font-medium">
-              {activeTab === "today" ? "No check-ins today yet" : "No contacts found"}
-            </p>
-            <p className="text-gray-600 text-sm mt-1">
-              {activeTab === "today"
-                ? "Use the search above to find people and check them in, or create new prospects."
-                : "Try adjusting your filters or add some contacts."}
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const variantOptions = [
+    { value: "default" as const, label: "Default (Icons)" },
+    { value: "badges" as const, label: "Colored Badges" },
+    { value: "dots" as const, label: "Large Dots" },
+    { value: "cards" as const, label: "Card Style" },
+    { value: "progress" as const, label: "Progress Bar" },
+  ]
 
   const getRowBackgroundColor = (hasAlert?: boolean) => {
     if (hasAlert) {
@@ -204,7 +160,6 @@ export function ContactTable({
     }
   }
 
-  // Mobile Card Component
   const ContactCard = ({ contact }: { contact: Contact }) => (
     <div
       className={`p-4 border rounded-lg cursor-pointer transition-colors ${getRowBackgroundColor(contact.hasAlert)}`}
@@ -276,6 +231,7 @@ export function ContactTable({
             servicesRequested={contact.servicesRequested || []}
             servicesProvided={contact.servicesProvided || []}
             className="text-sm"
+            variant={servicesVariant}
           />
         </div>
       )}
@@ -305,6 +261,37 @@ export function ContactTable({
 
   return (
     <div className="bg-white">
+      {/* Services Display Variant Switcher */}
+      {activeTab === "today" && safeContacts.length > 0 && (
+        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Settings className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Services Display:</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 bg-transparent">
+                    {variantOptions.find((option) => option.value === servicesVariant)?.label}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {variantOptions.map((option) => (
+                    <DropdownMenuItem
+                      key={option.value}
+                      onClick={() => setServicesVariant(option.value)}
+                      className={servicesVariant === option.value ? "bg-blue-50 text-blue-700" : ""}
+                    >
+                      {option.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <div className="text-xs text-gray-500">Test different visualizations</div>
+          </div>
+        </div>
+      )}
+
       {/* Desktop Table View */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
@@ -414,6 +401,7 @@ export function ContactTable({
                       <ServicesDisplay
                         servicesRequested={row.servicesRequested || []}
                         servicesProvided={row.servicesProvided || []}
+                        variant={servicesVariant}
                       />
                     </td>
                     <td className="px-3 py-4 text-sm text-gray-600 max-w-xs" onClick={(e) => e.stopPropagation()}>

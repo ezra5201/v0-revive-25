@@ -11,6 +11,7 @@ interface ServicesDisplayProps {
     completedAt: string
   }>
   className?: string
+  variant?: "default" | "badges" | "progress" | "dots" | "cards"
 }
 
 const SERVICE_LABELS: { [key: string]: string } = {
@@ -30,14 +31,12 @@ export function ServicesDisplay({
   servicesRequested = [],
   servicesProvided = [],
   className = "",
+  variant = "default",
 }: ServicesDisplayProps) {
-  // Now always safe:
   const requested = Array.isArray(servicesRequested) ? servicesRequested : []
   const provided = Array.isArray(servicesProvided) ? servicesProvided : []
-  // All possible services
   const allServices = Object.keys(SERVICE_LABELS)
 
-  // Create service status map
   const serviceStatuses: { [key: string]: Service } = {}
 
   allServices.forEach((service) => {
@@ -113,13 +112,12 @@ export function ServicesDisplay({
     }
   }
 
-  return (
+  const renderDefault = () => (
     <div className={`flex flex-wrap gap-1 sm:gap-2 ${className}`}>
       {allServices.map((serviceName) => {
         const service = serviceStatuses[serviceName]
         const label = SERVICE_LABELS[serviceName]
 
-        // Show provider in parentheses for CM and OT services when provided
         const displayLabel =
           service.status === "provided" &&
           service.provider &&
@@ -146,4 +144,193 @@ export function ServicesDisplay({
       })}
     </div>
   )
+
+  const renderBadges = () => (
+    <div className={`flex flex-wrap gap-1 sm:gap-2 ${className}`}>
+      {allServices.map((serviceName) => {
+        const service = serviceStatuses[serviceName]
+        const label = SERVICE_LABELS[serviceName]
+
+        const getBadgeStyle = (service: Service) => {
+          switch (service.status) {
+            case "provided":
+              return "bg-green-100 text-green-800 border-green-200"
+            case "requested":
+              return "bg-blue-100 text-blue-800 border-blue-200"
+            case "available_unused":
+              return "bg-orange-100 text-orange-800 border-orange-200"
+            case "not_requested":
+            default:
+              return "bg-gray-50 text-gray-500 border-gray-200"
+          }
+        }
+
+        const displayLabel =
+          service.status === "provided" &&
+          service.provider &&
+          (serviceName === "Case Management" || serviceName === "Occupational")
+            ? `${label} (${service.provider
+                .split(" ")
+                .map((n) => n[0])
+                .join("")})`
+            : label
+
+        return (
+          <ServiceTooltip key={serviceName} content={getTooltipContent(service)}>
+            <span
+              className={`inline-flex items-center text-xs font-medium px-2 py-1 rounded-full border cursor-help transition-colors ${getBadgeStyle(service)}`}
+            >
+              <span className="mr-1">{getStatusIcon(service)}</span>
+              <span className="hidden sm:inline">{displayLabel}</span>
+              <span className="sm:hidden font-bold">{label.substring(0, 2)}</span>
+            </span>
+          </ServiceTooltip>
+        )
+      })}
+    </div>
+  )
+
+  const renderDots = () => (
+    <div className={`flex flex-wrap gap-2 sm:gap-3 ${className}`}>
+      {allServices.map((serviceName) => {
+        const service = serviceStatuses[serviceName]
+        const label = SERVICE_LABELS[serviceName]
+
+        const getDotStyle = (service: Service) => {
+          switch (service.status) {
+            case "provided":
+              return "bg-green-500 ring-green-200"
+            case "requested":
+              return "bg-blue-500 ring-blue-200"
+            case "available_unused":
+              return "bg-orange-500 ring-orange-200"
+            case "not_requested":
+            default:
+              return "bg-gray-300 ring-gray-100"
+          }
+        }
+
+        const displayLabel =
+          service.status === "provided" &&
+          service.provider &&
+          (serviceName === "Case Management" || serviceName === "Occupational")
+            ? `${label} (${service.provider
+                .split(" ")
+                .map((n) => n[0])
+                .join("")})`
+            : label
+
+        return (
+          <ServiceTooltip key={serviceName} content={getTooltipContent(service)}>
+            <div className="flex flex-col items-center gap-1 cursor-help">
+              <div className={`w-3 h-3 rounded-full ring-2 transition-colors ${getDotStyle(service)}`} />
+              <span className="text-xs text-gray-600 hidden sm:block">{displayLabel}</span>
+              <span className="text-xs text-gray-600 sm:hidden font-bold">{label.substring(0, 2)}</span>
+            </div>
+          </ServiceTooltip>
+        )
+      })}
+    </div>
+  )
+
+  const renderCards = () => (
+    <div className={`flex flex-wrap gap-1 sm:gap-2 ${className}`}>
+      {allServices.map((serviceName) => {
+        const service = serviceStatuses[serviceName]
+        const label = SERVICE_LABELS[serviceName]
+
+        const getCardStyle = (service: Service) => {
+          switch (service.status) {
+            case "provided":
+              return "bg-green-50 border-green-200 shadow-green-100"
+            case "requested":
+              return "bg-blue-50 border-blue-200 shadow-blue-100"
+            case "available_unused":
+              return "bg-orange-50 border-orange-200 shadow-orange-100"
+            case "not_requested":
+            default:
+              return "bg-gray-50 border-gray-200 shadow-gray-100"
+          }
+        }
+
+        const displayLabel =
+          service.status === "provided" &&
+          service.provider &&
+          (serviceName === "Case Management" || serviceName === "Occupational")
+            ? `${label} (${service.provider
+                .split(" ")
+                .map((n) => n[0])
+                .join("")})`
+            : label
+
+        return (
+          <ServiceTooltip key={serviceName} content={getTooltipContent(service)}>
+            <div
+              className={`inline-flex items-center text-xs px-2 py-1 rounded border shadow-sm cursor-help transition-all hover:shadow-md ${getCardStyle(service)}`}
+            >
+              <span className={`mr-1 text-sm ${getIconColor(service)}`}>{getStatusIcon(service)}</span>
+              <span className="hidden sm:inline">{displayLabel}</span>
+              <span className="sm:hidden font-bold">{label.substring(0, 2)}</span>
+            </div>
+          </ServiceTooltip>
+        )
+      })}
+    </div>
+  )
+
+  const renderProgress = () => {
+    const providedCount = allServices.filter((s) => serviceStatuses[s].status === "provided").length
+    const requestedCount = allServices.filter((s) => serviceStatuses[s].status === "requested").length
+    const totalRequested = providedCount + requestedCount
+
+    return (
+      <div className={`space-y-2 ${className}`}>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-green-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: totalRequested > 0 ? `${(providedCount / totalRequested) * 100}%` : "0%" }}
+            />
+          </div>
+          <span className="text-xs text-gray-600 font-medium">
+            {providedCount}/{totalRequested}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {allServices.map((serviceName) => {
+            const service = serviceStatuses[serviceName]
+            const label = SERVICE_LABELS[serviceName]
+
+            if (service.status === "not_requested") return null
+
+            return (
+              <ServiceTooltip key={serviceName} content={getTooltipContent(service)}>
+                <span
+                  className={`inline-flex items-center text-xs px-1 py-0.5 rounded cursor-help ${getIconColor(service)}`}
+                >
+                  <span className="mr-1">{getStatusIcon(service)}</span>
+                  <span className="hidden sm:inline">{label}</span>
+                  <span className="sm:hidden font-bold">{label.substring(0, 2)}</span>
+                </span>
+              </ServiceTooltip>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  switch (variant) {
+    case "badges":
+      return renderBadges()
+    case "dots":
+      return renderDots()
+    case "cards":
+      return renderCards()
+    case "progress":
+      return renderProgress()
+    case "default":
+    default:
+      return renderDefault()
+  }
 }
