@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { AlertTriangle, Clock, User, Plus, Edit } from "lucide-react"
+import { AlertTriangle, Clock, Plus, Edit } from "lucide-react"
 import { CMCheckinModal } from "./cm-checkin-modal"
 import { OTCheckinModal } from "./ot-checkin-modal"
 
@@ -269,6 +269,13 @@ export function UpdateServicesDialog({
     }
   }
 
+  const handleClientInfoClick = () => {
+    if (contactData?.client) {
+      const encodedName = encodeURIComponent(contactData.client)
+      window.location.href = `/contact-log?tab=client&name=${encodedName}&section=basic-info`
+    }
+  }
+
   if (!contactData) return null
 
   return (
@@ -277,14 +284,32 @@ export function UpdateServicesDialog({
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="dialog-description">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between pr-8">
-              <span>Update Services - {contactData.client}</span>
-              {isFromCMTab && (
+              <div className="flex items-center space-x-4">
+                <span>Update Services</span>
+                <div className="flex items-center space-x-2 text-blue-600">
+                  <Clock className="h-4 w-4" />
+                  <span className="text-sm font-normal">Check-in: {contactData.date}</span>
+                </div>
+              </div>
+            </DialogTitle>
+            <div id="dialog-description" className="sr-only">
+              Update services provided for {contactData.client} on {contactData.date}
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <div className="bg-black text-white px-4 py-3 rounded-lg">
+                <span className="font-medium text-lg">{contactData.client}</span>
+              </div>
+
+              <div className="flex gap-3">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleCMCheckinClick}
                   disabled={checkingCheckin}
-                  className="ml-4 bg-transparent mr-2"
+                  className="flex-1 bg-transparent"
                 >
                   {checkingCheckin ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-2" />
@@ -295,14 +320,12 @@ export function UpdateServicesDialog({
                   )}
                   {checkingCheckin ? "Checking..." : hasCheckinToday ? "Edit CM Check-In" : "+ CM Check-In"}
                 </Button>
-              )}
-              {isFromOTTab && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleOTCheckinClick}
                   disabled={checkingOTCheckin}
-                  className="ml-4 bg-transparent mr-2"
+                  className="flex-1 bg-transparent"
                 >
                   {checkingOTCheckin ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-2" />
@@ -313,22 +336,9 @@ export function UpdateServicesDialog({
                   )}
                   {checkingOTCheckin ? "Checking..." : hasOTCheckinToday ? "Edit OT Check-In" : "+ OT Check-In"}
                 </Button>
-              )}
-            </DialogTitle>
-            <div id="dialog-description" className="sr-only">
-              Update services provided for {contactData.client} on {contactData.date}
-            </div>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="flex items-center space-x-2 text-blue-800">
-                <Clock className="h-4 w-4" />
-                <span className="font-medium">Check-in: {contactData.date}</span>
-              </div>
-              <div className="flex items-center space-x-2 text-blue-700 mt-1">
-                <User className="h-4 w-4" />
-                <span>Client: {contactData.client}</span>
+                <Button variant="outline" size="sm" onClick={handleClientInfoClick} className="flex-1 bg-transparent">
+                  Client Info
+                </Button>
               </div>
             </div>
 
