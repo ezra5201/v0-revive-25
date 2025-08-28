@@ -272,7 +272,7 @@ export function UpdateServicesDialog({
   const handleClientInfoClick = () => {
     if (contactData?.client) {
       const encodedName = encodeURIComponent(contactData.client)
-      window.location.href = `/clients?tab=client&name=${encodedName}&section=basic-info`
+      window.location.href = `/contact-log?tab=client&name=${encodedName}&section=basic-info`
     }
   }
 
