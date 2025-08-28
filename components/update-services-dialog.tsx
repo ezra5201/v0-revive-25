@@ -272,7 +272,7 @@ export function UpdateServicesDialog({
   const handleClientInfoClick = () => {
     if (contactData?.client) {
       const encodedName = encodeURIComponent(contactData.client)
-      window.open(`/clients?tab=client&name=${encodedName}&section=basic-info`, "_blank")
+      window.location.href = `/clients?tab=client&name=${encodedName}&section=basic-info`
     }
   }
 
@@ -304,9 +304,6 @@ export function UpdateServicesDialog({
               </div>
 
               <div className="flex gap-3">
-                <Button variant="outline" size="sm" onClick={handleClientInfoClick} className="flex-1 bg-transparent">
-                  Client Info
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -338,6 +335,9 @@ export function UpdateServicesDialog({
                     <Plus className="h-4 w-4 mr-2" />
                   )}
                   {checkingOTCheckin ? "Checking..." : hasOTCheckinToday ? "Edit OT Check-In" : "+ OT Check-In"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleClientInfoClick} className="flex-1 bg-transparent">
+                  Client Info
                 </Button>
               </div>
             </div>
