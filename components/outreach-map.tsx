@@ -38,6 +38,7 @@ export function OutreachMap() {
   const [loading, setLoading] = useState(true)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState<OutreachLocation | null>(null)
+  const [showAllLocations, setShowAllLocations] = useState(false)
 
   // Filters
   const [dateRange, setDateRange] = useState("30") // days
@@ -48,16 +49,32 @@ export function OutreachMap() {
   const mapInstanceRef = useRef<any>(null)
   const markersRef = useRef<any[]>([])
 
-  useEffect(() => {
-    fetchData()
-    loadMap()
-  }, [])
+  const reviveCenter: OutreachLocation = {
+    id: -1, // Use negative ID to distinguish from database locations
+    name: "Revive Center",
+    intersection: "1668 W Ogden Ave",
+    address: "1668 W Ogden Ave, Chicago, IL 60612",
+    latitude: 41.8656,
+    longitude: -87.6693,
+    visit_count: 0,
+    is_active: true,
+    notes: "Main Revive Center location",
+  }
 
   useEffect(() => {
-    if (mapLoaded && locations.length > 0) {
+    if (showAllLocations) {
+      fetchData()
+    } else {
+      setLoading(false)
+    }
+    loadMap()
+  }, [showAllLocations])
+
+  useEffect(() => {
+    if (mapLoaded) {
       updateMapMarkers()
     }
-  }, [mapLoaded, locations, runs, dateRange, runStatus, activityLevel])
+  }, [mapLoaded, locations, runs, dateRange, runStatus, activityLevel, showAllLocations])
 
   const fetchData = async () => {
     try {
@@ -83,11 +100,9 @@ export function OutreachMap() {
     try {
       console.log("[v0] Starting map initialization...")
 
-      // Dynamically import Leaflet to avoid SSR issues
       const L = (await import("leaflet")).default
       console.log("[v0] Leaflet imported successfully")
 
-      // Import CSS
       const link = document.createElement("link")
       link.rel = "stylesheet"
       link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -96,7 +111,6 @@ export function OutreachMap() {
 
       await new Promise((resolve) => {
         link.onload = resolve
-        // Fallback timeout
         setTimeout(resolve, 1000)
       })
 
@@ -106,8 +120,7 @@ export function OutreachMap() {
         mapRef.current.style.height = "500px"
         mapRef.current.style.width = "100%"
 
-        // Initialize map centered on Chicago
-        const map = L.map(mapRef.current).setView([41.8781, -87.6298], 12)
+        const map = L.map(mapRef.current).setView([reviveCenter.latitude!, reviveCenter.longitude!], 14)
         console.log("[v0] Map instance created")
 
         L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
@@ -132,11 +145,99 @@ export function OutreachMap() {
 
     const L = (await import("leaflet")).default
 
-    // Clear existing markers
     markersRef.current.forEach((marker) => mapInstanceRef.current.removeLayer(marker))
     markersRef.current = []
 
-    // Filter runs based on date range and status
+    const reviveCenterIcon = L.divIcon({
+      html: `
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
+          <div style="
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            width: 40px;
+            height: 40px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 3px solid white;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+          ">
+            <div style="
+              transform: rotate(45deg);
+              color: white;
+              font-size: 16px;
+              font-weight: bold;
+              text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+            ">
+              🏠
+            </div>
+          </div>
+          <div style="
+            width: 18px;
+            height: 10px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 50%;
+            margin-top: -4px;
+            filter: blur(3px);
+          "></div>
+        </div>
+      `,
+      className: "custom-pin-marker revive-center-marker",
+      iconSize: [44, 52],
+      iconAnchor: [22, 44],
+      popupAnchor: [0, -44],
+    })
+
+    const reviveMarker = L.marker([reviveCenter.latitude!, reviveCenter.longitude!], {
+      icon: reviveCenterIcon,
+    }).addTo(mapInstanceRef.current)
+
+    const reviveTooltipContent = `
+      <div style="font-size: 12px; line-height: 1.3;">
+        <strong>${reviveCenter.name}</strong><br/>
+        ${reviveCenter.address}
+      </div>
+    `
+
+    reviveMarker.bindTooltip(reviveTooltipContent, {
+      permanent: false,
+      direction: "top",
+      offset: [0, -10],
+      className: "custom-tooltip",
+    })
+
+    const revivePopupContent = `
+      <div class="p-3 min-w-[220px]">
+        <h3 class="font-semibold text-base mb-2">${reviveCenter.name}</h3>
+        <p class="text-sm text-gray-600 mb-3">${reviveCenter.address}</p>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-500">Type:</span>
+            <span class="font-medium text-purple-600">Main Center</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500">Status:</span>
+            <span class="font-medium text-green-600">Active</span>
+          </div>
+          <div class="mt-3 p-2 bg-purple-50 border border-purple-200 rounded">
+            <p class="text-purple-800 text-xs font-medium">🏠 Revive Center</p>
+            <p class="text-purple-700 text-xs mt-1">Main outreach coordination hub</p>
+          </div>
+        </div>
+      </div>
+    `
+
+    reviveMarker.bindPopup(revivePopupContent, {
+      maxWidth: 300,
+      className: "custom-popup",
+    })
+
+    markersRef.current.push(reviveMarker)
+
+    if (!showAllLocations) return
+
     const now = new Date()
     const daysAgo = new Date(now.getTime() - Number.parseInt(dateRange) * 24 * 60 * 60 * 1000)
     const daysAhead = new Date(now.getTime() + Number.parseInt(dateRange) * 24 * 60 * 60 * 1000)
@@ -148,40 +249,35 @@ export function OutreachMap() {
       return inDateRange && statusMatch
     })
 
-    // Create markers for each location
     locations.forEach((location) => {
       if (!location.latitude || !location.longitude) return
 
-      // Calculate activity level
       const locationRuns = filteredRuns.filter(
         (run) => run.planned_locations.includes(location.id) || run.actual_locations.includes(location.id),
       )
 
       const totalContacts = locationRuns.reduce((sum, run) => sum + run.total_contacts, 0)
 
-      // Filter by activity level
       if (activityLevel === "high" && totalContacts < 10) return
       if (activityLevel === "medium" && (totalContacts < 3 || totalContacts >= 10)) return
       if (activityLevel === "low" && totalContacts >= 3) return
 
-      // Determine marker color based on activity and safety
-      let markerColor = "#3b82f6" // blue default
-      let borderColor = "#1e40af" // darker blue
+      let markerColor = "#3b82f6"
+      let borderColor = "#1e40af"
       if (location.safety_concerns) {
-        markerColor = "#ef4444" // red for safety concerns
+        markerColor = "#ef4444"
         borderColor = "#dc2626"
       } else if (totalContacts >= 10) {
-        markerColor = "#22c55e" // green for high activity
+        markerColor = "#22c55e"
         borderColor = "#16a34a"
       } else if (totalContacts >= 3) {
-        markerColor = "#f59e0b" // orange for medium activity
+        markerColor = "#f59e0b"
         borderColor = "#d97706"
       }
 
       const markerIcon = L.divIcon({
         html: `
           <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
-            <!-- Pin body -->
             <div style="
               background: linear-gradient(135deg, ${markerColor} 0%, ${borderColor} 100%);
               width: 36px;
@@ -195,7 +291,6 @@ export function OutreachMap() {
               justify-content: center;
               position: relative;
             ">
-              <!-- Contact count inside pin -->
               <div style="
                 transform: rotate(45deg);
                 color: white;
@@ -206,7 +301,6 @@ export function OutreachMap() {
                 ${totalContacts || ""}
               </div>
             </div>
-            <!-- Pin shadow -->
             <div style="
               width: 16px;
               height: 8px;
@@ -235,7 +329,6 @@ export function OutreachMap() {
         </div>
       `
 
-      // Bind tooltip for mouseover
       marker.bindTooltip(tooltipContent, {
         permanent: false,
         direction: "top",
@@ -243,7 +336,6 @@ export function OutreachMap() {
         className: "custom-tooltip",
       })
 
-      // Create detailed popup content for clicks
       const popupContent = `
         <div class="p-3 min-w-[220px]">
           <h3 class="font-semibold text-base mb-2">${location.name}</h3>
@@ -309,6 +401,10 @@ export function OutreachMap() {
   }
 
   const getActivityStats = () => {
+    if (!showAllLocations) {
+      return { totalContacts: 0, activeLocations: 1, safetyLocations: 0, totalRuns: 0 }
+    }
+
     const now = new Date()
     const daysAgo = new Date(now.getTime() - Number.parseInt(dateRange) * 24 * 60 * 60 * 1000)
     const daysAhead = new Date(now.getTime() + Number.parseInt(dateRange) * 24 * 60 * 60 * 1000)
@@ -337,78 +433,87 @@ export function OutreachMap() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Chicago Outreach Map</h2>
           <p className="text-gray-600">Interactive map of outreach locations and run activity</p>
         </div>
+        <div className="flex gap-2">
+          <Button
+            variant={showAllLocations ? "outline" : "default"}
+            onClick={() => setShowAllLocations(!showAllLocations)}
+            className="flex items-center gap-2"
+          >
+            <MapPin className="h-4 w-4" />
+            {showAllLocations ? "Show Revive Center Only" : "Load All Locations"}
+          </Button>
+        </div>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="h-4 w-4 text-gray-500" />
-            <span className="font-medium text-sm">Filters</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="dateRange" className="text-xs">
-                Time Range
-              </Label>
-              <Select value={dateRange} onValueChange={setDateRange}>
-                <SelectTrigger className="h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7">Last 7 days</SelectItem>
-                  <SelectItem value="30">Last 30 days</SelectItem>
-                  <SelectItem value="90">Last 90 days</SelectItem>
-                  <SelectItem value="365">Last year</SelectItem>
-                </SelectContent>
-              </Select>
+      {showAllLocations && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <span className="font-medium text-sm">Filters</span>
             </div>
 
-            <div>
-              <Label htmlFor="runStatus" className="text-xs">
-                Run Status
-              </Label>
-              <Select value={runStatus} onValueChange={setRunStatus}>
-                <SelectTrigger className="h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All runs</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="dateRange" className="text-xs">
+                  Time Range
+                </Label>
+                <Select value={dateRange} onValueChange={setDateRange}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">Last 7 days</SelectItem>
+                    <SelectItem value="30">Last 30 days</SelectItem>
+                    <SelectItem value="90">Last 90 days</SelectItem>
+                    <SelectItem value="365">Last year</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <Label htmlFor="activityLevel" className="text-xs">
-                Activity Level
-              </Label>
-              <Select value={activityLevel} onValueChange={setActivityLevel}>
-                <SelectTrigger className="h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All locations</SelectItem>
-                  <SelectItem value="high">High activity (10+ contacts)</SelectItem>
-                  <SelectItem value="medium">Medium activity (3-9 contacts)</SelectItem>
-                  <SelectItem value="low">Low activity (0-2 contacts)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              <div>
+                <Label htmlFor="runStatus" className="text-xs">
+                  Run Status
+                </Label>
+                <Select value={runStatus} onValueChange={setRunStatus}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All runs</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-      {/* Stats Cards */}
+              <div>
+                <Label htmlFor="activityLevel" className="text-xs">
+                  Activity Level
+                </Label>
+                <Select value={activityLevel} onValueChange={setActivityLevel}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All locations</SelectItem>
+                    <SelectItem value="high">High activity (10+ contacts)</SelectItem>
+                    <SelectItem value="medium">Medium activity (3-9 contacts)</SelectItem>
+                    <SelectItem value="low">Low activity (0-2 contacts)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
@@ -467,7 +572,6 @@ export function OutreachMap() {
         </Card>
       </div>
 
-      {/* Map */}
       <Card>
         <CardContent className="p-0">
           <div
@@ -484,7 +588,6 @@ export function OutreachMap() {
             </div>
           )}
 
-          {/* Custom CSS for enhanced tooltips and popups */}
           <style jsx global>{`
             .custom-tooltip {
               background: rgba(0, 0, 0, 0.9) !important;
@@ -517,7 +620,15 @@ export function OutreachMap() {
               z-index: 1000;
             }
             
-            /* Enhanced map container styling for better contrast */
+            .revive-center-marker {
+              z-index: 200 !important;
+            }
+            
+            .revive-center-marker:hover {
+              transform: scale(1.2);
+              z-index: 1001;
+            }
+            
             .leaflet-container {
               background: #f8fafc !important;
             }
@@ -536,7 +647,6 @@ export function OutreachMap() {
         </CardContent>
       </Card>
 
-      {/* Legend */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-3">
@@ -546,47 +656,66 @@ export function OutreachMap() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
             <div className="space-y-2">
-              <h4 className="font-medium text-sm text-gray-700 mb-2">Activity Levels</h4>
+              <h4 className="font-medium text-sm text-gray-700 mb-2">Locations</h4>
               <div className="flex items-center gap-2">
                 <div
-                  className="w-5 h-5 rounded-full bg-green-500 border-2 border-white shadow-md transform rotate-45"
+                  className="w-6 h-6 rounded-full bg-purple-500 border-2 border-white shadow-md transform rotate-45 flex items-center justify-center"
                   style={{ borderRadius: "50% 50% 50% 0" }}
-                ></div>
-                <span>High Activity (10+ contacts)</span>
+                >
+                  <span className="transform -rotate-45 text-xs">🏠</span>
+                </div>
+                <span>Revive Center (Main Hub)</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-5 h-5 rounded-full bg-orange-500 border-2 border-white shadow-md transform rotate-45"
-                  style={{ borderRadius: "50% 50% 50% 0" }}
-                ></div>
-                <span>Medium Activity (3-9 contacts)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-5 h-5 rounded-full bg-blue-500 border-2 border-white shadow-md transform rotate-45"
-                  style={{ borderRadius: "50% 50% 50% 0" }}
-                ></div>
-                <span>Low Activity (0-2 contacts)</span>
-              </div>
+              {showAllLocations && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-5 h-5 rounded-full bg-green-500 border-2 border-white shadow-md transform rotate-45"
+                      style={{ borderRadius: "50% 50% 50% 0" }}
+                    ></div>
+                    <span>High Activity (10+ contacts)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-5 h-5 rounded-full bg-orange-500 border-2 border-white shadow-md transform rotate-45"
+                      style={{ borderRadius: "50% 50% 50% 0" }}
+                    ></div>
+                    <span>Medium Activity (3-9 contacts)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-5 h-5 rounded-full bg-blue-500 border-2 border-white shadow-md transform rotate-45"
+                      style={{ borderRadius: "50% 50% 50% 0" }}
+                    ></div>
+                    <span>Low Activity (0-2 contacts)</span>
+                  </div>
+                </>
+              )}
             </div>
             <div className="space-y-2">
               <h4 className="font-medium text-sm text-gray-700 mb-2">Special Indicators</h4>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-5 h-5 rounded-full bg-red-500 border-2 border-white shadow-md transform rotate-45"
-                  style={{ borderRadius: "50% 50% 50% 0" }}
-                ></div>
-                <span>Safety Concerns</span>
-              </div>
+              {showAllLocations && (
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-5 h-5 rounded-full bg-red-500 border-2 border-white shadow-md transform rotate-45"
+                    style={{ borderRadius: "50% 50% 50% 0" }}
+                  ></div>
+                  <span>Safety Concerns</span>
+                </div>
+              )}
               <div className="text-xs text-gray-600 mt-2">
                 <strong>💡 Tip:</strong> Hover over pins for quick address info, click for detailed information
               </div>
+              {!showAllLocations && (
+                <div className="text-xs text-blue-600 mt-2">
+                  <strong>🚀 Performance:</strong> Click "Load All Locations" to see outreach data
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Selected Location Details */}
       {selectedLocation && (
         <Card>
           <CardContent className="p-4">
