@@ -13,6 +13,7 @@ import { DatabaseSetup } from "@/components/database-setup"
 import { useContacts } from "@/hooks/use-contacts"
 import { useDatabase } from "@/hooks/use-database"
 import { IDHSQuarterlyReport } from "@/components/idhs-quarterly-report"
+import { AllClientsReportHeader } from "@/components/all-clients-report-header"
 
 type MainTab = "all-clients" | "idhs-quarterly"
 
@@ -163,6 +164,12 @@ export default function ReportsPage() {
 
       {activeTab === "all-clients" && (
         <>
+          <AllClientsReportHeader
+            totalClients={filterData.clients.length}
+            totalContacts={contacts.length}
+            activeClients={filterData.clients.length}
+          />
+
           <ActionBar
             activeTab="all"
             selectedCount={selectedCount}
