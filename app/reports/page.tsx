@@ -2,18 +2,16 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { ContactTable } from "@/components/contact-table"
 import { QuickCheckinDialog } from "@/components/quick-checkin-dialog"
 import { NewProspectDialog } from "@/components/new-prospect-dialog"
 import { ChangeDateDialog } from "@/components/change-date-dialog"
 import { UpdateServicesDialog } from "@/components/update-services-dialog"
 import { Header } from "@/components/header"
-import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
 import { useContacts } from "@/hooks/use-contacts"
 import { useDatabase } from "@/hooks/use-database"
 import { IDHSQuarterlyReport } from "@/components/idhs-quarterly-report"
-import { AllClientsReportHeader } from "@/components/all-clients-report-header"
+import { AllClientsReport } from "@/components/all-clients-report"
 
 type MainTab = "all-clients" | "idhs-quarterly"
 
@@ -163,41 +161,25 @@ export default function ReportsPage() {
       </div>
 
       {activeTab === "all-clients" && (
-        <>
-          <AllClientsReportHeader
-            totalClients={filterData.clients.length}
-            totalContacts={contacts.length}
-            activeClients={filterData.clients.length}
-          />
-
-          <ActionBar
-            activeTab="all"
+        <main className="bg-white">
+          <AllClientsReport
+            contacts={contacts}
+            filterData={filterData}
+            isLoading={contactsLoading}
+            error={contactsError}
             selectedCount={selectedCount}
             selectedContactIds={selectedContactIds}
-            onExport={() => console.log("Export")}
-            clients={filterData.clients}
+            onClientClick={handleClientClick}
+            onSelectionChange={handleSelectionChange}
+            onUpdateServicesClick={handleUpdateServicesClick}
+            onClientRowClick={handleClientRowClick}
             onClientSelect={handleClientSearch}
             onNewProspect={handleNewProspectClick}
-            providers={filterData.providers}
-            categories={filterData.categories}
             onFiltersChange={setFilters}
             onServiceCompleted={handleDataUpdate}
             onDateChangeClick={() => setIsChangeDateDialogOpen(true)}
           />
-
-          <main className="bg-white">
-            <ContactTable
-              activeTab="all"
-              contacts={contacts}
-              isLoading={contactsLoading}
-              error={contactsError}
-              onClientClick={handleClientClick}
-              onSelectionChange={handleSelectionChange}
-              onUpdateServicesClick={handleUpdateServicesClick}
-              onClientRowClick={handleClientRowClick}
-            />
-          </main>
-        </>
+        </main>
       )}
 
       {activeTab === "idhs-quarterly" && (
