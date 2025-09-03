@@ -78,6 +78,7 @@ export function OutreachMap() {
 
   const fetchData = async () => {
     try {
+      setLoading(true)
       const [locationsRes, runsRes] = await Promise.all([fetch("/api/outreach/locations"), fetch("/api/outreach/runs")])
 
       if (locationsRes.ok && runsRes.ok) {
@@ -406,12 +407,22 @@ export function OutreachMap() {
     }
 
     const now = new Date()
-    const daysAgo = new Date(now.getTime() - Number.parseInt(dateRange) * 24 * 60 * 60 * 1000)
-    const daysAhead = new Date(now.getTime() + Number.parseInt(dateRange) * 24 * 60 * 60 * 1000)
+    const rangeValue = Number.parseInt(dateRange)
+    let startDate: Date, endDate: Date
+
+    if (rangeValue < 0) {
+      // Future dates (negative values)
+      startDate = now
+      endDate = new Date(now.getTime() + Math.abs(rangeValue) * 24 * 60 * 60 * 1000)
+    } else {
+      // Past dates (positive values)
+      startDate = new Date(now.getTime() - rangeValue * 24 * 60 * 60 * 1000)
+      endDate = now
+    }
 
     const filteredRuns = runs.filter((run) => {
       const runDate = new Date(run.run_date)
-      return runDate >= daysAgo && runDate <= daysAhead
+      return runDate >= startDate && runDate <= endDate
     })
 
     const totalContacts = filteredRuns.reduce((sum, run) => sum + run.total_contacts, 0)
@@ -472,6 +483,9 @@ export function OutreachMap() {
                     <SelectItem value="30">Last 30 days</SelectItem>
                     <SelectItem value="90">Last 90 days</SelectItem>
                     <SelectItem value="365">Last year</SelectItem>
+                    <SelectItem value="-7">Next 7 days</SelectItem>
+                    <SelectItem value="-30">Next 30 days</SelectItem>
+                    <SelectItem value="-90">Next 90 days</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

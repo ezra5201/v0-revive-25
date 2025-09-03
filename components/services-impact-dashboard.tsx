@@ -283,6 +283,10 @@ export function ServicesImpactDashboard({ overview }: Props) {
                 <SelectItem value="This Quarter">This Quarter</SelectItem>
                 <SelectItem value="Last Quarter">Last Quarter</SelectItem>
                 <SelectItem value="This Year">This Year</SelectItem>
+                <SelectItem value="Next 7 Days">Next 7 Days</SelectItem>
+                <SelectItem value="Next 30 Days">Next 30 Days</SelectItem>
+                <SelectItem value="Next 3 Months">Next 3 Months</SelectItem>
+                <SelectItem value="Next Quarter">Next Quarter</SelectItem>
                 <SelectItem value="Specific Date">Specific Date</SelectItem>
                 <SelectItem value="Custom Date Range">Custom Date Range</SelectItem>
               </SelectContent>
