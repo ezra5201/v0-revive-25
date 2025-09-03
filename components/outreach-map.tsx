@@ -90,7 +90,7 @@ export function OutreachMap() {
 
       if (mapRef.current && !mapInstanceRef.current) {
         // Initialize map centered on Chicago
-        const map = L.map(mapRef.current).setView([41.8781, -87.6298], 11)
+        const map = L.map(mapRef.current).setView([41.8781, -87.6298], 13)
 
         // Add OpenStreetMap tiles
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
