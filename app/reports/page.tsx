@@ -2,18 +2,18 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { ContactTable } from "@/components/contact-table"
 import { QuickCheckinDialog } from "@/components/quick-checkin-dialog"
 import { NewProspectDialog } from "@/components/new-prospect-dialog"
 import { ChangeDateDialog } from "@/components/change-date-dialog"
 import { UpdateServicesDialog } from "@/components/update-services-dialog"
 import { Header } from "@/components/header"
-import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
 import { useContacts } from "@/hooks/use-contacts"
 import { useDatabase } from "@/hooks/use-database"
+import { IDHSQuarterlyReport } from "@/components/idhs-quarterly-report"
+import { AllClientsReport } from "@/components/all-clients-report"
 
-type MainTab = "all-clients"
+type MainTab = "all-clients" | "idhs-quarterly"
 
 export default function ReportsPage() {
   const searchParams = useSearchParams()
@@ -48,6 +48,8 @@ export default function ReportsPage() {
 
     if (tab === "all-clients") {
       setActiveTab("all-clients")
+    } else if (tab === "idhs-quarterly") {
+      setActiveTab("idhs-quarterly")
     } else {
       // Default to all-clients tab
       router.replace("/reports?tab=all-clients")
@@ -129,7 +131,10 @@ export default function ReportsPage() {
         <div className="px-4 sm:px-6">
           <nav className="flex space-x-8" aria-label="Tabs">
             <button
-              onClick={() => setActiveTab("all-clients")}
+              onClick={() => {
+                setActiveTab("all-clients")
+                router.push("/reports?tab=all-clients")
+              }}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === "all-clients"
                   ? "border-orange-500 text-orange-600"
@@ -138,37 +143,50 @@ export default function ReportsPage() {
             >
               All Clients
             </button>
+            <button
+              onClick={() => {
+                setActiveTab("idhs-quarterly")
+                router.push("/reports?tab=idhs-quarterly")
+              }}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "idhs-quarterly"
+                  ? "border-orange-500 text-orange-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              IDHS Quarterly
+            </button>
           </nav>
         </div>
       </div>
 
-      <ActionBar
-        activeTab="all"
-        selectedCount={selectedCount}
-        selectedContactIds={selectedContactIds}
-        onExport={() => console.log("Export")}
-        clients={filterData.clients}
-        onClientSelect={handleClientSearch}
-        onNewProspect={handleNewProspectClick}
-        providers={filterData.providers}
-        categories={filterData.categories}
-        onFiltersChange={setFilters}
-        onServiceCompleted={handleDataUpdate}
-        onDateChangeClick={() => setIsChangeDateDialogOpen(true)}
-      />
+      {activeTab === "all-clients" && (
+        <main className="bg-white">
+          <AllClientsReport
+            contacts={contacts}
+            filterData={filterData}
+            isLoading={contactsLoading}
+            error={contactsError}
+            selectedCount={selectedCount}
+            selectedContactIds={selectedContactIds}
+            onClientClick={handleClientClick}
+            onSelectionChange={handleSelectionChange}
+            onUpdateServicesClick={handleUpdateServicesClick}
+            onClientRowClick={handleClientRowClick}
+            onClientSelect={handleClientSearch}
+            onNewProspect={handleNewProspectClick}
+            onFiltersChange={setFilters}
+            onServiceCompleted={handleDataUpdate}
+            onDateChangeClick={() => setIsChangeDateDialogOpen(true)}
+          />
+        </main>
+      )}
 
-      <main className="bg-white">
-        <ContactTable
-          activeTab="all"
-          contacts={contacts}
-          isLoading={contactsLoading}
-          error={contactsError}
-          onClientClick={handleClientClick}
-          onSelectionChange={handleSelectionChange}
-          onUpdateServicesClick={handleUpdateServicesClick}
-          onClientRowClick={handleClientRowClick}
-        />
-      </main>
+      {activeTab === "idhs-quarterly" && (
+        <main className="bg-white">
+          <IDHSQuarterlyReport />
+        </main>
+      )}
 
       <QuickCheckinDialog
         isOpen={isDialogOpen}
