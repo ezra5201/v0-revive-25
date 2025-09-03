@@ -107,12 +107,14 @@ export function OutreachMap() {
         mapRef.current.style.width = "100%"
 
         // Initialize map centered on Chicago
-        const map = L.map(mapRef.current).setView([41.8781, -87.6298], 13)
+        const map = L.map(mapRef.current).setView([41.8781, -87.6298], 12)
         console.log("[v0] Map instance created")
 
-        // Add OpenStreetMap tiles
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+          attribution:
+            '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: "abcd",
+          maxZoom: 19,
         }).addTo(map)
         console.log("[v0] Map tiles added")
 
@@ -182,12 +184,12 @@ export function OutreachMap() {
             <!-- Pin body -->
             <div style="
               background: linear-gradient(135deg, ${markerColor} 0%, ${borderColor} 100%);
-              width: 28px;
-              height: 28px;
+              width: 36px;
+              height: 36px;
               border-radius: 50% 50% 50% 0;
               transform: rotate(-45deg);
-              border: 2px solid white;
-              box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+              border: 3px solid white;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.4);
               display: flex;
               align-items: center;
               justify-content: center;
@@ -197,28 +199,28 @@ export function OutreachMap() {
               <div style="
                 transform: rotate(45deg);
                 color: white;
-                font-size: 10px;
+                font-size: 12px;
                 font-weight: bold;
-                text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+                text-shadow: 0 1px 3px rgba(0,0,0,0.7);
               ">
                 ${totalContacts || ""}
               </div>
             </div>
             <!-- Pin shadow -->
             <div style="
-              width: 12px;
-              height: 6px;
-              background: rgba(0,0,0,0.2);
+              width: 16px;
+              height: 8px;
+              background: rgba(0,0,0,0.3);
               border-radius: 50%;
-              margin-top: -2px;
-              filter: blur(1px);
+              margin-top: -3px;
+              filter: blur(2px);
             "></div>
           </div>
         `,
         className: "custom-pin-marker",
-        iconSize: [32, 40],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32],
+        iconSize: [40, 48],
+        iconAnchor: [20, 40],
+        popupAnchor: [0, -40],
       })
 
       const marker = L.marker([location.latitude, location.longitude], { icon: markerIcon }).addTo(
@@ -485,32 +487,50 @@ export function OutreachMap() {
           {/* Custom CSS for enhanced tooltips and popups */}
           <style jsx global>{`
             .custom-tooltip {
-              background: rgba(0, 0, 0, 0.8) !important;
+              background: rgba(0, 0, 0, 0.9) !important;
               border: none !important;
-              border-radius: 6px !important;
+              border-radius: 8px !important;
               color: white !important;
-              font-size: 12px !important;
-              padding: 8px 10px !important;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+              font-size: 13px !important;
+              padding: 10px 12px !important;
+              box-shadow: 0 6px 20px rgba(0,0,0,0.4) !important;
+              font-weight: 500 !important;
             }
             
             .custom-tooltip:before {
-              border-top-color: rgba(0, 0, 0, 0.8) !important;
+              border-top-color: rgba(0, 0, 0, 0.9) !important;
             }
             
             .custom-popup .leaflet-popup-content-wrapper {
-              border-radius: 8px !important;
-              box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+              border-radius: 12px !important;
+              box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
             }
             
             .custom-pin-marker {
               cursor: pointer;
-              transition: transform 0.2s ease;
+              transition: all 0.2s ease;
+              z-index: 100;
             }
             
             .custom-pin-marker:hover {
-              transform: scale(1.1);
+              transform: scale(1.15);
               z-index: 1000;
+            }
+            
+            /* Enhanced map container styling for better contrast */
+            .leaflet-container {
+              background: #f8fafc !important;
+            }
+            
+            .leaflet-control-zoom a {
+              background: white !important;
+              border: 2px solid #e2e8f0 !important;
+              color: #475569 !important;
+            }
+            
+            .leaflet-control-zoom a:hover {
+              background: #f1f5f9 !important;
+              border-color: #cbd5e1 !important;
             }
           `}</style>
         </CardContent>
