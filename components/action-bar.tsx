@@ -271,6 +271,13 @@ export function ActionBar({
             Last 3 months
           </button>
           <button className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 rounded-lg border">Last year</button>
+          <button className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 rounded-lg border">Next 7 days</button>
+          <button className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 rounded-lg border">
+            Next 30 days
+          </button>
+          <button className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 rounded-lg border">
+            Next 3 months
+          </button>
           <button className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 rounded-lg border">
             Custom range...
           </button>
@@ -466,6 +473,15 @@ export function ActionBar({
                         </button>
                         <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
                           Last year
+                        </button>
+                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                          Next 7 days
+                        </button>
+                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                          Next 30 days
+                        </button>
+                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                          Next 3 months
                         </button>
                         <hr className="my-2" />
                         <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
