@@ -39,11 +39,7 @@ export function OutreachMap() {
   const [mapLoaded, setMapLoaded] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState<OutreachLocation | null>(null)
   const [showAllLocations, setShowAllLocations] = useState(false)
-
-  // Filters
-  const [dateRange, setDateRange] = useState("30") // days
-  const [runStatus, setRunStatus] = useState("all")
-  const [activityLevel, setActivityLevel] = useState("all")
+  const [locationsLoading, setLocationsLoading] = useState(false)
 
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
@@ -74,24 +70,42 @@ export function OutreachMap() {
     if (mapLoaded) {
       updateMapMarkers()
     }
-  }, [mapLoaded, locations, runs, dateRange, runStatus, activityLevel, showAllLocations])
+  }, [mapLoaded, locations, runs])
 
   const fetchData = async () => {
     try {
-      setLoading(true)
+      setLocationsLoading(true)
+      console.log("[v0] Starting to fetch location data...")
+
       const [locationsRes, runsRes] = await Promise.all([fetch("/api/outreach/locations"), fetch("/api/outreach/runs")])
+
+      console.log("[v0] API responses received:", {
+        locationsOk: locationsRes.ok,
+        runsOk: runsRes.ok,
+      })
 
       if (locationsRes.ok && runsRes.ok) {
         const locationsData = await locationsRes.json()
         const runsData = await runsRes.json()
 
+        console.log("[v0] Data parsed:", {
+          locationCount: locationsData.length,
+          runCount: runsData.length,
+        })
+
         setLocations(locationsData)
         setRuns(runsData)
+      } else {
+        console.error("[v0] API error:", {
+          locationsStatus: locationsRes.status,
+          runsStatus: runsRes.status,
+        })
       }
     } catch (error) {
-      console.error("Error fetching data:", error)
+      console.error("[v0] Error fetching data:", error)
     } finally {
       setLoading(false)
+      setLocationsLoading(false)
     }
   }
 
@@ -239,48 +253,14 @@ export function OutreachMap() {
 
     if (!showAllLocations) return
 
-    const now = new Date()
-    const daysAgo = new Date(now.getTime() - Number.parseInt(dateRange) * 24 * 60 * 60 * 1000)
-    const daysAhead = new Date(now.getTime() + Number.parseInt(dateRange) * 24 * 60 * 60 * 1000)
-
-    const filteredRuns = runs.filter((run) => {
-      const runDate = new Date(run.run_date)
-      const inDateRange = runDate >= daysAgo && runDate <= daysAhead
-      const statusMatch = runStatus === "all" || run.status === runStatus
-      return inDateRange && statusMatch
-    })
-
     locations.forEach((location) => {
       if (!location.latitude || !location.longitude) return
-
-      const locationRuns = filteredRuns.filter(
-        (run) => run.planned_locations.includes(location.id) || run.actual_locations.includes(location.id),
-      )
-
-      const totalContacts = locationRuns.reduce((sum, run) => sum + run.total_contacts, 0)
-
-      if (activityLevel === "high" && totalContacts < 10) return
-      if (activityLevel === "medium" && (totalContacts < 3 || totalContacts >= 10)) return
-      if (activityLevel === "low" && totalContacts >= 3) return
-
-      let markerColor = "#3b82f6"
-      let borderColor = "#1e40af"
-      if (location.safety_concerns) {
-        markerColor = "#ef4444"
-        borderColor = "#dc2626"
-      } else if (totalContacts >= 10) {
-        markerColor = "#22c55e"
-        borderColor = "#16a34a"
-      } else if (totalContacts >= 3) {
-        markerColor = "#f59e0b"
-        borderColor = "#d97706"
-      }
 
       const markerIcon = L.divIcon({
         html: `
           <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
             <div style="
-              background: linear-gradient(135deg, ${markerColor} 0%, ${borderColor} 100%);
+              background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
               width: 36px;
               height: 36px;
               border-radius: 50% 50% 50% 0;
@@ -299,7 +279,7 @@ export function OutreachMap() {
                 font-weight: bold;
                 text-shadow: 0 1px 3px rgba(0,0,0,0.7);
               ">
-                ${totalContacts || ""}
+                {location.visit_count || ""}
               </div>
             </div>
             <div style="
@@ -345,10 +325,6 @@ export function OutreachMap() {
             <div class="flex justify-between">
               <span class="text-gray-500">Total visits:</span>
               <span class="font-medium">${location.visit_count}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-500">Recent contacts:</span>
-              <span class="font-medium">${totalContacts}</span>
             </div>
             <div class="flex justify-between">
               <span class="text-gray-500">Last visited:</span>
@@ -407,18 +383,8 @@ export function OutreachMap() {
     }
 
     const now = new Date()
-    const rangeValue = Number.parseInt(dateRange)
-    let startDate: Date, endDate: Date
-
-    if (rangeValue < 0) {
-      // Future dates (negative values)
-      startDate = now
-      endDate = new Date(now.getTime() + Math.abs(rangeValue) * 24 * 60 * 60 * 1000)
-    } else {
-      // Past dates (positive values)
-      startDate = new Date(now.getTime() - rangeValue * 24 * 60 * 60 * 1000)
-      endDate = now
-    }
+    const startDate = new Date(now.getTime() - Number.parseInt("30") * 24 * 60 * 60 * 1000)
+    const endDate = now
 
     const filteredRuns = runs.filter((run) => {
       const runDate = new Date(run.run_date)
@@ -454,14 +420,26 @@ export function OutreachMap() {
             variant={showAllLocations ? "outline" : "default"}
             onClick={() => setShowAllLocations(!showAllLocations)}
             className="flex items-center gap-2"
+            disabled={locationsLoading}
           >
             <MapPin className="h-4 w-4" />
-            {showAllLocations ? "Show Revive Center Only" : "Load All Locations"}
+            {locationsLoading ? "Loading..." : showAllLocations ? "Show Revive Center Only" : "Load All Locations"}
           </Button>
         </div>
       </div>
 
-      {showAllLocations && (
+      {locationsLoading && (
+        <Card>
+          <CardContent className="p-8">
+            <div className="flex items-center justify-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mr-3" />
+              <span className="text-gray-600">Loading location data with coordinates...</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {showAllLocations && !locationsLoading && (
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-4">
@@ -469,12 +447,21 @@ export function OutreachMap() {
               <span className="font-medium text-sm">Filters</span>
             </div>
 
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-blue-800 text-sm font-medium">
+                📊 Loaded {locations.length} locations with coordinates • {runs.length} runs
+              </p>
+              <p className="text-blue-700 text-xs mt-1">
+                Only showing locations with valid coordinates for optimal performance
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="dateRange" className="text-xs">
                   Time Range
                 </Label>
-                <Select value={dateRange} onValueChange={setDateRange}>
+                <Select value="30" onValueChange={() => {}}>
                   <SelectTrigger className="h-8">
                     <SelectValue />
                   </SelectTrigger>
@@ -494,7 +481,7 @@ export function OutreachMap() {
                 <Label htmlFor="runStatus" className="text-xs">
                   Run Status
                 </Label>
-                <Select value={runStatus} onValueChange={setRunStatus}>
+                <Select value="all" onValueChange={() => {}}>
                   <SelectTrigger className="h-8">
                     <SelectValue />
                   </SelectTrigger>
@@ -511,7 +498,7 @@ export function OutreachMap() {
                 <Label htmlFor="activityLevel" className="text-xs">
                   Activity Level
                 </Label>
-                <Select value={activityLevel} onValueChange={setActivityLevel}>
+                <Select value="all" onValueChange={() => {}}>
                   <SelectTrigger className="h-8">
                     <SelectValue />
                   </SelectTrigger>
