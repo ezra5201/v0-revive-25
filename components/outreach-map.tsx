@@ -591,23 +591,34 @@ export function OutreachMap() {
 
           <style jsx global>{`
             .custom-tooltip {
-              background: rgba(0, 0, 0, 0.9) !important;
-              border: none !important;
+              background: rgba(30, 41, 59, 0.95) !important;
+              border: 2px solid rgba(255, 255, 255, 0.2) !important;
               border-radius: 8px !important;
-              color: white !important;
+              color: #f1f5f9 !important;
               font-size: 13px !important;
               padding: 10px 12px !important;
-              box-shadow: 0 6px 20px rgba(0,0,0,0.4) !important;
+              box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
               font-weight: 500 !important;
+              backdrop-filter: blur(8px) !important;
             }
             
             .custom-tooltip:before {
-              border-top-color: rgba(0, 0, 0, 0.9) !important;
+              border-top-color: rgba(30, 41, 59, 0.95) !important;
+            }
+            
+            .custom-tooltip strong {
+              color: #fbbf24 !important;
+              text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
             }
             
             .custom-popup .leaflet-popup-content-wrapper {
               border-radius: 12px !important;
               box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+              background: white !important;
+            }
+            
+            .custom-popup .leaflet-popup-content {
+              color: #1e293b !important;
             }
             
             .custom-pin-marker {
