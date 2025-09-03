@@ -79,29 +79,47 @@ export function OutreachMap() {
     if (typeof window === "undefined") return
 
     try {
+      console.log("[v0] Starting map initialization...")
+
       // Dynamically import Leaflet to avoid SSR issues
       const L = (await import("leaflet")).default
+      console.log("[v0] Leaflet imported successfully")
 
       // Import CSS
       const link = document.createElement("link")
       link.rel = "stylesheet"
       link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       document.head.appendChild(link)
+      console.log("[v0] Leaflet CSS loaded")
+
+      await new Promise((resolve) => {
+        link.onload = resolve
+        // Fallback timeout
+        setTimeout(resolve, 1000)
+      })
 
       if (mapRef.current && !mapInstanceRef.current) {
+        console.log("[v0] Initializing map container...")
+
+        mapRef.current.style.height = "500px"
+        mapRef.current.style.width = "100%"
+
         // Initialize map centered on Chicago
         const map = L.map(mapRef.current).setView([41.8781, -87.6298], 13)
+        console.log("[v0] Map instance created")
 
         // Add OpenStreetMap tiles
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(map)
+        console.log("[v0] Map tiles added")
 
         mapInstanceRef.current = map
         setMapLoaded(true)
+        console.log("[v0] Map initialization complete")
       }
     } catch (error) {
-      console.error("Error loading map:", error)
+      console.error("[v0] Error loading map:", error)
     }
   }
 
@@ -379,7 +397,19 @@ export function OutreachMap() {
       {/* Map */}
       <Card>
         <CardContent className="p-0">
-          <div ref={mapRef} className="w-full h-[500px] lg:h-[600px] rounded-lg" style={{ minHeight: "400px" }} />
+          <div
+            ref={mapRef}
+            className="w-full rounded-lg"
+            style={{ height: "500px", minHeight: "500px", position: "relative" }}
+          />
+          {!mapLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-50 rounded-lg">
+              <div className="text-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mx-auto mb-2" />
+                <p className="text-sm text-gray-600">Loading map...</p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
