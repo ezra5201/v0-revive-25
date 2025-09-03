@@ -13,7 +13,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts"
-import { TrendingUp, TrendingDown, Target, AlertTriangle, Activity, Users, UserPlus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Target, AlertTriangle, Activity, Users, UserPlus } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -31,10 +31,10 @@ function useIsMobile() {
     }
 
     checkIsMobile()
-    window.addEventListener('resize', checkIsMobile)
-    
+    window.addEventListener("resize", checkIsMobile)
+
     // Proper cleanup for responsive event listeners
-    return () => window.removeEventListener('resize', checkIsMobile)
+    return () => window.removeEventListener("resize", checkIsMobile)
   }, [])
 
   return isMobile
@@ -63,15 +63,15 @@ const getChartConfig = (isMobile, isTablet) => ({
   xAxisProps: {
     angle: isMobile ? -90 : -45,
     textAnchor: "end",
-    height: isMobile ? 120 : 80
+    height: isMobile ? 120 : 80,
   },
-  margin: { 
-    top: 20, 
-    right: 30, 
-    left: 20, 
-    bottom: isMobile ? 120 : 80 
+  margin: {
+    top: 20,
+    right: 30,
+    left: 20,
+    bottom: isMobile ? 120 : 80,
   },
-  labelFormatter: (value) => abbreviateServiceName(value, isMobile)
+  labelFormatter: (value) => abbreviateServiceName(value, isMobile),
 })
 
 // Mock data simulating your Neon database queries - replace with real API calls
@@ -128,7 +128,7 @@ interface Props {
 export function ServicesImpactDashboard({ overview }: Props) {
   const [serviceData, setServiceData] = useState([])
   const [trendData, setTrendData] = useState([])
-  const [selectedPeriod, setSelectedPeriod] = useState("This Month")
+  const [selectedPeriod, setSelectedPeriod] = useState("Last 3 Months")
   const [loading, setLoading] = useState(true)
   const [specificDate, setSpecificDate] = useState("")
   const [customStartDate, setCustomStartDate] = useState("")
@@ -156,7 +156,7 @@ export function ServicesImpactDashboard({ overview }: Props) {
       totalProvided,
       totalGap,
       overallCompletionRate,
-      criticalGaps
+      criticalGaps,
     }
   }, [serviceData])
 
@@ -175,10 +175,7 @@ export function ServicesImpactDashboard({ overview }: Props) {
   }, [selectedPeriod])
 
   // Memoize tooltip formatter to prevent recreation on each render
-  const tooltipFormatter = useCallback((value, name) => [
-    value, 
-    name === 'requested' ? 'Requested' : 'Provided'
-  ], [])
+  const tooltipFormatter = useCallback((value, name) => [value, name === "requested" ? "Requested" : "Provided"], [])
 
   // Memoize tooltip label formatter
   const tooltipLabelFormatter = useCallback((label) => label, [])
@@ -188,7 +185,9 @@ export function ServicesImpactDashboard({ overview }: Props) {
       try {
         setLoading(true)
 
-        const response = await fetch(`/api/analytics/services-impact?period=${encodeURIComponent(debouncedSelectedPeriod)}`)
+        const response = await fetch(
+          `/api/analytics/services-impact?period=${encodeURIComponent(debouncedSelectedPeriod)}`,
+        )
 
         if (!response.ok) {
           throw new Error("Failed to fetch services data")
@@ -458,10 +457,7 @@ export function ServicesImpactDashboard({ overview }: Props) {
           <div className="min-w-[320px] overflow-x-auto">
             <div className="h-[300px] md:h-[400px] min-w-[600px] sm:min-w-0">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={serviceData}
-                  margin={chartConfig.margin}
-                >
+                <BarChart data={serviceData} margin={chartConfig.margin}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="name"
@@ -476,16 +472,16 @@ export function ServicesImpactDashboard({ overview }: Props) {
                     labelFormatter={tooltipLabelFormatter}
                     formatter={tooltipFormatter}
                     contentStyle={{
-                      fontSize: isMobile ? '12px' : '14px',
-                      padding: isMobile ? '8px' : '12px'
+                      fontSize: isMobile ? "12px" : "14px",
+                      padding: isMobile ? "8px" : "12px",
                     }}
                   />
                   <Legend
                     wrapperStyle={{
-                      paddingTop: isMobile ? '10px' : '20px',
-                      fontSize: isMobile ? '12px' : '14px'
+                      paddingTop: isMobile ? "10px" : "20px",
+                      fontSize: isMobile ? "12px" : "14px",
                     }}
-                    iconType={isMobile ? 'rect' : 'line'}
+                    iconType={isMobile ? "rect" : "line"}
                   />
                   <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
                   <Bar dataKey="provided" fill="#3B82F6" name="Provided" />

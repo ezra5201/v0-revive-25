@@ -18,7 +18,7 @@ export default function DashboardPage() {
   const [overview, setOverview] = useState<OverviewData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("This Month")
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("Last 3 Months")
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -109,6 +109,8 @@ export default function DashboardPage() {
         return "New Clients Last Month"
       case "This Year":
         return "New Clients This Year"
+      case "Last 3 Months":
+        return "New Clients Last 3 Months"
       default:
         return "New Clients"
     }
