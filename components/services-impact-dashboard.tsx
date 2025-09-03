@@ -145,9 +145,9 @@ export function ServicesImpactDashboard({ overview }: Props) {
   const [customEndDate, setCustomEndDate] = useState("")
   const [isSpecificDateOpen, setIsSpecificDateOpen] = useState(false)
   const [isCustomRangeOpen, setIsCustomRangeOpen] = useState(false)
-  const [isPerformanceExpanded, setIsPerformanceExpanded] = useState(true)
-  const [isDeliveryVsDemandExpanded, setIsDeliveryVsDemandExpanded] = useState(true)
-  const [isTrendsAndGapsExpanded, setIsTrendsAndGapsExpanded] = useState(true)
+  const [isPerformanceExpanded, setIsPerformanceExpanded] = useState(false) // Changed from true to false for collapsed default
+  const [isDeliveryVsDemandExpanded, setIsDeliveryVsDemandExpanded] = useState(false) // Changed from true to false for collapsed default
+  const [isTrendsAndGapsExpanded, setIsTrendsAndGapsExpanded] = useState(false) // Changed from true to false for collapsed default
   const isMobile = useIsMobile()
 
   // Debounce filter changes to prevent excessive API calls
