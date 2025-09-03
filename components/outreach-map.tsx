@@ -12,12 +12,14 @@ interface OutreachLocation {
   id: number
   name: string
   intersection: string
+  address?: string
   latitude?: number
   longitude?: number
   visit_count: number
   last_visited?: string
   safety_concerns?: string
   is_active: boolean
+  notes?: string
 }
 
 interface OutreachRun {
@@ -162,64 +164,121 @@ export function OutreachMap() {
 
       // Determine marker color based on activity and safety
       let markerColor = "#3b82f6" // blue default
-      if (location.safety_concerns)
+      let borderColor = "#1e40af" // darker blue
+      if (location.safety_concerns) {
         markerColor = "#ef4444" // red for safety concerns
-      else if (totalContacts >= 10)
+        borderColor = "#dc2626"
+      } else if (totalContacts >= 10) {
         markerColor = "#22c55e" // green for high activity
-      else if (totalContacts >= 3) markerColor = "#f59e0b" // orange for medium activity
+        borderColor = "#16a34a"
+      } else if (totalContacts >= 3) {
+        markerColor = "#f59e0b" // orange for medium activity
+        borderColor = "#d97706"
+      }
 
-      // Create custom marker icon
       const markerIcon = L.divIcon({
         html: `
-          <div style="
-            background-color: ${markerColor};
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 10px;
-            font-weight: bold;
-          ">
-            ${totalContacts || ""}
+          <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
+            <!-- Pin body -->
+            <div style="
+              background: linear-gradient(135deg, ${markerColor} 0%, ${borderColor} 100%);
+              width: 28px;
+              height: 28px;
+              border-radius: 50% 50% 50% 0;
+              transform: rotate(-45deg);
+              border: 2px solid white;
+              box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              position: relative;
+            ">
+              <!-- Contact count inside pin -->
+              <div style="
+                transform: rotate(45deg);
+                color: white;
+                font-size: 10px;
+                font-weight: bold;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+              ">
+                ${totalContacts || ""}
+              </div>
+            </div>
+            <!-- Pin shadow -->
+            <div style="
+              width: 12px;
+              height: 6px;
+              background: rgba(0,0,0,0.2);
+              border-radius: 50%;
+              margin-top: -2px;
+              filter: blur(1px);
+            "></div>
           </div>
         `,
-        className: "custom-marker",
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
+        className: "custom-pin-marker",
+        iconSize: [32, 40],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32],
       })
 
       const marker = L.marker([location.latitude, location.longitude], { icon: markerIcon }).addTo(
         mapInstanceRef.current,
       )
 
-      // Create popup content
+      const tooltipContent = `
+        <div style="font-size: 12px; line-height: 1.3;">
+          <strong>${location.name}</strong><br/>
+          ${location.intersection || location.address || "No address available"}
+          ${location.safety_concerns ? '<br/><span style="color: #ef4444;">⚠️ Safety Alert</span>' : ""}
+        </div>
+      `
+
+      // Bind tooltip for mouseover
+      marker.bindTooltip(tooltipContent, {
+        permanent: false,
+        direction: "top",
+        offset: [0, -10],
+        className: "custom-tooltip",
+      })
+
+      // Create detailed popup content for clicks
       const popupContent = `
-        <div class="p-2 min-w-[200px]">
-          <h3 class="font-semibold text-sm mb-1">${location.name}</h3>
-          <p class="text-xs text-gray-600 mb-2">${location.intersection}</p>
-          <div class="space-y-1 text-xs">
+        <div class="p-3 min-w-[220px]">
+          <h3 class="font-semibold text-base mb-2">${location.name}</h3>
+          <p class="text-sm text-gray-600 mb-3">${location.intersection || location.address || "No address available"}</p>
+          <div class="space-y-2 text-sm">
             <div class="flex justify-between">
-              <span>Total visits:</span>
+              <span class="text-gray-500">Total visits:</span>
               <span class="font-medium">${location.visit_count}</span>
             </div>
             <div class="flex justify-between">
-              <span>Recent contacts:</span>
+              <span class="text-gray-500">Recent contacts:</span>
               <span class="font-medium">${totalContacts}</span>
             </div>
             <div class="flex justify-between">
-              <span>Last visited:</span>
+              <span class="text-gray-500">Last visited:</span>
               <span class="font-medium">${location.last_visited ? new Date(location.last_visited).toLocaleDateString() : "Never"}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-500">Status:</span>
+              <span class="font-medium ${location.is_active ? "text-green-600" : "text-gray-500"}">${location.is_active ? "Active" : "Inactive"}</span>
             </div>
             ${
               location.safety_concerns
                 ? `
-              <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+              <div class="mt-3 p-2 bg-red-50 border border-red-200 rounded">
                 <p class="text-red-800 text-xs font-medium">⚠️ Safety Concerns</p>
+                <p class="text-red-700 text-xs mt-1">${location.safety_concerns}</p>
+              </div>
+            `
+                : ""
+            }
+            ${
+              location.notes
+                ? `
+              <div class="mt-3 p-2 bg-blue-50 border border-blue-200 rounded">
+                <p class="text-blue-800 text-xs font-medium">📝 Notes</p>
+                <p class="text-blue-700 text-xs mt-1">${location.notes}</p>
               </div>
             `
                 : ""
@@ -228,7 +287,19 @@ export function OutreachMap() {
         </div>
       `
 
-      marker.bindPopup(popupContent)
+      marker.bindPopup(popupContent, {
+        maxWidth: 300,
+        className: "custom-popup",
+      })
+
+      marker.on("mouseover", function () {
+        this.openTooltip()
+      })
+
+      marker.on("mouseout", function () {
+        this.closeTooltip()
+      })
+
       marker.on("click", () => setSelectedLocation(location))
 
       markersRef.current.push(marker)
@@ -410,6 +481,38 @@ export function OutreachMap() {
               </div>
             </div>
           )}
+
+          {/* Custom CSS for enhanced tooltips and popups */}
+          <style jsx global>{`
+            .custom-tooltip {
+              background: rgba(0, 0, 0, 0.8) !important;
+              border: none !important;
+              border-radius: 6px !important;
+              color: white !important;
+              font-size: 12px !important;
+              padding: 8px 10px !important;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+            }
+            
+            .custom-tooltip:before {
+              border-top-color: rgba(0, 0, 0, 0.8) !important;
+            }
+            
+            .custom-popup .leaflet-popup-content-wrapper {
+              border-radius: 8px !important;
+              box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+            }
+            
+            .custom-pin-marker {
+              cursor: pointer;
+              transition: transform 0.2s ease;
+            }
+            
+            .custom-pin-marker:hover {
+              transform: scale(1.1);
+              z-index: 1000;
+            }
+          `}</style>
         </CardContent>
       </Card>
 
@@ -421,22 +524,43 @@ export function OutreachMap() {
             <span className="font-medium text-sm">Map Legend</span>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-green-500 border-2 border-white shadow"></div>
-              <span>High Activity (10+ contacts)</span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm text-gray-700 mb-2">Activity Levels</h4>
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-5 h-5 rounded-full bg-green-500 border-2 border-white shadow-md transform rotate-45"
+                  style={{ borderRadius: "50% 50% 50% 0" }}
+                ></div>
+                <span>High Activity (10+ contacts)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-5 h-5 rounded-full bg-orange-500 border-2 border-white shadow-md transform rotate-45"
+                  style={{ borderRadius: "50% 50% 50% 0" }}
+                ></div>
+                <span>Medium Activity (3-9 contacts)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-5 h-5 rounded-full bg-blue-500 border-2 border-white shadow-md transform rotate-45"
+                  style={{ borderRadius: "50% 50% 50% 0" }}
+                ></div>
+                <span>Low Activity (0-2 contacts)</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-orange-500 border-2 border-white shadow"></div>
-              <span>Medium Activity (3-9 contacts)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow"></div>
-              <span>Low Activity (0-2 contacts)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow"></div>
-              <span>Safety Concerns</span>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm text-gray-700 mb-2">Special Indicators</h4>
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-5 h-5 rounded-full bg-red-500 border-2 border-white shadow-md transform rotate-45"
+                  style={{ borderRadius: "50% 50% 50% 0" }}
+                ></div>
+                <span>Safety Concerns</span>
+              </div>
+              <div className="text-xs text-gray-600 mt-2">
+                <strong>💡 Tip:</strong> Hover over pins for quick address info, click for detailed information
+              </div>
             </div>
           </div>
         </CardContent>
