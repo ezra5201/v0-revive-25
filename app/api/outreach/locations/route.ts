@@ -6,8 +6,22 @@ const sql = neon(process.env.DATABASE_URL!)
 export async function GET() {
   try {
     const locations = await sql`
-      SELECT * FROM outreach_locations 
-      ORDER BY is_active DESC, name ASC
+      SELECT 
+        id,
+        name,
+        intersection,
+        address,
+        latitude,
+        longitude,
+        is_active,
+        visit_count,
+        last_visited
+      FROM outreach_locations 
+      WHERE is_active = true 
+        AND latitude IS NOT NULL 
+        AND longitude IS NOT NULL
+      ORDER BY visit_count DESC, name ASC
+      LIMIT 100
     `
 
     return NextResponse.json(locations)

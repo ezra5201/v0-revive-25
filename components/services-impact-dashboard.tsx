@@ -13,7 +13,17 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts"
-import { TrendingUp, TrendingDown, Target, AlertTriangle, Activity, Users, UserPlus } from 'lucide-react'
+import {
+  TrendingUp,
+  TrendingDown,
+  Target,
+  AlertTriangle,
+  Activity,
+  Users,
+  UserPlus,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -31,10 +41,10 @@ function useIsMobile() {
     }
 
     checkIsMobile()
-    window.addEventListener('resize', checkIsMobile)
-    
+    window.addEventListener("resize", checkIsMobile)
+
     // Proper cleanup for responsive event listeners
-    return () => window.removeEventListener('resize', checkIsMobile)
+    return () => window.removeEventListener("resize", checkIsMobile)
   }, [])
 
   return isMobile
@@ -63,15 +73,15 @@ const getChartConfig = (isMobile, isTablet) => ({
   xAxisProps: {
     angle: isMobile ? -90 : -45,
     textAnchor: "end",
-    height: isMobile ? 120 : 80
+    height: isMobile ? 120 : 80,
   },
-  margin: { 
-    top: 20, 
-    right: 30, 
-    left: 20, 
-    bottom: isMobile ? 120 : 80 
+  margin: {
+    top: 20,
+    right: 30,
+    left: 20,
+    bottom: isMobile ? 120 : 80,
   },
-  labelFormatter: (value) => abbreviateServiceName(value, isMobile)
+  labelFormatter: (value) => abbreviateServiceName(value, isMobile),
 })
 
 // Mock data simulating your Neon database queries - replace with real API calls
@@ -128,13 +138,16 @@ interface Props {
 export function ServicesImpactDashboard({ overview }: Props) {
   const [serviceData, setServiceData] = useState([])
   const [trendData, setTrendData] = useState([])
-  const [selectedPeriod, setSelectedPeriod] = useState("This Month")
+  const [selectedPeriod, setSelectedPeriod] = useState("Last 3 Months")
   const [loading, setLoading] = useState(true)
   const [specificDate, setSpecificDate] = useState("")
   const [customStartDate, setCustomStartDate] = useState("")
   const [customEndDate, setCustomEndDate] = useState("")
   const [isSpecificDateOpen, setIsSpecificDateOpen] = useState(false)
   const [isCustomRangeOpen, setIsCustomRangeOpen] = useState(false)
+  const [isPerformanceExpanded, setIsPerformanceExpanded] = useState(false) // Changed from true to false for collapsed default
+  const [isDeliveryVsDemandExpanded, setIsDeliveryVsDemandExpanded] = useState(false) // Changed from true to false for collapsed default
+  const [isTrendsAndGapsExpanded, setIsTrendsAndGapsExpanded] = useState(false) // Changed from true to false for collapsed default
   const isMobile = useIsMobile()
 
   // Debounce filter changes to prevent excessive API calls
@@ -156,7 +169,7 @@ export function ServicesImpactDashboard({ overview }: Props) {
       totalProvided,
       totalGap,
       overallCompletionRate,
-      criticalGaps
+      criticalGaps,
     }
   }, [serviceData])
 
@@ -175,10 +188,7 @@ export function ServicesImpactDashboard({ overview }: Props) {
   }, [selectedPeriod])
 
   // Memoize tooltip formatter to prevent recreation on each render
-  const tooltipFormatter = useCallback((value, name) => [
-    value, 
-    name === 'requested' ? 'Requested' : 'Provided'
-  ], [])
+  const tooltipFormatter = useCallback((value, name) => [value, name === "requested" ? "Requested" : "Provided"], [])
 
   // Memoize tooltip label formatter
   const tooltipLabelFormatter = useCallback((label) => label, [])
@@ -188,7 +198,9 @@ export function ServicesImpactDashboard({ overview }: Props) {
       try {
         setLoading(true)
 
-        const response = await fetch(`/api/analytics/services-impact?period=${encodeURIComponent(debouncedSelectedPeriod)}`)
+        const response = await fetch(
+          `/api/analytics/services-impact?period=${encodeURIComponent(debouncedSelectedPeriod)}`,
+        )
 
         if (!response.ok) {
           throw new Error("Failed to fetch services data")
@@ -284,6 +296,10 @@ export function ServicesImpactDashboard({ overview }: Props) {
                 <SelectItem value="This Quarter">This Quarter</SelectItem>
                 <SelectItem value="Last Quarter">Last Quarter</SelectItem>
                 <SelectItem value="This Year">This Year</SelectItem>
+                <SelectItem value="Next 7 Days">Next 7 Days</SelectItem>
+                <SelectItem value="Next 30 Days">Next 30 Days</SelectItem>
+                <SelectItem value="Next 3 Months">Next 3 Months</SelectItem>
+                <SelectItem value="Next Quarter">Next Quarter</SelectItem>
                 <SelectItem value="Specific Date">Specific Date</SelectItem>
                 <SelectItem value="Custom Date Range">Custom Date Range</SelectItem>
               </SelectContent>
@@ -375,170 +391,210 @@ export function ServicesImpactDashboard({ overview }: Props) {
         </div>
 
         {/* Service Performance Grid */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Service Performance Overview</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {serviceData.map((service) => (
-              <div
-                key={service.name}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-gray-900">{service.name}</h3>
-                  <div
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      service.impact === "high"
-                        ? "bg-green-100 text-green-800"
-                        : service.impact === "medium"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {service.completionRate}%
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Requested:</span>
-                    <span className="font-medium">{service.requested}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Provided:</span>
-                    <span className="font-medium text-blue-600">{service.provided}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Gap:</span>
-                    <span className={`font-medium ${service.gap > 20 ? "text-red-600" : "text-gray-900"}`}>
-                      {service.gap}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-3">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all duration-300 ${
-                        service.impact === "high"
-                          ? "bg-green-500"
-                          : service.impact === "medium"
-                            ? "bg-yellow-500"
-                            : "bg-red-500"
-                      }`}
-                      style={{ width: `${service.completionRate}%` }}
-                    />
-                  </div>
-                </div>
-
-                {service.trend !== 0 && (
-                  <div className="flex items-center mt-2 text-xs">
-                    {service.trend > 0 ? (
-                      <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3 text-red-500 mr-1" />
-                    )}
-                    <span className={service.trend > 0 ? "text-green-600" : "text-red-600"}>
-                      {Math.abs(service.trend)}% vs last month
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div
+            className="flex items-center justify-between p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => setIsPerformanceExpanded(!isPerformanceExpanded)}
+          >
+            <h2 className="text-xl font-semibold text-gray-900">Service Performance Overview</h2>
+            {isPerformanceExpanded ? (
+              <ChevronUp className="h-5 w-5 text-gray-500" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-gray-500" />
+            )}
           </div>
+          {isPerformanceExpanded && (
+            <div className="px-6 pb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {serviceData.map((service) => (
+                  <div
+                    key={service.name}
+                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-medium text-gray-900">{service.name}</h3>
+                      <div
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          service.impact === "high"
+                            ? "bg-green-100 text-green-800"
+                            : service.impact === "medium"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {service.completionRate}%
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Requested:</span>
+                        <span className="font-medium">{service.requested}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Provided:</span>
+                        <span className="font-medium text-blue-600">{service.provided}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Gap:</span>
+                        <span className={`font-medium ${service.gap > 20 ? "text-red-600" : "text-gray-900"}`}>
+                          {service.gap}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            service.impact === "high"
+                              ? "bg-green-500"
+                              : service.impact === "medium"
+                                ? "bg-yellow-500"
+                                : "bg-red-500"
+                          }`}
+                          style={{ width: `${service.completionRate}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {service.trend !== 0 && (
+                      <div className="flex items-center mt-2 text-xs">
+                        {service.trend > 0 ? (
+                          <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-red-500 mr-1" />
+                        )}
+                        <span className={service.trend > 0 ? "text-green-600" : "text-red-600"}>
+                          {Math.abs(service.trend)}% vs last month
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Service Comparison Chart */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div
+            className="flex items-center justify-between p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => setIsDeliveryVsDemandExpanded(!isDeliveryVsDemandExpanded)}
+          >
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Service Delivery vs Demand</h2>
               <p className="text-sm text-gray-500 mt-1">Shows the gap between what clients need and what we deliver</p>
             </div>
+            {isDeliveryVsDemandExpanded ? (
+              <ChevronUp className="h-5 w-5 text-gray-500" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-gray-500" />
+            )}
           </div>
-          <div className="min-w-[320px] overflow-x-auto">
-            <div className="h-[300px] md:h-[400px] min-w-[600px] sm:min-w-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={serviceData}
-                  margin={chartConfig.margin}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="name"
-                    angle={chartConfig.xAxisProps.angle}
-                    textAnchor={chartConfig.xAxisProps.textAnchor}
-                    height={chartConfig.xAxisProps.height}
-                    tickFormatter={chartConfig.labelFormatter}
-                    fontSize={isMobile ? 12 : 14}
-                  />
-                  <YAxis fontSize={isMobile ? 12 : 14} />
-                  <Tooltip
-                    labelFormatter={tooltipLabelFormatter}
-                    formatter={tooltipFormatter}
-                    contentStyle={{
-                      fontSize: isMobile ? '12px' : '14px',
-                      padding: isMobile ? '8px' : '12px'
-                    }}
-                  />
-                  <Legend
-                    wrapperStyle={{
-                      paddingTop: isMobile ? '10px' : '20px',
-                      fontSize: isMobile ? '12px' : '14px'
-                    }}
-                    iconType={isMobile ? 'rect' : 'line'}
-                  />
-                  <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
-                  <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
-                </BarChart>
-              </ResponsiveContainer>
+          {isDeliveryVsDemandExpanded && (
+            <div className="px-6 pb-6">
+              <div className="min-w-[320px] overflow-x-auto">
+                <div className="h-[300px] md:h-[400px] min-w-[600px] sm:min-w-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={serviceData} margin={chartConfig.margin}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="name"
+                        angle={chartConfig.xAxisProps.angle}
+                        textAnchor={chartConfig.xAxisProps.textAnchor}
+                        height={chartConfig.xAxisProps.height}
+                        tickFormatter={chartConfig.labelFormatter}
+                        fontSize={isMobile ? 12 : 14}
+                      />
+                      <YAxis fontSize={isMobile ? 12 : 14} />
+                      <Tooltip
+                        labelFormatter={tooltipLabelFormatter}
+                        formatter={tooltipFormatter}
+                        contentStyle={{
+                          fontSize: isMobile ? "12px" : "14px",
+                          padding: isMobile ? "8px" : "12px",
+                        }}
+                      />
+                      <Legend
+                        wrapperStyle={{
+                          paddingTop: isMobile ? "10px" : "20px",
+                          fontSize: isMobile ? "12px" : "14px",
+                        }}
+                        iconType={isMobile ? "rect" : "line"}
+                      />
+                      <Bar dataKey="requested" fill="#94A3B8" name="Requested" />
+                      <Bar dataKey="provided" fill="#3B82F6" name="Provided" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Trends and Critical Gaps */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Service Trends */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Service Delivery Trends</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="requested" stroke="#94A3B8" strokeWidth={2} name="Requested" />
-                <Line type="monotone" dataKey="provided" stroke="#3B82F6" strokeWidth={2} name="Provided" />
-              </LineChart>
-            </ResponsiveContainer>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div
+            className="flex items-center justify-between p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => setIsTrendsAndGapsExpanded(!isTrendsAndGapsExpanded)}
+          >
+            <h2 className="text-xl font-semibold text-gray-900">Service Delivery Trends & Critical Gaps</h2>
+            {isTrendsAndGapsExpanded ? (
+              <ChevronUp className="h-5 w-5 text-gray-500" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-gray-500" />
+            )}
           </div>
+          {isTrendsAndGapsExpanded && (
+            <div className="px-6 pb-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Service Trends */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Service Delivery Trends</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={trendData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="requested" stroke="#94A3B8" strokeWidth={2} name="Requested" />
+                      <Line type="monotone" dataKey="provided" stroke="#3B82F6" strokeWidth={2} name="Provided" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
 
-          {/* Critical Service Gaps */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Critical Service Gaps</h2>
-            <div className="space-y-4">
-              {calculatedMetrics.criticalGaps.slice(0, 5).map((service, index) => (
-                <div
-                  key={service.name}
-                  className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-bold text-red-600">{index + 1}</span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{service.name}</p>
-                      <p className="text-sm text-gray-600">{service.completionRate}% completion rate</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-red-600">{service.gap}</p>
-                    <p className="text-sm text-gray-500">unmet requests</p>
+                {/* Critical Service Gaps */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Critical Service Gaps</h3>
+                  <div className="space-y-4">
+                    {calculatedMetrics.criticalGaps.slice(0, 5).map((service, index) => (
+                      <div
+                        key={service.name}
+                        className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-bold text-red-600">{index + 1}</span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{service.name}</p>
+                            <p className="text-sm text-gray-600">{service.completionRate}% completion rate</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-red-600">{service.gap}</p>
+                          <p className="text-sm text-gray-500">unmet requests</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Specific Date Dialog */}
