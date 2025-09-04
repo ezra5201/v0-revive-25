@@ -73,6 +73,18 @@ export default function ContactLogPage() {
     refetch: refetchContacts,
   } = useContacts(activeTab === "client" ? "all" : activeTab, filters)
 
+  useEffect(() => {
+    console.log("[v0] ContactLogPage debug:", {
+      isInitialized,
+      dbLoading,
+      dbError,
+      contactsLoading,
+      contactsError,
+      activeTab,
+      selectedClient,
+    })
+  }, [isInitialized, dbLoading, dbError, contactsLoading, contactsError, activeTab, selectedClient])
+
   const updateURL = useCallback(
     (tab: MainTab, clientName?: string, section?: ClientSection, view?: ViewMode) => {
       const params = new URLSearchParams()
@@ -193,11 +205,30 @@ export default function ContactLogPage() {
     setSelectedContactForUpdate(null)
   }, [refetchContacts])
 
+  if (dbError) {
+    console.log("[v0] Database error:", dbError)
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Database Error: {dbError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (!isInitialized && !dbLoading) {
+    console.log("[v0] Showing DatabaseSetup component")
     return <DatabaseSetup />
   }
 
   if (dbLoading) {
+    console.log("[v0] Showing loading spinner")
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -208,6 +239,7 @@ export default function ContactLogPage() {
     )
   }
 
+  console.log("[v0] Rendering main application")
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />

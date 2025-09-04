@@ -46,6 +46,8 @@ export function useContacts(activeTab: "today" | "all", filters: Filters) {
     setIsLoading(true)
     setError(null)
 
+    console.log("[v0] Fetching contacts for tab:", activeTab, "with filters:", filters)
+
     try {
       const params = new URLSearchParams()
       params.set("tab", activeTab)
@@ -59,8 +61,18 @@ export function useContacts(activeTab: "today" | "all", filters: Filters) {
         }
       }
 
-      const response = await fetch(`/api/contacts?${params.toString()}`)
+      const url = `/api/contacts?${params.toString()}`
+      console.log("[v0] Contacts API URL:", url)
+
+      const response = await fetch(url)
+      console.log("[v0] Contacts API response status:", response.status)
+
+      if (!response.ok) {
+        throw new Error(`Contacts API returned ${response.status}: ${response.statusText}`)
+      }
+
       const data = await response.json()
+      console.log("[v0] Contacts API data:", data)
 
       if (response.ok) {
         setContacts(data.contacts || [])
@@ -68,7 +80,8 @@ export function useContacts(activeTab: "today" | "all", filters: Filters) {
         setError(data.error || "Failed to fetch contacts")
       }
     } catch (err) {
-      setError("Failed to connect to server")
+      console.error("[v0] Contacts fetch error:", err)
+      setError(`Failed to connect to server: ${err instanceof Error ? err.message : "Unknown error"}`)
     } finally {
       setIsLoading(false)
     }

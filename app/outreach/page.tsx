@@ -8,9 +8,8 @@ import { OutreachLocations } from "@/components/outreach-locations"
 import { OutreachRuns } from "@/components/outreach-runs"
 import { OutreachContacts } from "@/components/outreach-contacts"
 import { OutreachInventory } from "@/components/outreach-inventory"
-import { OutreachMap } from "@/components/outreach-map"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MapPin, Calendar, Package, Users, Map } from "lucide-react"
+import { MapPin, Calendar, Package, Users } from "lucide-react"
 
 export default function OutreachPage() {
   // Use the same database initialization logic as Contact Log
@@ -47,7 +46,7 @@ export default function OutreachPage() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5">
+              <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
                 <TabsTrigger value="locations" className="flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
                   <span className="hidden sm:inline">Locations</span>
@@ -55,10 +54,6 @@ export default function OutreachPage() {
                 <TabsTrigger value="runs" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   <span className="hidden sm:inline">Runs</span>
-                </TabsTrigger>
-                <TabsTrigger value="map" className="flex items-center gap-2">
-                  <Map className="h-4 w-4" />
-                  <span className="hidden sm:inline">Map</span>
                 </TabsTrigger>
                 <TabsTrigger value="inventory" className="flex items-center gap-2">
                   <Package className="h-4 w-4" />
@@ -76,10 +71,6 @@ export default function OutreachPage() {
 
               <TabsContent value="runs">
                 <OutreachRuns />
-              </TabsContent>
-
-              <TabsContent value="map">
-                <OutreachMap />
               </TabsContent>
 
               <TabsContent value="inventory">

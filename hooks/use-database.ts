@@ -18,9 +18,19 @@ export function useDatabase() {
 
   useEffect(() => {
     const checkDatabaseStatus = async () => {
+      console.log("[v0] Checking database status...")
+
       try {
         const response = await fetch("/api/setup")
+
+        console.log("[v0] Setup API response status:", response.status)
+
+        if (!response.ok) {
+          throw new Error(`Setup API returned ${response.status}: ${response.statusText}`)
+        }
+
         const result = await response.json()
+        console.log("[v0] Setup API result:", result)
 
         setState({
           isInitialized: result.initialized,
@@ -29,10 +39,11 @@ export function useDatabase() {
           status: result.status,
         })
       } catch (error) {
+        console.error("[v0] Database status check failed:", error)
         setState({
           isInitialized: false,
           isLoading: false,
-          error: "Failed to check database status",
+          error: `Failed to check database status: ${error instanceof Error ? error.message : "Unknown error"}`,
         })
       }
     }
