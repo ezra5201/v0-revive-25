@@ -16,7 +16,7 @@ import { useDatabase } from "@/hooks/use-database"
 import { X } from "lucide-react"
 
 type MainTab = "today" | "all" | "client"
-type ClientSection = "basic-info" | "contact-history" | "journey-timeline" | "ot-goals"
+type ClientSection = "basic-info" | "contact-history" | "ot-goals" | "ot-checkins"
 
 export default function OtPage() {
   const searchParams = useSearchParams()
@@ -112,7 +112,7 @@ export default function OtPage() {
 
   // Client section change handler
   const handleClientSectionChange = useCallback(
-    (section: "basic-info" | "contact-history" | "journey-timeline" | "ot-goals") => {
+    (section: "basic-info" | "contact-history" | "ot-goals" | "ot-checkins") => {
       setActiveClientSection(section)
       if (selectedClient) {
         updateURL("client", selectedClient, section)
@@ -227,7 +227,7 @@ export default function OtPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
-              My Caseload
+              OT Caseload
             </button>
 
             {/* Dynamic client tab */}
