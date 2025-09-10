@@ -82,7 +82,7 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
   // Fetch goals when modal opens
   useEffect(() => {
     if (isOpen && clientName) {
-      fetchGoals()
+      fetchGoals(clientName)
     }
   }, [isOpen, clientName])
 
@@ -188,10 +188,10 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
     }
   }
 
-  const fetchGoals = async () => {
-    setLoading(true)
-    setError(null)
+  const fetchGoals = async (clientName: string) => {
     try {
+      setLoading(true)
+      setError(null)
       console.log("DEBUG: Fetching OT goals for client:", clientName)
       const response = await fetch(`/api/ot-goals/by-client/${encodeURIComponent(clientName)}`)
       console.log("DEBUG: OT goals fetch response status:", response.status)
@@ -206,6 +206,12 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
         // If we get HTML instead of JSON (like a 404 page), treat as no goals
         if (!isJson && errorText.includes("<!DOCTYPE")) {
           console.log("DEBUG: Received HTML response, treating as no OT goals found")
+          setGoals([])
+          return
+        }
+
+        if (response.status === 404) {
+          console.log("DEBUG: 404 error, treating as no OT goals found")
           setGoals([])
           return
         }
@@ -235,7 +241,7 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
         setGoals([])
         setError(null) // Don't show error for this case
       } else {
-        setError(err instanceof Error ? err.message : "Failed to fetch OT goals")
+        setError("No goals found for this person")
         setGoals([])
       }
     } finally {
@@ -806,7 +812,7 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
               )}
 
               {error && (
-                <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
+                <div className="flex items-center space-x-2 text-gray-800 bg-gray-50 p-3 rounded-md">
                   <AlertCircle className="h-4 w-4" />
                   <span className="text-sm">{error}</span>
                 </div>
@@ -998,7 +1004,7 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
             </div>
 
             {error && (
-              <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
+              <div className="flex items-center space-x-2 text-gray-800 bg-gray-50 p-3 rounded-md">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm">{error}</span>
               </div>
@@ -1109,7 +1115,7 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
             </div>
 
             {error && (
-              <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
+              <div className="flex items-center space-x-2 text-gray-800 bg-gray-50 p-3 rounded-md">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm">{error}</span>
               </div>
