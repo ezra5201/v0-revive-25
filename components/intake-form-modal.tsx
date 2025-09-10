@@ -163,6 +163,8 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
 
   const [overallCompletion, setOverallCompletion] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   // Calculate section completion percentages
   useEffect(() => {
@@ -265,8 +267,22 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
     return Math.round((filledFields / fields.length) * 100)
   }
 
-  const handleSave = async () => {
-    setIsSaving(true)
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+
+    const autoSaveTimer = setTimeout(() => {
+      handleSave(true) // Pass true to indicate auto-save
+    }, 3000) // Auto-save after 3 seconds of inactivity
+
+    return () => clearTimeout(autoSaveTimer)
+  }, [formData, hasUnsavedChanges])
+
+  useEffect(() => {
+    setHasUnsavedChanges(true)
+  }, [formData])
+
+  const handleSave = async (isAutoSave = false) => {
+    if (!isAutoSave) setIsSaving(true)
     try {
       const response = await fetch("/api/intake-forms", {
         method: "POST",
@@ -285,11 +301,13 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
         throw new Error("Failed to save intake form")
       }
 
+      setLastSaved(new Date())
+      setHasUnsavedChanges(false)
       console.log("Intake form saved successfully")
     } catch (error) {
       console.error("Error saving intake form:", error)
     } finally {
-      setIsSaving(false)
+      if (!isAutoSave) setIsSaving(false)
     }
   }
 
@@ -929,14 +947,20 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
               <em className="text-sm">*Reference 2025 Federal Poverty Guidelines</em>
             </div>
             <div className="flex justify-between items-center">
-              <div className="text-base text-muted-foreground">Progress is automatically saved</div>
+              <div className="text-base text-muted-foreground">
+                {hasUnsavedChanges
+                  ? "Saving changes..."
+                  : lastSaved
+                    ? `Last saved: ${lastSaved.toLocaleTimeString()}`
+                    : "Progress will be saved automatically"}
+              </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={onClose} className="text-base px-6 py-2 bg-transparent">
                   Close
                 </Button>
-                <Button onClick={handleSave} disabled={isSaving} className="text-base px-6 py-2">
+                <Button onClick={() => handleSave(false)} disabled={isSaving} className="text-base px-6 py-2">
                   <Save className="h-4 w-4 mr-2" />
-                  {isSaving ? "Saving..." : "Save Progress"}
+                  {isSaving ? "Saving..." : "Save Now"}
                 </Button>
               </div>
             </div>
