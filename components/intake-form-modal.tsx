@@ -342,28 +342,31 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <div className="fixed inset-0 bg-gray-500/30 backdrop-blur-sm z-40" />
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 z-50">
-        <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700 p-6">
+      <DialogContent className="w-[95vw] sm:w-[90vw] md:w-[85vw] lg:max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col p-0 z-50">
+        <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700 p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl text-white font-semibold">
-              <FileText className="h-6 w-6" />
-              Center Walk-In Intake - {clientName}
+            <DialogTitle className="flex items-center gap-2 text-xl sm:text-2xl text-white font-semibold">
+              <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
+              <span className="truncate">Center Walk-In Intake - {clientName}</span>
             </DialogTitle>
-            <div className="text-base text-gray-300 mb-3">
+            <div className="text-sm sm:text-base text-gray-300 mb-3">
               These questions help us connect you to the team members and supports that you need and want.
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <div className="flex-1">
-                <Progress value={overallCompletion} className="h-3" />
+                <Progress value={overallCompletion} className="h-2 sm:h-3" />
               </div>
-              <Badge variant={overallCompletion === 100 ? "default" : "secondary"} className="text-base px-4 py-2">
+              <Badge
+                variant={overallCompletion === 100 ? "default" : "secondary"}
+                className="text-sm sm:text-base px-2 sm:px-4 py-1 sm:py-2 whitespace-nowrap"
+              >
                 {overallCompletion}% Complete
               </Badge>
             </div>
           </DialogHeader>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="space-y-2">
             {/* Basic Information Section */}
             <Collapsible
@@ -376,8 +379,8 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                 completion={sectionCompletion.basicInfo}
                 isRequired
               />
-              <CollapsibleContent className="px-4 pb-4 space-y-4 border-l-2 border-muted ml-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CollapsibleContent className="px-2 sm:px-4 pb-4 space-y-4 border-l-2 border-muted ml-2 sm:ml-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="name" className="flex items-center gap-1 text-base font-medium">
                       Name <AlertCircle className="h-3 w-3 text-orange-500" />
@@ -387,7 +390,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       value={formData.name}
                       onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                       placeholder="Full name"
-                      className="mt-1 text-base"
+                      className="mt-1 text-base h-11 sm:h-10"
                     />
                   </div>
                   <div>
@@ -399,7 +402,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       value={formData.pronouns}
                       onChange={(e) => setFormData((prev) => ({ ...prev, pronouns: e.target.value }))}
                       placeholder="e.g., he/him, she/her, they/them"
-                      className="mt-1 text-base"
+                      className="mt-1 text-base h-11 sm:h-10"
                     />
                   </div>
                   <div>
@@ -411,7 +414,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       type="date"
                       value={formData.dateOfBirth}
                       onChange={(e) => setFormData((prev) => ({ ...prev, dateOfBirth: e.target.value }))}
-                      className="mt-1 text-base"
+                      className="mt-1 text-base h-11 sm:h-10"
                     />
                   </div>
                   <div>
@@ -423,10 +426,10 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       value={formData.birthYear}
                       onChange={(e) => setFormData((prev) => ({ ...prev, birthYear: e.target.value }))}
                       placeholder="e.g., 1990"
-                      className="mt-1 text-base"
+                      className="mt-1 text-base h-11 sm:h-10"
                     />
                   </div>
-                  <div className="md:col-span-2">
+                  <div className="lg:col-span-2">
                     <Label htmlFor="program" className="text-base font-medium">
                       Program
                     </Label>
@@ -435,7 +438,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       value={formData.program}
                       onChange={(e) => setFormData((prev) => ({ ...prev, program: e.target.value }))}
                       placeholder="Program name"
-                      className="mt-1 text-base"
+                      className="mt-1 text-base h-11 sm:h-10"
                     />
                   </div>
                 </div>
@@ -449,7 +452,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                     onChange={(e) => setFormData((prev) => ({ ...prev, howHeardAboutUs: e.target.value }))}
                     placeholder="Please describe how you learned about ReVive"
                     rows={3}
-                    className="mt-1 text-base"
+                    className="mt-1 text-base min-h-[80px]"
                   />
                 </div>
               </CollapsibleContent>
@@ -465,12 +468,12 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                 section="supportNeeds"
                 completion={sectionCompletion.supportNeeds}
               />
-              <CollapsibleContent className="px-4 pb-4 space-y-6 border-l-2 border-muted ml-4">
+              <CollapsibleContent className="px-2 sm:px-4 pb-4 space-y-6 border-l-2 border-muted ml-2 sm:ml-4">
                 <div>
                   <Label className="text-base font-semibold text-muted-foreground mb-3 block">Needs:</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                     {NEEDS_OPTIONS.map((need) => (
-                      <div key={need} className="flex items-start space-x-2">
+                      <div key={need} className="flex items-start space-x-3">
                         <Checkbox
                           id={`need-${need}`}
                           checked={formData.needs.includes(need)}
@@ -480,9 +483,9 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                               needs: checked ? [...prev.needs, need] : prev.needs.filter((item) => item !== need),
                             }))
                           }
-                          className="mt-0.5"
+                          className="mt-0.5 h-5 w-5 sm:h-4 sm:w-4"
                         />
-                        <Label htmlFor={`need-${need}`} className="text-base leading-6">
+                        <Label htmlFor={`need-${need}`} className="text-base leading-6 cursor-pointer">
                           {need}
                         </Label>
                       </div>
@@ -492,9 +495,9 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
 
                 <div>
                   <Label className="text-base font-semibold text-muted-foreground mb-3 block">See a:</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                     {SEE_STAFF_OPTIONS.map((staff) => (
-                      <div key={staff} className="flex items-start space-x-2">
+                      <div key={staff} className="flex items-start space-x-3">
                         <Checkbox
                           id={`staff-${staff}`}
                           checked={formData.seeStaff.includes(staff)}
@@ -506,9 +509,9 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                                 : prev.seeStaff.filter((item) => item !== staff),
                             }))
                           }
-                          className="mt-0.5"
+                          className="mt-0.5 h-5 w-5 sm:h-4 sm:w-4"
                         />
-                        <Label htmlFor={`staff-${staff}`} className="text-base leading-6">
+                        <Label htmlFor={`staff-${staff}`} className="text-base leading-6 cursor-pointer">
                           {staff}
                         </Label>
                       </div>
@@ -526,7 +529,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                     onChange={(e) => setFormData((prev) => ({ ...prev, otherSupport: e.target.value }))}
                     placeholder="Please describe any other support needs"
                     rows={2}
-                    className="mt-2 text-base"
+                    className="mt-2 text-base min-h-[60px]"
                   />
                 </div>
               </CollapsibleContent>
@@ -645,8 +648,8 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                 section="demographics"
                 completion={sectionCompletion.demographics}
               />
-              <CollapsibleContent className="px-4 pb-4 space-y-6 border-l-2 border-muted ml-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CollapsibleContent className="px-2 sm:px-4 pb-4 space-y-6 border-l-2 border-muted ml-2 sm:ml-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
                     <Label htmlFor="race">Race</Label>
                     <Input
@@ -654,7 +657,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       value={formData.race}
                       onChange={(e) => setFormData((prev) => ({ ...prev, race: e.target.value }))}
                       placeholder="Race"
-                      className="mt-1 text-base"
+                      className="mt-1 text-base h-11 sm:h-10"
                     />
                   </div>
                   <div>
@@ -662,44 +665,56 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                     <RadioGroup
                       value={formData.ethnicity}
                       onValueChange={(value) => setFormData((prev) => ({ ...prev, ethnicity: value }))}
-                      className="flex gap-6"
+                      className="flex flex-col sm:flex-row gap-4 sm:gap-6"
                     >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Hispanic" id="hispanic" />
-                        <Label htmlFor="hispanic">Hispanic</Label>
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="Hispanic" id="hispanic" className="h-5 w-5 sm:h-4 sm:w-4" />
+                        <Label htmlFor="hispanic" className="text-base cursor-pointer">
+                          Hispanic
+                        </Label>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Non-Hispanic" id="non-hispanic" />
-                        <Label htmlFor="non-hispanic">Non-Hispanic</Label>
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="Non-Hispanic" id="non-hispanic" className="h-5 w-5 sm:h-4 sm:w-4" />
+                        <Label htmlFor="non-hispanic" className="text-base cursor-pointer">
+                          Non-Hispanic
+                        </Label>
                       </div>
                     </RadioGroup>
                   </div>
-                  <div>
+                  <div className="lg:col-span-2">
                     <Label className="block mb-2">Gender</Label>
                     <RadioGroup
                       value={formData.gender}
                       onValueChange={(value) => setFormData((prev) => ({ ...prev, gender: value }))}
-                      className="grid grid-cols-2 gap-3"
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
                     >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Man" id="man" />
-                        <Label htmlFor="man">Man</Label>
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="Man" id="man" className="h-5 w-5 sm:h-4 sm:w-4" />
+                        <Label htmlFor="man" className="text-base cursor-pointer">
+                          Man
+                        </Label>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Woman" id="woman" />
-                        <Label htmlFor="woman">Woman</Label>
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="Woman" id="woman" className="h-5 w-5 sm:h-4 sm:w-4" />
+                        <Label htmlFor="woman" className="text-base cursor-pointer">
+                          Woman
+                        </Label>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Non-binary" id="non-binary" />
-                        <Label htmlFor="non-binary">Non-binary</Label>
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="Non-binary" id="non-binary" className="h-5 w-5 sm:h-4 sm:w-4" />
+                        <Label htmlFor="non-binary" className="text-base cursor-pointer">
+                          Non-binary
+                        </Label>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Other" id="other-gender" />
-                        <Label htmlFor="other-gender">Other</Label>
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="Other" id="other-gender" className="h-5 w-5 sm:h-4 sm:w-4" />
+                        <Label htmlFor="other-gender" className="text-base cursor-pointer">
+                          Other
+                        </Label>
                       </div>
                     </RadioGroup>
                   </div>
-                  <div className="space-y-4">
+                  <div className="lg:col-span-2 space-y-4">
                     <div>
                       <Label className="block mb-2">Disability?</Label>
                       <RadioGroup
@@ -707,15 +722,19 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                         onValueChange={(value) =>
                           setFormData((prev) => ({ ...prev, isDisabled: value === "" ? null : value === "true" }))
                         }
-                        className="flex gap-6"
+                        className="flex flex-col sm:flex-row gap-4 sm:gap-6"
                       >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="true" id="disabled-yes" />
-                          <Label htmlFor="disabled-yes">Yes</Label>
+                        <div className="flex items-center space-x-3">
+                          <RadioGroupItem value="true" id="disabled-yes" className="h-5 w-5 sm:h-4 sm:w-4" />
+                          <Label htmlFor="disabled-yes" className="text-base cursor-pointer">
+                            Yes
+                          </Label>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="false" id="disabled-no" />
-                          <Label htmlFor="disabled-no">No</Label>
+                        <div className="flex items-center space-x-3">
+                          <RadioGroupItem value="false" id="disabled-no" className="h-5 w-5 sm:h-4 sm:w-4" />
+                          <Label htmlFor="disabled-no" className="text-base cursor-pointer">
+                            No
+                          </Label>
                         </div>
                       </RadioGroup>
                     </div>
@@ -726,15 +745,19 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                         onValueChange={(value) =>
                           setFormData((prev) => ({ ...prev, isVeteran: value === "" ? null : value === "true" }))
                         }
-                        className="flex gap-6"
+                        className="flex flex-col sm:flex-row gap-4 sm:gap-6"
                       >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="true" id="veteran-yes" />
-                          <Label htmlFor="veteran-yes">Yes</Label>
+                        <div className="flex items-center space-x-3">
+                          <RadioGroupItem value="true" id="veteran-yes" className="h-5 w-5 sm:h-4 sm:w-4" />
+                          <Label htmlFor="veteran-yes" className="text-base cursor-pointer">
+                            Yes
+                          </Label>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="false" id="veteran-no" />
-                          <Label htmlFor="veteran-no">No</Label>
+                        <div className="flex items-center space-x-3">
+                          <RadioGroupItem value="false" id="veteran-no" className="h-5 w-5 sm:h-4 sm:w-4" />
+                          <Label htmlFor="veteran-no" className="text-base cursor-pointer">
+                            No
+                          </Label>
                         </div>
                       </RadioGroup>
                     </div>
@@ -753,25 +776,31 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                 section="employment"
                 completion={sectionCompletion.employment}
               />
-              <CollapsibleContent className="px-4 pb-4 space-y-6 border-l-2 border-muted ml-4">
+              <CollapsibleContent className="px-2 sm:px-4 pb-4 space-y-6 border-l-2 border-muted ml-2 sm:ml-4">
                 <div>
                   <Label className="block mb-2">Are you:</Label>
                   <RadioGroup
                     value={formData.employmentStatus}
                     onValueChange={(value) => setFormData((prev) => ({ ...prev, employmentStatus: value }))}
-                    className="flex gap-6"
+                    className="flex flex-col sm:flex-row gap-4 sm:gap-6"
                   >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="employed" id="employed" />
-                      <Label htmlFor="employed">Employed</Label>
+                    <div className="flex items-center space-x-3">
+                      <RadioGroupItem value="employed" id="employed" className="h-5 w-5 sm:h-4 sm:w-4" />
+                      <Label htmlFor="employed" className="text-base cursor-pointer">
+                        Employed
+                      </Label>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="underemployed" id="underemployed" />
-                      <Label htmlFor="underemployed">Underemployed</Label>
+                    <div className="flex items-center space-x-3">
+                      <RadioGroupItem value="underemployed" id="underemployed" className="h-5 w-5 sm:h-4 sm:w-4" />
+                      <Label htmlFor="underemployed" className="text-base cursor-pointer">
+                        Underemployed
+                      </Label>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="unemployed" id="unemployed" />
-                      <Label htmlFor="unemployed">Unemployed</Label>
+                    <div className="flex items-center space-x-3">
+                      <RadioGroupItem value="unemployed" id="unemployed" className="h-5 w-5 sm:h-4 sm:w-4" />
+                      <Label htmlFor="unemployed" className="text-base cursor-pointer">
+                        Unemployed
+                      </Label>
                     </div>
                   </RadioGroup>
                 </div>
@@ -780,7 +809,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                   <Label className="text-base font-semibold text-muted-foreground mb-3 block">I have:</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {INCOME_SOURCES.map((source) => (
-                      <div key={source} className="flex items-start space-x-2">
+                      <div key={source} className="flex items-start space-x-3">
                         <Checkbox
                           id={`income-${source}`}
                           checked={formData.incomeSources.includes(source)}
@@ -792,9 +821,9 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                                 : prev.incomeSources.filter((item) => item !== source),
                             }))
                           }
-                          className="mt-0.5"
+                          className="mt-0.5 h-5 w-5 sm:h-4 sm:w-4"
                         />
-                        <Label htmlFor={`income-${source}`} className="text-base leading-5">
+                        <Label htmlFor={`income-${source}`} className="text-base leading-5 cursor-pointer">
                           {source}
                         </Label>
                       </div>
@@ -853,16 +882,17 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
               onOpenChange={(open) => setSectionStates((prev) => ({ ...prev, contact: open }))}
             >
               <SectionHeader title="8. My Contact Info" section="contact" completion={sectionCompletion.contact} />
-              <CollapsibleContent className="px-4 pb-4 space-y-4 border-l-2 border-muted ml-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CollapsibleContent className="px-2 sm:px-4 pb-4 space-y-4 border-l-2 border-muted ml-2 sm:ml-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="phone">Phone #</Label>
                     <Input
                       id="phone"
+                      type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
                       placeholder="Phone number"
-                      className="mt-1 text-base"
+                      className="mt-1 text-base h-11 sm:h-10"
                     />
                   </div>
                   <div>
@@ -873,7 +903,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       value={formData.email}
                       onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                       placeholder="Email address"
-                      className="mt-1 text-base"
+                      className="mt-1 text-base h-11 sm:h-10"
                     />
                   </div>
                 </div>
@@ -884,7 +914,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                     value={formData.preferredContactMethod}
                     onChange={(e) => setFormData((prev) => ({ ...prev, preferredContactMethod: e.target.value }))}
                     placeholder="e.g., phone call, text, email"
-                    className="mt-1 text-base"
+                    className="mt-1 text-base h-11 sm:h-10"
                   />
                 </div>
               </CollapsibleContent>
@@ -900,8 +930,8 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                 section="emergencyContact"
                 completion={sectionCompletion.emergencyContact}
               />
-              <CollapsibleContent className="px-4 pb-4 space-y-4 border-l-2 border-muted ml-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CollapsibleContent className="px-2 sm:px-4 pb-4 space-y-4 border-l-2 border-muted ml-2 sm:ml-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="emergencyContactName">Name</Label>
                     <Input
@@ -909,7 +939,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       value={formData.emergencyContactName}
                       onChange={(e) => setFormData((prev) => ({ ...prev, emergencyContactName: e.target.value }))}
                       placeholder="Emergency contact name"
-                      className="mt-1 text-base"
+                      className="mt-1 text-base h-11 sm:h-10"
                     />
                   </div>
                   <div>
@@ -921,7 +951,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                         setFormData((prev) => ({ ...prev, emergencyContactRelationship: e.target.value }))
                       }
                       placeholder="e.g., spouse, parent, friend"
-                      className="mt-1 text-base"
+                      className="mt-1 text-base h-11 sm:h-10"
                     />
                   </div>
                 </div>
@@ -929,10 +959,11 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                   <Label htmlFor="emergencyContactPhone">Phone #</Label>
                   <Input
                     id="emergencyContactPhone"
+                    type="tel"
                     value={formData.emergencyContactPhone}
                     onChange={(e) => setFormData((prev) => ({ ...prev, emergencyContactPhone: e.target.value }))}
                     placeholder="Emergency contact phone number"
-                    className="mt-1 text-base"
+                    className="mt-1 text-base h-11 sm:h-10"
                   />
                 </div>
               </CollapsibleContent>
@@ -946,8 +977,8 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
               <br />
               <em className="text-sm">*Reference 2025 Federal Poverty Guidelines</em>
             </div>
-            <div className="flex justify-between items-center">
-              <div className="text-base text-muted-foreground">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div className="text-sm sm:text-base text-muted-foreground">
                 {hasUnsavedChanges
                   ? "Saving changes..."
                   : lastSaved
@@ -955,10 +986,18 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                     : "Progress will be saved automatically"}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={onClose} className="text-base px-6 py-2 bg-transparent">
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  className="text-base px-4 sm:px-6 py-2 h-11 sm:h-10 bg-transparent flex-1 sm:flex-none"
+                >
                   Close
                 </Button>
-                <Button onClick={() => handleSave(false)} disabled={isSaving} className="text-base px-6 py-2">
+                <Button
+                  onClick={() => handleSave(false)}
+                  disabled={isSaving}
+                  className="text-base px-4 sm:px-6 py-2 h-11 sm:h-10 flex-1 sm:flex-none"
+                >
                   <Save className="h-4 w-4 mr-2" />
                   {isSaving ? "Saving..." : "Save Now"}
                 </Button>
