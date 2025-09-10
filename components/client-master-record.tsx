@@ -174,7 +174,7 @@ export function ClientMasterRecord({
     if (context === "cm") {
       return ["basic-info", "journey-timeline", "cm-goals", "ot-checkins", "ot-goals", "contact-history"]
     } else if (context === "ot") {
-      return ["basic-info", "ot-checkins", "ot-goals", "journey-timeline", "cm-goals", "contact-history"]
+      return ["basic-info", "ot-checkins", "ot-goals", "contact-history"]
     } else {
       return ["basic-info", "contact-history", "journey-timeline", "cm-goals", "ot-goals", "ot-checkins"]
     }
@@ -375,138 +375,146 @@ export function ClientMasterRecord({
                     </div>
                   )}
                 </div>
-                <div className="border border-gray-200 rounded-lg">
-                  <button
-                    onClick={() => toggleSection("cm-checkins")}
-                    className={`w-full flex items-center justify-between p-4 text-left transition-colors ${
-                      sectionCounts.cmCheckins === 0 && !sectionsLoading
-                        ? "cursor-not-allowed bg-gray-50"
-                        : "hover:bg-gray-50"
-                    }`}
-                    disabled={sectionCounts.cmCheckins === 0 && !sectionsLoading}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      {renderSectionHeader("CM Check-ins", sectionCounts.cmCheckins, sectionsLoading)}
-                      <div className="flex items-center space-x-2">
-                        {context === "clients" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleOpenInCM()
-                            }}
-                            className="flex items-center space-x-1 bg-transparent"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                            <span>Open in CM</span>
-                          </Button>
-                        )}
-                        {(sectionCounts.cmCheckins > 0 || sectionsLoading) &&
-                          (expandedSections["cm-checkins"] ? (
+                {context === "cm" && (
+                  <>
+                    <div className="border border-gray-200 rounded-lg">
+                      <button
+                        onClick={() => toggleSection("cm-checkins")}
+                        className={`w-full flex items-center justify-between p-4 text-left transition-colors ${
+                          sectionCounts.cmCheckins === 0 && !sectionsLoading
+                            ? "cursor-not-allowed bg-gray-50"
+                            : "hover:bg-gray-50"
+                        }`}
+                        disabled={sectionCounts.cmCheckins === 0 && !sectionsLoading}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          {renderSectionHeader("CM Check-ins", sectionCounts.cmCheckins, sectionsLoading)}
+                          <div className="flex items-center space-x-2">
+                            {context === "clients" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleOpenInCM()
+                                }}
+                                className="flex items-center space-x-1 bg-transparent"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                                <span>Open in CM</span>
+                              </Button>
+                            )}
+                            {(sectionCounts.cmCheckins > 0 || sectionsLoading) &&
+                              (expandedSections["cm-checkins"] ? (
+                                <ChevronDown className="h-5 w-5 text-gray-500" />
+                              ) : (
+                                <ChevronRight className="h-5 w-5 text-gray-500" />
+                              ))}
+                          </div>
+                        </div>
+                      </button>
+                      {expandedSections["cm-checkins"] && sectionCounts.cmCheckins > 0 && (
+                        <div className="px-4 pb-4 border-t border-gray-100">
+                          <ClientJourneyTimeline clientName={clientName} contactHistory={contactHistory} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="border border-gray-200 rounded-lg">
+                      <button
+                        onClick={() => toggleSection("cm-goals")}
+                        className={`w-full flex items-center justify-between p-4 text-left transition-colors ${
+                          sectionCounts.cmGoals === 0 && !sectionsLoading
+                            ? "cursor-not-allowed bg-gray-50"
+                            : "hover:bg-gray-50"
+                        }`}
+                        disabled={sectionCounts.cmGoals === 0 && !sectionsLoading}
+                      >
+                        {renderSectionHeader("CM Goals", sectionCounts.cmGoals, sectionsLoading)}
+                        {(sectionCounts.cmGoals > 0 || sectionsLoading) &&
+                          (expandedSections["cm-goals"] ? (
                             <ChevronDown className="h-5 w-5 text-gray-500" />
                           ) : (
                             <ChevronRight className="h-5 w-5 text-gray-500" />
                           ))}
-                      </div>
+                      </button>
+                      {expandedSections["cm-goals"] && sectionCounts.cmGoals > 0 && (
+                        <div className="px-4 pb-4 border-t border-gray-100">
+                          <GoalWidget clientName={clientName} />
+                        </div>
+                      )}
                     </div>
-                  </button>
-                  {expandedSections["cm-checkins"] && sectionCounts.cmCheckins > 0 && (
-                    <div className="px-4 pb-4 border-t border-gray-100">
-                      <ClientJourneyTimeline clientName={clientName} contactHistory={contactHistory} />
+                  </>
+                )}
+                {context === "ot" && (
+                  <>
+                    <div className="border border-gray-200 rounded-lg">
+                      <button
+                        onClick={() => toggleSection("ot-checkins")}
+                        className={`w-full flex items-center justify-between p-4 text-left transition-colors ${
+                          sectionCounts.otCheckins === 0 && !sectionsLoading
+                            ? "cursor-not-allowed bg-gray-50"
+                            : "hover:bg-gray-50"
+                        }`}
+                        disabled={sectionCounts.otCheckins === 0 && !sectionsLoading}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          {renderSectionHeader("OT Check-ins", sectionCounts.otCheckins, sectionsLoading)}
+                          <div className="flex items-center space-x-2">
+                            {context === "clients" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleOpenInOT()
+                                }}
+                                className="flex items-center space-x-1 bg-transparent"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                                <span>Open in OT</span>
+                              </Button>
+                            )}
+                            {(sectionCounts.otCheckins > 0 || sectionsLoading) &&
+                              (expandedSections["ot-checkins"] ? (
+                                <ChevronDown className="h-5 w-5 text-gray-500" />
+                              ) : (
+                                <ChevronRight className="h-5 w-5 text-gray-500" />
+                              ))}
+                          </div>
+                        </div>
+                      </button>
+                      {expandedSections["ot-checkins"] && sectionCounts.otCheckins > 0 && (
+                        <div className="px-4 pb-4 border-t border-gray-100">
+                          <ClientOTCheckins clientName={clientName} contactHistory={contactHistory} />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="border border-gray-200 rounded-lg">
-                  <button
-                    onClick={() => toggleSection("cm-goals")}
-                    className={`w-full flex items-center justify-between p-4 text-left transition-colors ${
-                      sectionCounts.cmGoals === 0 && !sectionsLoading
-                        ? "cursor-not-allowed bg-gray-50"
-                        : "hover:bg-gray-50"
-                    }`}
-                    disabled={sectionCounts.cmGoals === 0 && !sectionsLoading}
-                  >
-                    {renderSectionHeader("CM Goals", sectionCounts.cmGoals, sectionsLoading)}
-                    {(sectionCounts.cmGoals > 0 || sectionsLoading) &&
-                      (expandedSections["cm-goals"] ? (
-                        <ChevronDown className="h-5 w-5 text-gray-500" />
-                      ) : (
-                        <ChevronRight className="h-5 w-5 text-gray-500" />
-                      ))}
-                  </button>
-                  {expandedSections["cm-goals"] && sectionCounts.cmGoals > 0 && (
-                    <div className="px-4 pb-4 border-t border-gray-100">
-                      <GoalWidget clientName={clientName} />
-                    </div>
-                  )}
-                </div>
-                <div className="border border-gray-200 rounded-lg">
-                  <button
-                    onClick={() => toggleSection("ot-checkins")}
-                    className={`w-full flex items-center justify-between p-4 text-left transition-colors ${
-                      sectionCounts.otCheckins === 0 && !sectionsLoading
-                        ? "cursor-not-allowed bg-gray-50"
-                        : "hover:bg-gray-50"
-                    }`}
-                    disabled={sectionCounts.otCheckins === 0 && !sectionsLoading}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      {renderSectionHeader("OT Check-ins", sectionCounts.otCheckins, sectionsLoading)}
-                      <div className="flex items-center space-x-2">
-                        {context === "clients" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleOpenInOT()
-                            }}
-                            className="flex items-center space-x-1 bg-transparent"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                            <span>Open in OT</span>
-                          </Button>
-                        )}
-                        {(sectionCounts.otCheckins > 0 || sectionsLoading) &&
-                          (expandedSections["ot-checkins"] ? (
+                    <div className="border border-gray-200 rounded-lg">
+                      <button
+                        onClick={() => toggleSection("ot-goals")}
+                        className={`w-full flex items-center justify-between p-4 text-left transition-colors ${
+                          sectionCounts.otGoals === 0 && !sectionsLoading
+                            ? "cursor-not-allowed bg-gray-50"
+                            : "hover:bg-gray-50"
+                        }`}
+                        disabled={sectionCounts.otGoals === 0 && !sectionsLoading}
+                      >
+                        {renderSectionHeader("OT Goals", sectionCounts.otGoals, sectionsLoading)}
+                        {(sectionCounts.otGoals > 0 || sectionsLoading) &&
+                          (expandedSections["ot-goals"] ? (
                             <ChevronDown className="h-5 w-5 text-gray-500" />
                           ) : (
                             <ChevronRight className="h-5 w-5 text-gray-500" />
                           ))}
-                      </div>
+                      </button>
+                      {expandedSections["ot-goals"] && sectionCounts.otGoals > 0 && (
+                        <div className="px-4 pb-4 border-t border-gray-100">
+                          <OTGoalWidget clientName={clientName} />
+                        </div>
+                      )}
                     </div>
-                  </button>
-                  {expandedSections["ot-checkins"] && sectionCounts.otCheckins > 0 && (
-                    <div className="px-4 pb-4 border-t border-gray-100">
-                      <ClientOTCheckins clientName={clientName} contactHistory={contactHistory} />
-                    </div>
-                  )}
-                </div>
-                <div className="border border-gray-200 rounded-lg">
-                  <button
-                    onClick={() => toggleSection("ot-goals")}
-                    className={`w-full flex items-center justify-between p-4 text-left transition-colors ${
-                      sectionCounts.otGoals === 0 && !sectionsLoading
-                        ? "cursor-not-allowed bg-gray-50"
-                        : "hover:bg-gray-50"
-                    }`}
-                    disabled={sectionCounts.otGoals === 0 && !sectionsLoading}
-                  >
-                    {renderSectionHeader("OT Goals", sectionCounts.otGoals, sectionsLoading)}
-                    {(sectionCounts.otGoals > 0 || sectionsLoading) &&
-                      (expandedSections["ot-goals"] ? (
-                        <ChevronDown className="h-5 w-5 text-gray-500" />
-                      ) : (
-                        <ChevronRight className="h-5 w-5 text-gray-500" />
-                      ))}
-                  </button>
-                  {expandedSections["ot-goals"] && sectionCounts.otGoals > 0 && (
-                    <div className="px-4 pb-4 border-t border-gray-100">
-                      <OTGoalWidget clientName={clientName} />
-                    </div>
-                  )}
-                </div>
+                  </>
+                )}
               </div>
             ) : (
               <>
