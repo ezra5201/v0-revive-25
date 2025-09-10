@@ -172,7 +172,7 @@ export function ClientMasterRecord({
 
   const getTabOrder = () => {
     if (context === "cm") {
-      return ["basic-info", "journey-timeline", "cm-goals", "ot-checkins", "ot-goals", "contact-history"]
+      return ["basic-info", "journey-timeline", "cm-goals", "contact-history"]
     } else if (context === "ot") {
       return ["basic-info", "ot-checkins", "ot-goals", "contact-history"]
     } else {
