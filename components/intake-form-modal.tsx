@@ -165,6 +165,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
   const [isSaving, setIsSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [tableNotReady, setTableNotReady] = useState(false)
 
   // Calculate section completion percentages
   useEffect(() => {
@@ -297,15 +298,26 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
         }),
       })
 
+      const result = await response.json()
+
       if (!response.ok) {
-        throw new Error("Failed to save intake form")
+        if (result.error === "intake_table_not_ready") {
+          setTableNotReady(true)
+          console.log("Intake form table not ready - form data not saved")
+          return
+        }
+        throw new Error(result.message || "Failed to save intake form")
       }
 
       setLastSaved(new Date())
       setHasUnsavedChanges(false)
+      setTableNotReady(false)
       console.log("Intake form saved successfully")
     } catch (error) {
       console.error("Error saving intake form:", error)
+      if (!tableNotReady) {
+        // Could add user-visible error handling here if needed
+      }
     } finally {
       if (!isAutoSave) setIsSaving(false)
     }
@@ -979,11 +991,13 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
             </div>
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div className="text-sm sm:text-base text-muted-foreground">
-                {hasUnsavedChanges
-                  ? "Saving changes..."
-                  : lastSaved
-                    ? `Last saved: ${lastSaved.toLocaleTimeString()}`
-                    : "Progress will be saved automatically"}
+                {tableNotReady
+                  ? "Intake form functionality is not yet available"
+                  : hasUnsavedChanges
+                    ? "Saving changes..."
+                    : lastSaved
+                      ? `Last saved: ${lastSaved.toLocaleTimeString()}`
+                      : "Progress will be saved automatically"}
               </div>
               <div className="flex gap-2">
                 <Button
@@ -995,7 +1009,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                 </Button>
                 <Button
                   onClick={() => handleSave(false)}
-                  disabled={isSaving}
+                  disabled={isSaving || tableNotReady}
                   className="text-base px-4 sm:px-6 py-2 h-11 sm:h-10 flex-1 sm:flex-none"
                 >
                   <Save className="h-4 w-4 mr-2" />
