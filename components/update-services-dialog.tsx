@@ -300,7 +300,10 @@ export function UpdateServicesDialog({
           <div className="space-y-6">
             <div className="space-y-4">
               <div className="bg-black text-white px-4 py-3 rounded-lg">
-                <span className="font-medium text-lg">{contactData.client}</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-lg">{contactData.client}</span>
+                  <span className="text-sm text-gray-300">Intake form not started</span>
+                </div>
               </div>
 
               <div className="flex gap-3">
@@ -337,7 +340,7 @@ export function UpdateServicesDialog({
                   {checkingOTCheckin ? "Checking..." : hasOTCheckinToday ? "Edit OT Check-In" : "+ OT Check-In"}
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleClientInfoClick} className="flex-1 bg-transparent">
-                  Client Info
+                  Intake Form
                 </Button>
               </div>
             </div>
