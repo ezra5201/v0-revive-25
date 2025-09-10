@@ -100,7 +100,6 @@ const CURRENT_HOUSING_OPTIONS = [
   "Couch surfing",
   "In a shelter",
   "Unsheltered (train, tent, abandoned building)",
-  "Unsheltered (train, tent, abandoned building)",
   "None of the above",
 ]
 
@@ -439,7 +438,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
           {/* Support Needs Section */}
           <Collapsible open={sectionStates.supportNeeds} onOpenChange={() => toggleSection("supportNeeds")}>
             <SectionHeader
-              title="2. Support Needs"
+              title="2. What support do you hope to have at ReVive's Engagement Center?"
               section="supportNeeds"
               completion={sectionCompletion.supportNeeds}
             />
@@ -860,6 +859,8 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
           <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
             <strong>Note:</strong> Please provide a copy of your ID and health insurance card as part of your
             enrollment. This will help us to better support you in reaching your goals.
+            <br />
+            <em className="text-xs">*Reference 2025 Federal Poverty Guidelines</em>
           </div>
           <div className="flex justify-between items-center">
             <div className="text-sm text-muted-foreground">Progress is automatically saved</div>
