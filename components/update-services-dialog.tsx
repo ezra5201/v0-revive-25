@@ -227,10 +227,12 @@ export function UpdateServicesDialog({
   }
 
   const handleCMCheckinClick = () => {
+    console.log("[v0] CM Check-In button clicked, opening modal")
     setIsCMCheckinModalOpen(true)
   }
 
   const handleCMCheckinClose = () => {
+    console.log("[v0] CM Check-In modal closing")
     setIsCMCheckinModalOpen(false)
     if (isFromCMTab) {
       checkForTodaysCheckin()
@@ -250,10 +252,12 @@ export function UpdateServicesDialog({
   }
 
   const handleOTCheckinClick = () => {
+    console.log("[v0] OT Check-In button clicked, opening modal")
     setIsOTCheckinModalOpen(true)
   }
 
   const handleOTCheckinClose = () => {
+    console.log("[v0] OT Check-In modal closing")
     setIsOTCheckinModalOpen(false)
     if (isFromOTTab) {
       checkForTodaysOTCheckin()
