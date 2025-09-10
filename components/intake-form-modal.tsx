@@ -307,32 +307,38 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
     <CollapsibleTrigger asChild>
       <Button variant="ghost" className="w-full justify-between p-4 h-auto hover:bg-muted/50">
         <div className="flex items-center gap-3">
-          {sectionStates[section] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          <span className="font-medium text-left">{title}</span>
-          {isRequired && <AlertCircle className="h-3 w-3 text-orange-500" />}
+          {sectionStates[section] ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+          <span className="font-bold text-left text-lg">{title}</span>
+          {isRequired && <AlertCircle className="h-4 w-4 text-orange-500" />}
         </div>
-        <Badge variant={completion === 100 ? "default" : completion > 0 ? "secondary" : "outline"}>{completion}%</Badge>
+        <Badge
+          variant={completion === 100 ? "default" : completion > 0 ? "secondary" : "outline"}
+          className="text-base px-3 py-1"
+        >
+          {completion}%
+        </Badge>
       </Button>
     </CollapsibleTrigger>
   )
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+      <div className="fixed inset-0 bg-gray-500/30 backdrop-blur-sm z-40" />
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 z-50">
         <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700 p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl text-white">
-              <FileText className="h-5 w-5" />
+            <DialogTitle className="flex items-center gap-2 text-2xl text-white font-semibold">
+              <FileText className="h-6 w-6" />
               Center Walk-In Intake - {clientName}
             </DialogTitle>
-            <div className="text-sm text-gray-300 mb-3">
+            <div className="text-base text-gray-300 mb-3">
               These questions help us connect you to the team members and supports that you need and want.
             </div>
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <Progress value={overallCompletion} className="h-3" />
               </div>
-              <Badge variant={overallCompletion === 100 ? "default" : "secondary"} className="text-sm px-3 py-1">
+              <Badge variant={overallCompletion === 100 ? "default" : "secondary"} className="text-base px-4 py-2">
                 {overallCompletion}% Complete
               </Badge>
             </div>
@@ -355,7 +361,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
               <CollapsibleContent className="px-4 pb-4 space-y-4 border-l-2 border-muted ml-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="name" className="flex items-center gap-1">
+                    <Label htmlFor="name" className="flex items-center gap-1 text-base font-medium">
                       Name <AlertCircle className="h-3 w-3 text-orange-500" />
                     </Label>
                     <Input
@@ -363,59 +369,69 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       value={formData.name}
                       onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                       placeholder="Full name"
-                      className="mt-1"
+                      className="mt-1 text-base"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="pronouns">Pronouns</Label>
+                    <Label htmlFor="pronouns" className="text-base font-medium">
+                      Pronouns
+                    </Label>
                     <Input
                       id="pronouns"
                       value={formData.pronouns}
                       onChange={(e) => setFormData((prev) => ({ ...prev, pronouns: e.target.value }))}
                       placeholder="e.g., he/him, she/her, they/them"
-                      className="mt-1"
+                      className="mt-1 text-base"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    <Label htmlFor="dateOfBirth" className="text-base font-medium">
+                      Date of Birth
+                    </Label>
                     <Input
                       id="dateOfBirth"
                       type="date"
                       value={formData.dateOfBirth}
                       onChange={(e) => setFormData((prev) => ({ ...prev, dateOfBirth: e.target.value }))}
-                      className="mt-1"
+                      className="mt-1 text-base"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="birthYear">Birth Year (if date unknown)</Label>
+                    <Label htmlFor="birthYear" className="text-base font-medium">
+                      Birth Year (if date unknown)
+                    </Label>
                     <Input
                       id="birthYear"
                       value={formData.birthYear}
                       onChange={(e) => setFormData((prev) => ({ ...prev, birthYear: e.target.value }))}
                       placeholder="e.g., 1990"
-                      className="mt-1"
+                      className="mt-1 text-base"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <Label htmlFor="program">Program</Label>
+                    <Label htmlFor="program" className="text-base font-medium">
+                      Program
+                    </Label>
                     <Input
                       id="program"
                       value={formData.program}
                       onChange={(e) => setFormData((prev) => ({ ...prev, program: e.target.value }))}
                       placeholder="Program name"
-                      className="mt-1"
+                      className="mt-1 text-base"
                     />
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="howHeardAboutUs">How did you hear about us?</Label>
+                  <Label htmlFor="howHeardAboutUs" className="text-base font-medium">
+                    How did you hear about us?
+                  </Label>
                   <Textarea
                     id="howHeardAboutUs"
                     value={formData.howHeardAboutUs}
                     onChange={(e) => setFormData((prev) => ({ ...prev, howHeardAboutUs: e.target.value }))}
                     placeholder="Please describe how you learned about ReVive"
                     rows={3}
-                    className="mt-1"
+                    className="mt-1 text-base"
                   />
                 </div>
               </CollapsibleContent>
@@ -433,7 +449,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
               />
               <CollapsibleContent className="px-4 pb-4 space-y-6 border-l-2 border-muted ml-4">
                 <div>
-                  <Label className="text-sm font-semibold text-muted-foreground mb-3 block">Needs:</Label>
+                  <Label className="text-base font-semibold text-muted-foreground mb-3 block">Needs:</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {NEEDS_OPTIONS.map((need) => (
                       <div key={need} className="flex items-start space-x-2">
@@ -448,7 +464,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                           }
                           className="mt-0.5"
                         />
-                        <Label htmlFor={`need-${need}`} className="text-sm leading-5">
+                        <Label htmlFor={`need-${need}`} className="text-base leading-6">
                           {need}
                         </Label>
                       </div>
@@ -457,7 +473,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                 </div>
 
                 <div>
-                  <Label className="text-sm font-semibold text-muted-foreground mb-3 block">See a:</Label>
+                  <Label className="text-base font-semibold text-muted-foreground mb-3 block">See a:</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {SEE_STAFF_OPTIONS.map((staff) => (
                       <div key={staff} className="flex items-start space-x-2">
@@ -474,7 +490,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                           }
                           className="mt-0.5"
                         />
-                        <Label htmlFor={`staff-${staff}`} className="text-sm leading-5">
+                        <Label htmlFor={`staff-${staff}`} className="text-base leading-6">
                           {staff}
                         </Label>
                       </div>
@@ -483,7 +499,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                 </div>
 
                 <div>
-                  <Label htmlFor="otherSupport" className="text-sm font-semibold text-muted-foreground">
+                  <Label htmlFor="otherSupport" className="text-base font-semibold text-muted-foreground">
                     Other:
                   </Label>
                   <Textarea
@@ -492,7 +508,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                     onChange={(e) => setFormData((prev) => ({ ...prev, otherSupport: e.target.value }))}
                     placeholder="Please describe any other support needs"
                     rows={2}
-                    className="mt-2"
+                    className="mt-2 text-base"
                   />
                 </div>
               </CollapsibleContent>
@@ -512,7 +528,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                     value={formData.languages}
                     onChange={(e) => setFormData((prev) => ({ ...prev, languages: e.target.value }))}
                     placeholder="e.g., English, Spanish, Arabic"
-                    className="mt-1"
+                    className="mt-1 text-base"
                   />
                 </div>
               </CollapsibleContent>
@@ -526,7 +542,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
               <SectionHeader title="4. Housing Status" section="housing" completion={sectionCompletion.housing} />
               <CollapsibleContent className="px-4 pb-4 space-y-6 border-l-2 border-muted ml-4">
                 <div>
-                  <Label className="text-sm font-semibold text-muted-foreground mb-3 block">
+                  <Label className="text-base font-semibold text-muted-foreground mb-3 block">
                     Current Housing Status (Unstably housed, such as):
                   </Label>
                   <div className="grid grid-cols-1 gap-3">
@@ -545,7 +561,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                           }
                           className="mt-0.5"
                         />
-                        <Label htmlFor={`current-housing-${status}`} className="text-sm leading-5">
+                        <Label htmlFor={`current-housing-${status}`} className="text-base leading-5">
                           {status}
                         </Label>
                       </div>
@@ -554,7 +570,9 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                 </div>
 
                 <div>
-                  <Label className="text-sm font-semibold text-muted-foreground mb-3 block">Past Housing Status:</Label>
+                  <Label className="text-base font-semibold text-muted-foreground mb-3 block">
+                    Past Housing Status:
+                  </Label>
                   <div className="space-y-3">
                     <div className="flex items-start space-x-2">
                       <Checkbox
@@ -572,7 +590,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                         }
                         className="mt-0.5"
                       />
-                      <Label htmlFor="past-housing-homeless" className="text-sm leading-5">
+                      <Label htmlFor="past-housing-homeless" className="text-base leading-5">
                         I have been homeless or had unstable housing
                       </Label>
                     </div>
@@ -590,7 +608,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                         }
                         className="mt-0.5"
                       />
-                      <Label htmlFor="past-housing-na" className="text-sm leading-5">
+                      <Label htmlFor="past-housing-na" className="text-base leading-5">
                         N/A
                       </Label>
                     </div>
@@ -618,7 +636,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       value={formData.race}
                       onChange={(e) => setFormData((prev) => ({ ...prev, race: e.target.value }))}
                       placeholder="Race"
-                      className="mt-1"
+                      className="mt-1 text-base"
                     />
                   </div>
                   <div>
@@ -741,7 +759,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                 </div>
 
                 <div>
-                  <Label className="text-sm font-semibold text-muted-foreground mb-3 block">I have:</Label>
+                  <Label className="text-base font-semibold text-muted-foreground mb-3 block">I have:</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {INCOME_SOURCES.map((source) => (
                       <div key={source} className="flex items-start space-x-2">
@@ -758,7 +776,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                           }
                           className="mt-0.5"
                         />
-                        <Label htmlFor={`income-${source}`} className="text-sm leading-5">
+                        <Label htmlFor={`income-${source}`} className="text-base leading-5">
                           {source}
                         </Label>
                       </div>
@@ -783,7 +801,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                     onChange={(e) => setFormData((prev) => ({ ...prev, goal1: e.target.value }))}
                     placeholder="Describe your first main goal"
                     rows={2}
-                    className="mt-1"
+                    className="mt-1 text-base"
                   />
                 </div>
                 <div>
@@ -794,7 +812,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                     onChange={(e) => setFormData((prev) => ({ ...prev, goal2: e.target.value }))}
                     placeholder="Describe your second main goal"
                     rows={2}
-                    className="mt-1"
+                    className="mt-1 text-base"
                   />
                 </div>
                 <div>
@@ -805,7 +823,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                     onChange={(e) => setFormData((prev) => ({ ...prev, goal3: e.target.value }))}
                     placeholder="Describe your third main goal"
                     rows={2}
-                    className="mt-1"
+                    className="mt-1 text-base"
                   />
                 </div>
               </CollapsibleContent>
@@ -826,7 +844,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       value={formData.phone}
                       onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
                       placeholder="Phone number"
-                      className="mt-1"
+                      className="mt-1 text-base"
                     />
                   </div>
                   <div>
@@ -837,7 +855,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       value={formData.email}
                       onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                       placeholder="Email address"
-                      className="mt-1"
+                      className="mt-1 text-base"
                     />
                   </div>
                 </div>
@@ -848,7 +866,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                     value={formData.preferredContactMethod}
                     onChange={(e) => setFormData((prev) => ({ ...prev, preferredContactMethod: e.target.value }))}
                     placeholder="e.g., phone call, text, email"
-                    className="mt-1"
+                    className="mt-1 text-base"
                   />
                 </div>
               </CollapsibleContent>
@@ -873,7 +891,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       value={formData.emergencyContactName}
                       onChange={(e) => setFormData((prev) => ({ ...prev, emergencyContactName: e.target.value }))}
                       placeholder="Emergency contact name"
-                      className="mt-1"
+                      className="mt-1 text-base"
                     />
                   </div>
                   <div>
@@ -885,7 +903,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                         setFormData((prev) => ({ ...prev, emergencyContactRelationship: e.target.value }))
                       }
                       placeholder="e.g., spouse, parent, friend"
-                      className="mt-1"
+                      className="mt-1 text-base"
                     />
                   </div>
                 </div>
@@ -896,7 +914,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                     value={formData.emergencyContactPhone}
                     onChange={(e) => setFormData((prev) => ({ ...prev, emergencyContactPhone: e.target.value }))}
                     placeholder="Emergency contact phone number"
-                    className="mt-1"
+                    className="mt-1 text-base"
                   />
                 </div>
               </CollapsibleContent>
@@ -904,19 +922,19 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
           </div>
 
           <div className="pt-6 border-t space-y-4">
-            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+            <div className="text-base text-muted-foreground bg-muted/50 p-3 rounded-lg">
               <strong>Note:</strong> Please provide a copy of your ID and health insurance card as part of your
               enrollment. This will help us to better support you in reaching your goals.
               <br />
-              <em className="text-xs">*Reference 2025 Federal Poverty Guidelines</em>
+              <em className="text-sm">*Reference 2025 Federal Poverty Guidelines</em>
             </div>
             <div className="flex justify-between items-center">
-              <div className="text-sm text-muted-foreground">Progress is automatically saved</div>
+              <div className="text-base text-muted-foreground">Progress is automatically saved</div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={onClose}>
+                <Button variant="outline" onClick={onClose} className="text-base px-6 py-2 bg-transparent">
                   Close
                 </Button>
-                <Button onClick={handleSave} disabled={isSaving}>
+                <Button onClick={handleSave} disabled={isSaving} className="text-base px-6 py-2">
                   <Save className="h-4 w-4 mr-2" />
                   {isSaving ? "Saving..." : "Save Progress"}
                 </Button>
