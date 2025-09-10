@@ -5,9 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { AlertTriangle, Clock, Plus, Edit } from "lucide-react"
+import { AlertTriangle, Clock, Plus, Edit, FileText } from "lucide-react"
 import { CMCheckinModal } from "./cm-checkin-modal"
 import { OTCheckinModal } from "./ot-checkin-modal"
+import { IntakeFormModal } from "./intake-form-modal"
 
 interface UpdateServicesDialogProps {
   isOpen: boolean
@@ -69,6 +70,7 @@ export function UpdateServicesDialog({
   const [isOTCheckinModalOpen, setIsOTCheckinModalOpen] = useState(false)
   const [hasOTCheckinToday, setHasOTCheckinToday] = useState(false)
   const [checkingOTCheckin, setCheckingOTCheckin] = useState(false)
+  const [isIntakeFormModalOpen, setIsIntakeFormModalOpen] = useState(false)
 
   useEffect(() => {
     if (isOpen && contactData) {
@@ -151,6 +153,7 @@ export function UpdateServicesDialog({
     setIsOTCheckinModalOpen(false)
     setHasOTCheckinToday(false)
     setCheckingOTCheckin(false)
+    setIsIntakeFormModalOpen(false)
     onClose()
   }
 
@@ -269,11 +272,8 @@ export function UpdateServicesDialog({
     }
   }
 
-  const handleClientInfoClick = () => {
-    if (contactData?.client) {
-      const encodedName = encodeURIComponent(contactData.client)
-      window.location.href = `/contact-log?tab=client&name=${encodedName}&section=basic-info`
-    }
+  const handleIntakeFormClick = () => {
+    setIsIntakeFormModalOpen(true)
   }
 
   if (!contactData) return null
@@ -300,7 +300,18 @@ export function UpdateServicesDialog({
           <div className="space-y-6">
             <div className="space-y-4">
               <div className="bg-black text-white px-4 py-3 rounded-lg">
-                <span className="font-medium text-lg">{contactData.client}</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-lg">{contactData.client}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleIntakeFormClick}
+                    className="text-sm text-gray-300 hover:text-white hover:bg-gray-800 border-gray-500 hover:border-gray-400 h-auto px-2 py-1 bg-transparent"
+                  >
+                    <FileText className="h-3 w-3 mr-1" />
+                    Intake form not started
+                  </Button>
+                </div>
               </div>
 
               <div className="flex gap-3">
@@ -335,9 +346,6 @@ export function UpdateServicesDialog({
                     <Plus className="h-4 w-4 mr-2" />
                   )}
                   {checkingOTCheckin ? "Checking..." : hasOTCheckinToday ? "Edit OT Check-In" : "+ OT Check-In"}
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleClientInfoClick} className="flex-1 bg-transparent">
-                  Client Info
                 </Button>
               </div>
             </div>
@@ -458,6 +466,13 @@ export function UpdateServicesDialog({
           contactId={contactData?.id || 0}
         />
       )}
+
+      <IntakeFormModal
+        isOpen={isIntakeFormModalOpen}
+        onClose={() => setIsIntakeFormModalOpen(false)}
+        clientId={contactData?.id || 0}
+        clientName={contactData?.client || ""}
+      />
     </>
   )
 }
