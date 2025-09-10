@@ -870,10 +870,10 @@ function OTCheckinModal({ isOpen, onClose, clientName, onSuccess, contactId, edi
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Target className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-sm">Client has no OT goals</p>
-                  <p className="text-xs text-gray-400 mt-1">Click "New OT Goal" to get started.</p>
+                <div className="text-center py-8 text-gray-700">
+                  <Target className="h-10 w-10 mx-auto mb-3 text-gray-500" />
+                  <p className="text-base font-medium">Client has no OT goals</p>
+                  <p className="text-sm text-gray-600 mt-2">Click "New OT Goal" to get started.</p>
                 </div>
               )}
             </div>
