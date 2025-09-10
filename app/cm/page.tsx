@@ -26,7 +26,6 @@ export default function CmPage() {
   const [activeTab, setActiveTab] = useState<MainTab>("today")
   const [selectedClient, setSelectedClient] = useState<string | null>(null)
   const [activeClientSection, setActiveClientSection] = useState<ClientSection>("basic-info")
-  const [selectedProvider, setSelectedProvider] = useState<string>("Andrea Leflore") // Default to current user
 
   // Existing state (PRESERVED)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -38,7 +37,7 @@ export default function CmPage() {
   const [selectedContactIds, setSelectedContactIds] = useState<number[]>([])
   const [filters, setFilters] = useState<{ categories: string[]; providers: string[] }>({
     categories: [],
-    providers: [],
+    providers: ["Andrea Leflore"], // Default to current user
   })
   const [prefilledProspectName, setPrefilledProspectName] = useState("")
 
@@ -70,7 +69,7 @@ export default function CmPage() {
     isLoading: contactsLoading,
     error: contactsError,
     refetch: refetchContacts,
-  } = useCMContacts(activeTab === "client" ? "all" : activeTab, filters, selectedProvider)
+  } = useCMContacts(activeTab === "client" ? "all" : activeTab, filters)
 
   const updateURL = useCallback(
     (tab: MainTab, clientName?: string, section?: ClientSection) => {
@@ -145,9 +144,10 @@ export default function CmPage() {
       setActiveTab(tab)
       setSelectedCount(0)
       setSelectedContactIds([])
-      setFilters({ categories: [], providers: [] })
-      if (tab !== "all") {
-        setSelectedProvider("Andrea Leflore")
+      if (tab === "all") {
+        setFilters({ categories: [], providers: ["Andrea Leflore"] })
+      } else {
+        setFilters({ categories: [], providers: [] })
       }
       if (tab !== "client") {
         setSelectedClient(null)
@@ -256,28 +256,6 @@ export default function CmPage() {
               </button>
             )}
           </nav>
-
-          {activeTab === "all" && (
-            <div className="pb-4">
-              <div className="flex items-center space-x-3">
-                <label htmlFor="provider-select" className="text-sm font-medium text-gray-700">
-                  Provider:
-                </label>
-                <select
-                  id="provider-select"
-                  value={selectedProvider}
-                  onChange={(e) => setSelectedProvider(e.target.value)}
-                  className="text-sm border border-gray-300 rounded-md px-3 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                >
-                  {filterData.providers.map((provider) => (
-                    <option key={provider} value={provider}>
-                      {provider}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
