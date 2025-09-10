@@ -276,6 +276,13 @@ export function UpdateServicesDialog({
     }
   }
 
+  const handleIntakeFormClick = () => {
+    // TODO: This will trigger the intake form when the system is implemented
+    console.log("Intake form triggered for:", contactData?.client)
+    // For now, we can navigate to client info as a placeholder
+    handleClientInfoClick()
+  }
+
   if (!contactData) return null
 
   return (
@@ -302,7 +309,14 @@ export function UpdateServicesDialog({
               <div className="bg-black text-white px-4 py-3 rounded-lg">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-lg">{contactData.client}</span>
-                  <span className="text-sm text-gray-300">Intake form not started</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleIntakeFormClick}
+                    className="text-sm text-gray-300 hover:text-white hover:bg-gray-800 h-auto p-1"
+                  >
+                    Intake form not started
+                  </Button>
                 </div>
               </div>
 
@@ -338,9 +352,6 @@ export function UpdateServicesDialog({
                     <Plus className="h-4 w-4 mr-2" />
                   )}
                   {checkingOTCheckin ? "Checking..." : hasOTCheckinToday ? "Edit OT Check-In" : "+ OT Check-In"}
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleClientInfoClick} className="flex-1 bg-transparent">
-                  Intake Form
                 </Button>
               </div>
             </div>
