@@ -293,22 +293,6 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
     }
   }
 
-  const toggleSection = (section: keyof typeof sectionStates) => {
-    setSectionStates((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }))
-  }
-
-  const handleCheckboxChange = (field: keyof IntakeFormData, value: string, checked: boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: checked
-        ? [...(prev[field] as string[]), value]
-        : (prev[field] as string[]).filter((item) => item !== value),
-    }))
-  }
-
   const SectionHeader = ({
     title,
     section,
@@ -321,11 +305,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
     isRequired?: boolean
   }) => (
     <CollapsibleTrigger asChild>
-      <Button
-        variant="ghost"
-        className="w-full justify-between p-4 h-auto hover:bg-muted/50"
-        onClick={() => toggleSection(section)}
-      >
+      <Button variant="ghost" className="w-full justify-between p-4 h-auto hover:bg-muted/50">
         <div className="flex items-center gap-3">
           {sectionStates[section] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           <span className="font-medium text-left">{title}</span>
@@ -359,7 +339,10 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
 
         <div className="space-y-2">
           {/* Basic Information Section */}
-          <Collapsible open={sectionStates.basicInfo} onOpenChange={() => toggleSection("basicInfo")}>
+          <Collapsible
+            open={sectionStates.basicInfo}
+            onOpenChange={(open) => setSectionStates((prev) => ({ ...prev, basicInfo: open }))}
+          >
             <SectionHeader
               title="1. Basic Information"
               section="basicInfo"
@@ -436,7 +419,10 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
           </Collapsible>
 
           {/* Support Needs Section */}
-          <Collapsible open={sectionStates.supportNeeds} onOpenChange={() => toggleSection("supportNeeds")}>
+          <Collapsible
+            open={sectionStates.supportNeeds}
+            onOpenChange={(open) => setSectionStates((prev) => ({ ...prev, supportNeeds: open }))}
+          >
             <SectionHeader
               title="2. What support do you hope to have at ReVive's Engagement Center?"
               section="supportNeeds"
@@ -451,7 +437,12 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       <Checkbox
                         id={`need-${need}`}
                         checked={formData.needs.includes(need)}
-                        onCheckedChange={(checked) => handleCheckboxChange("needs", need, checked as boolean)}
+                        onCheckedChange={(checked) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            needs: checked ? [...prev.needs, need] : prev.needs.filter((item) => item !== need),
+                          }))
+                        }
                         className="mt-0.5"
                       />
                       <Label htmlFor={`need-${need}`} className="text-sm leading-5">
@@ -470,7 +461,14 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       <Checkbox
                         id={`staff-${staff}`}
                         checked={formData.seeStaff.includes(staff)}
-                        onCheckedChange={(checked) => handleCheckboxChange("seeStaff", staff, checked as boolean)}
+                        onCheckedChange={(checked) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            seeStaff: checked
+                              ? [...prev.seeStaff, staff]
+                              : prev.seeStaff.filter((item) => item !== staff),
+                          }))
+                        }
                         className="mt-0.5"
                       />
                       <Label htmlFor={`staff-${staff}`} className="text-sm leading-5">
@@ -498,7 +496,10 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
           </Collapsible>
 
           {/* Language Section */}
-          <Collapsible open={sectionStates.language} onOpenChange={() => toggleSection("language")}>
+          <Collapsible
+            open={sectionStates.language}
+            onOpenChange={(open) => setSectionStates((prev) => ({ ...prev, language: open }))}
+          >
             <SectionHeader title="3. Language" section="language" completion={sectionCompletion.language} />
             <CollapsibleContent className="px-4 pb-4 border-l-2 border-muted ml-4">
               <div>
@@ -515,7 +516,10 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
           </Collapsible>
 
           {/* Housing Status Section */}
-          <Collapsible open={sectionStates.housing} onOpenChange={() => toggleSection("housing")}>
+          <Collapsible
+            open={sectionStates.housing}
+            onOpenChange={(open) => setSectionStates((prev) => ({ ...prev, housing: open }))}
+          >
             <SectionHeader title="4. Housing Status" section="housing" completion={sectionCompletion.housing} />
             <CollapsibleContent className="px-4 pb-4 space-y-6 border-l-2 border-muted ml-4">
               <div>
@@ -529,7 +533,12 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                         id={`current-housing-${status}`}
                         checked={formData.currentHousingStatus.includes(status)}
                         onCheckedChange={(checked) =>
-                          handleCheckboxChange("currentHousingStatus", status, checked as boolean)
+                          setFormData((prev) => ({
+                            ...prev,
+                            currentHousingStatus: checked
+                              ? [...prev.currentHousingStatus, status]
+                              : prev.currentHousingStatus.filter((item) => item !== status),
+                          }))
                         }
                         className="mt-0.5"
                       />
@@ -549,11 +558,14 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       id="past-housing-homeless"
                       checked={formData.pastHousingStatus.includes("I have been homeless or had unstable housing")}
                       onCheckedChange={(checked) =>
-                        handleCheckboxChange(
-                          "pastHousingStatus",
-                          "I have been homeless or had unstable housing",
-                          checked as boolean,
-                        )
+                        setFormData((prev) => ({
+                          ...prev,
+                          pastHousingStatus: checked
+                            ? [...prev.pastHousingStatus, "I have been homeless or had unstable housing"]
+                            : prev.pastHousingStatus.filter(
+                                (item) => item !== "I have been homeless or had unstable housing",
+                              ),
+                        }))
                       }
                       className="mt-0.5"
                     />
@@ -566,7 +578,12 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       id="past-housing-na"
                       checked={formData.pastHousingStatus.includes("N/A")}
                       onCheckedChange={(checked) =>
-                        handleCheckboxChange("pastHousingStatus", "N/A", checked as boolean)
+                        setFormData((prev) => ({
+                          ...prev,
+                          pastHousingStatus: checked
+                            ? [...prev.pastHousingStatus, "N/A"]
+                            : prev.pastHousingStatus.filter((item) => item !== "N/A"),
+                        }))
                       }
                       className="mt-0.5"
                     />
@@ -580,7 +597,10 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
           </Collapsible>
 
           {/* Demographics Section */}
-          <Collapsible open={sectionStates.demographics} onOpenChange={() => toggleSection("demographics")}>
+          <Collapsible
+            open={sectionStates.demographics}
+            onOpenChange={(open) => setSectionStates((prev) => ({ ...prev, demographics: open }))}
+          >
             <SectionHeader title="5. Demographics" section="demographics" completion={sectionCompletion.demographics} />
             <CollapsibleContent className="px-4 pb-4 space-y-6 border-l-2 border-muted ml-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -681,7 +701,10 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
           </Collapsible>
 
           {/* Employment and Income Section */}
-          <Collapsible open={sectionStates.employment} onOpenChange={() => toggleSection("employment")}>
+          <Collapsible
+            open={sectionStates.employment}
+            onOpenChange={(open) => setSectionStates((prev) => ({ ...prev, employment: open }))}
+          >
             <SectionHeader
               title="6. Employment & Income"
               section="employment"
@@ -718,7 +741,14 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
                       <Checkbox
                         id={`income-${source}`}
                         checked={formData.incomeSources.includes(source)}
-                        onCheckedChange={(checked) => handleCheckboxChange("incomeSources", source, checked as boolean)}
+                        onCheckedChange={(checked) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            incomeSources: checked
+                              ? [...prev.incomeSources, source]
+                              : prev.incomeSources.filter((item) => item !== source),
+                          }))
+                        }
                         className="mt-0.5"
                       />
                       <Label htmlFor={`income-${source}`} className="text-sm leading-5">
@@ -732,7 +762,10 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
           </Collapsible>
 
           {/* Goals Section */}
-          <Collapsible open={sectionStates.goals} onOpenChange={() => toggleSection("goals")}>
+          <Collapsible
+            open={sectionStates.goals}
+            onOpenChange={(open) => setSectionStates((prev) => ({ ...prev, goals: open }))}
+          >
             <SectionHeader title="7. My Main Goals" section="goals" completion={sectionCompletion.goals} />
             <CollapsibleContent className="px-4 pb-4 space-y-4 border-l-2 border-muted ml-4">
               <div>
@@ -772,7 +805,10 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
           </Collapsible>
 
           {/* Contact Information Section */}
-          <Collapsible open={sectionStates.contact} onOpenChange={() => toggleSection("contact")}>
+          <Collapsible
+            open={sectionStates.contact}
+            onOpenChange={(open) => setSectionStates((prev) => ({ ...prev, contact: open }))}
+          >
             <SectionHeader title="8. My Contact Info" section="contact" completion={sectionCompletion.contact} />
             <CollapsibleContent className="px-4 pb-4 space-y-4 border-l-2 border-muted ml-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -812,7 +848,10 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
           </Collapsible>
 
           {/* Emergency Contact Section */}
-          <Collapsible open={sectionStates.emergencyContact} onOpenChange={() => toggleSection("emergencyContact")}>
+          <Collapsible
+            open={sectionStates.emergencyContact}
+            onOpenChange={(open) => setSectionStates((prev) => ({ ...prev, emergencyContact: open }))}
+          >
             <SectionHeader
               title="9. Emergency Contact Info"
               section="emergencyContact"
