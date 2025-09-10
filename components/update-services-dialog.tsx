@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { AlertTriangle, Clock, Plus, Edit, FileText } from "lucide-react"
 import { CMCheckinModal } from "./cm-checkin-modal"
 import { OTCheckinModal } from "./ot-checkin-modal"
+import { IntakeFormModal } from "./intake-form-modal"
 
 interface UpdateServicesDialogProps {
   isOpen: boolean
@@ -69,6 +70,7 @@ export function UpdateServicesDialog({
   const [isOTCheckinModalOpen, setIsOTCheckinModalOpen] = useState(false)
   const [hasOTCheckinToday, setHasOTCheckinToday] = useState(false)
   const [checkingOTCheckin, setCheckingOTCheckin] = useState(false)
+  const [isIntakeFormModalOpen, setIsIntakeFormModalOpen] = useState(false)
 
   useEffect(() => {
     if (isOpen && contactData) {
@@ -151,6 +153,7 @@ export function UpdateServicesDialog({
     setIsOTCheckinModalOpen(false)
     setHasOTCheckinToday(false)
     setCheckingOTCheckin(false)
+    setIsIntakeFormModalOpen(false)
     onClose()
   }
 
@@ -269,18 +272,8 @@ export function UpdateServicesDialog({
     }
   }
 
-  const handleClientInfoClick = () => {
-    if (contactData?.client) {
-      const encodedName = encodeURIComponent(contactData.client)
-      window.location.href = `/contact-log?tab=client&name=${encodedName}&section=basic-info`
-    }
-  }
-
   const handleIntakeFormClick = () => {
-    // TODO: This will trigger the intake form when the system is implemented
-    console.log("Intake form triggered for:", contactData?.client)
-    // For now, we can navigate to client info as a placeholder
-    handleClientInfoClick()
+    setIsIntakeFormModalOpen(true)
   }
 
   if (!contactData) return null
@@ -473,6 +466,13 @@ export function UpdateServicesDialog({
           contactId={contactData?.id || 0}
         />
       )}
+
+      <IntakeFormModal
+        isOpen={isIntakeFormModalOpen}
+        onClose={() => setIsIntakeFormModalOpen(false)}
+        clientId={contactData?.id || 0}
+        clientName={contactData?.client || ""}
+      />
     </>
   )
 }
