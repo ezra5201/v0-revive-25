@@ -33,7 +33,7 @@ interface Filters {
   providers: string[]
 }
 
-export function useCMContacts(activeTab: "today" | "all", filters: Filters) {
+export function useCMContacts(activeTab: "today" | "all", filters: Filters, selectedProvider?: string) {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [filterData, setFilterData] = useState<FilterData>({
     providers: [],
@@ -64,6 +64,9 @@ export function useCMContacts(activeTab: "today" | "all", filters: Filters) {
         if (filters.providers.length) {
           params.set("providers", filters.providers.join(","))
         }
+        if (selectedProvider) {
+          params.set("providerFilter", selectedProvider)
+        }
       }
 
       const response = await fetch(`/api/contacts?${params.toString()}`)
@@ -85,7 +88,7 @@ export function useCMContacts(activeTab: "today" | "all", filters: Filters) {
     } finally {
       setIsLoading(false)
     }
-  }, [activeTab, filters])
+  }, [activeTab, filters, selectedProvider])
 
   const fetchFilterData = useCallback(async () => {
     try {
