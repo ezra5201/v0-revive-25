@@ -362,7 +362,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
           {/* Basic Information Section */}
           <Collapsible open={sectionStates.basicInfo} onOpenChange={() => toggleSection("basicInfo")}>
             <SectionHeader
-              title="Basic Information"
+              title="1. Basic Information"
               section="basicInfo"
               completion={sectionCompletion.basicInfo}
               isRequired
@@ -439,7 +439,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
           {/* Support Needs Section */}
           <Collapsible open={sectionStates.supportNeeds} onOpenChange={() => toggleSection("supportNeeds")}>
             <SectionHeader
-              title="What support do you hope to have at ReVive's Engagement Center?"
+              title="2. Support Needs"
               section="supportNeeds"
               completion={sectionCompletion.supportNeeds}
             />
@@ -500,7 +500,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
 
           {/* Language Section */}
           <Collapsible open={sectionStates.language} onOpenChange={() => toggleSection("language")}>
-            <SectionHeader title="Language" section="language" completion={sectionCompletion.language} />
+            <SectionHeader title="3. Language" section="language" completion={sectionCompletion.language} />
             <CollapsibleContent className="px-4 pb-4 border-l-2 border-muted ml-4">
               <div>
                 <Label htmlFor="languages">Language (most fluent language first)</Label>
@@ -517,7 +517,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
 
           {/* Housing Status Section */}
           <Collapsible open={sectionStates.housing} onOpenChange={() => toggleSection("housing")}>
-            <SectionHeader title="Housing Status" section="housing" completion={sectionCompletion.housing} />
+            <SectionHeader title="4. Housing Status" section="housing" completion={sectionCompletion.housing} />
             <CollapsibleContent className="px-4 pb-4 space-y-6 border-l-2 border-muted ml-4">
               <div>
                 <Label className="text-sm font-semibold text-muted-foreground mb-3 block">
@@ -582,7 +582,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
 
           {/* Demographics Section */}
           <Collapsible open={sectionStates.demographics} onOpenChange={() => toggleSection("demographics")}>
-            <SectionHeader title="Demographics" section="demographics" completion={sectionCompletion.demographics} />
+            <SectionHeader title="5. Demographics" section="demographics" completion={sectionCompletion.demographics} />
             <CollapsibleContent className="px-4 pb-4 space-y-6 border-l-2 border-muted ml-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -683,7 +683,11 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
 
           {/* Employment and Income Section */}
           <Collapsible open={sectionStates.employment} onOpenChange={() => toggleSection("employment")}>
-            <SectionHeader title="Employment & Income" section="employment" completion={sectionCompletion.employment} />
+            <SectionHeader
+              title="6. Employment & Income"
+              section="employment"
+              completion={sectionCompletion.employment}
+            />
             <CollapsibleContent className="px-4 pb-4 space-y-6 border-l-2 border-muted ml-4">
               <div>
                 <Label className="block mb-2">Are you:</Label>
@@ -730,7 +734,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
 
           {/* Goals Section */}
           <Collapsible open={sectionStates.goals} onOpenChange={() => toggleSection("goals")}>
-            <SectionHeader title="My Main Goals" section="goals" completion={sectionCompletion.goals} />
+            <SectionHeader title="7. My Main Goals" section="goals" completion={sectionCompletion.goals} />
             <CollapsibleContent className="px-4 pb-4 space-y-4 border-l-2 border-muted ml-4">
               <div>
                 <Label htmlFor="goal1">1.</Label>
@@ -770,7 +774,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
 
           {/* Contact Information Section */}
           <Collapsible open={sectionStates.contact} onOpenChange={() => toggleSection("contact")}>
-            <SectionHeader title="My Contact Info" section="contact" completion={sectionCompletion.contact} />
+            <SectionHeader title="8. My Contact Info" section="contact" completion={sectionCompletion.contact} />
             <CollapsibleContent className="px-4 pb-4 space-y-4 border-l-2 border-muted ml-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -811,7 +815,7 @@ export function IntakeFormModal({ isOpen, onClose, clientId, clientName }: Intak
           {/* Emergency Contact Section */}
           <Collapsible open={sectionStates.emergencyContact} onOpenChange={() => toggleSection("emergencyContact")}>
             <SectionHeader
-              title="Emergency Contact Info"
+              title="9. Emergency Contact Info"
               section="emergencyContact"
               completion={sectionCompletion.emergencyContact}
             />
