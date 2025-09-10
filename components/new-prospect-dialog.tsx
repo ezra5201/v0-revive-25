@@ -63,7 +63,7 @@ export function NewProspectDialog({
   existingClients = [],
 }: NewProspectDialogProps) {
   const [name, setName] = useState("")
-  const [selectedObjectives, setSelectedObjectives] = useState<string[]>([])
+  const [selectedObjectives, setSelectedObjectives] = useState<string[]>(["Case Management"])
   const [accessedFood, setAccessedFood] = useState(false)
   const [comments, setComments] = useState("")
   const [hasAlert, setHasAlert] = useState(false)
@@ -98,7 +98,7 @@ export function NewProspectDialog({
 
   const handleClose = () => {
     setName("")
-    setSelectedObjectives([])
+    setSelectedObjectives(["Case Management"])
     setAccessedFood(false)
     setComments("")
     setHasAlert(false)
@@ -291,7 +291,7 @@ export function NewProspectDialog({
           </div>
 
           <div>
-            <Label className="text-base font-medium">Client objective for visiting today (optional):</Label>
+            <Label className="text-base font-medium">Visitor objective for visiting today (optional):</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
               {objectives.map((objective) => (
                 <div key={objective.value} className="flex items-center space-x-3 py-2 px-1 min-h-[44px]">
