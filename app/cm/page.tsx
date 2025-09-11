@@ -37,7 +37,7 @@ export default function CmPage() {
   const [selectedContactIds, setSelectedContactIds] = useState<number[]>([])
   const [filters, setFilters] = useState<{ categories: string[]; providers: string[] }>({
     categories: [],
-    providers: [],
+    providers: ["Andrea Leflore"], // Default to current user
   })
   const [prefilledProspectName, setPrefilledProspectName] = useState("")
 
@@ -144,13 +144,15 @@ export default function CmPage() {
       setActiveTab(tab)
       setSelectedCount(0)
       setSelectedContactIds([])
-      setFilters({ categories: [], providers: [] })
-
+      if (tab === "all") {
+        setFilters({ categories: [], providers: ["Andrea Leflore"] })
+      } else {
+        setFilters({ categories: [], providers: [] })
+      }
       if (tab !== "client") {
         setSelectedClient(null)
         setActiveClientSection("basic-info")
       }
-
       updateURL(tab)
     },
     [updateURL],
@@ -227,7 +229,7 @@ export default function CmPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
-              My Caseload
+              CM Caseload
             </button>
 
             {/* Dynamic client tab */}

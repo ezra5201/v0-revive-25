@@ -544,6 +544,8 @@ export default function ContactLogPage() {
         onClose={handleCloseUpdateServicesDialog}
         contactData={selectedContactForUpdate}
         onServicesUpdate={handleServicesUpdated}
+        isFromCMTab={true}
+        isFromOTTab={true}
       />
     </div>
   )

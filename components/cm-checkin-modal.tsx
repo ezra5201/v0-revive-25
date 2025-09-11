@@ -87,7 +87,7 @@ export function CMCheckinModal({
   // Fetch goals when modal opens
   useEffect(() => {
     if (isOpen && clientName) {
-      fetchGoals()
+      fetchGoals(clientName)
     }
   }, [isOpen, clientName])
 
@@ -191,10 +191,10 @@ export function CMCheckinModal({
     }
   }
 
-  const fetchGoals = async () => {
-    setLoading(true)
-    setError(null)
+  const fetchGoals = async (clientName: string) => {
     try {
+      setLoading(true)
+      setError(null)
       console.log("DEBUG: Fetching goals for client:", clientName)
       const response = await fetch(`/api/goals/by-client/${encodeURIComponent(clientName)}`)
       console.log("DEBUG: Goals fetch response status:", response.status)
@@ -210,6 +210,12 @@ export function CMCheckinModal({
         // If we get HTML instead of JSON (like a 404 page), treat as no goals
         if (!isJson && errorText.includes("<!DOCTYPE")) {
           console.log("DEBUG: Received HTML response, treating as no goals found")
+          setGoals([])
+          return
+        }
+
+        if (response.status === 404) {
+          console.log("DEBUG: 404 error, treating as no goals found")
           setGoals([])
           return
         }
@@ -239,7 +245,7 @@ export function CMCheckinModal({
         setGoals([])
         setError(null) // Don't show error for this case
       } else {
-        setError(err instanceof Error ? err.message : "Failed to fetch goals")
+        setError("No goals found for this person")
         setGoals([])
       }
     } finally {
@@ -721,7 +727,7 @@ export function CMCheckinModal({
 
               {/* Error Display */}
               {error && (
-                <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
+                <div className="flex items-center space-x-2 text-gray-800 bg-gray-50 p-3 rounded-md">
                   <AlertCircle className="h-4 w-4" />
                   <span className="text-sm">{error}</span>
                 </div>
@@ -914,7 +920,7 @@ export function CMCheckinModal({
             </div>
 
             {error && (
-              <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
+              <div className="flex items-center space-x-2 text-gray-800 bg-gray-50 p-3 rounded-md">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm">{error}</span>
               </div>
@@ -1021,7 +1027,7 @@ export function CMCheckinModal({
             </div>
 
             {error && (
-              <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
+              <div className="flex items-center space-x-2 text-gray-800 bg-gray-50 p-3 rounded-md">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm">{error}</span>
               </div>

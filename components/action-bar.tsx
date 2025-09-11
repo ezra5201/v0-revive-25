@@ -259,6 +259,26 @@ export function ActionBar({
   // Mobile Filter Sheet Content
   const MobileFiltersContent = () => (
     <div className="space-y-6">
+      {/* Provider Filter */}
+      <div className="space-y-3">
+        <h3 className="font-medium text-gray-900">Provider</h3>
+        <div className="space-y-3 max-h-60 overflow-y-auto">
+          {providers.map((provider) => (
+            <div key={provider} className="flex items-center space-x-3 py-1">
+              <Checkbox
+                id={`mobile-provider-${provider}`}
+                checked={selectedProviders.includes(provider)}
+                onCheckedChange={(checked) => handleProviderChange(provider, checked as boolean)}
+                className="h-5 w-5"
+              />
+              <label htmlFor={`mobile-provider-${provider}`} className="text-sm cursor-pointer flex-1 font-bold">
+                {provider}
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Date Filter */}
       <div className="space-y-3">
         <h3 className="font-medium text-gray-900">Date Range</h3>
@@ -298,26 +318,6 @@ export function ActionBar({
               />
               <label htmlFor={`mobile-category-${category}`} className="text-sm cursor-pointer flex-1">
                 {category}
-              </label>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Provider Filter */}
-      <div className="space-y-3">
-        <h3 className="font-medium text-gray-900">Provider</h3>
-        <div className="space-y-3 max-h-60 overflow-y-auto">
-          {providers.map((provider) => (
-            <div key={provider} className="flex items-center space-x-3 py-1">
-              <Checkbox
-                id={`mobile-provider-${provider}`}
-                checked={selectedProviders.includes(provider)}
-                onCheckedChange={(checked) => handleProviderChange(provider, checked as boolean)}
-                className="h-5 w-5"
-              />
-              <label htmlFor={`mobile-provider-${provider}`} className="text-sm cursor-pointer flex-1">
-                {provider}
               </label>
             </div>
           ))}
@@ -446,6 +446,43 @@ export function ActionBar({
             {/* Desktop Filters - Only for All Contacts workflow */}
             {activeTab === "all" && (
               <div className="hidden lg:flex items-center space-x-3">
+                {/* Provider Filter */}
+                <div className="relative" ref={providerDropdownRef}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowProviderDropdown(!showProviderDropdown)}
+                    className="h-9 text-sm"
+                  >
+                    Provider
+                    {selectedProviders.length > 0 && (
+                      <span className="ml-1 bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
+                        {selectedProviders.length}
+                      </span>
+                    )}
+                    <ChevronDown className="ml-2 h-3 w-3" />
+                  </Button>
+
+                  {showProviderDropdown && (
+                    <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[200px] max-h-60 overflow-y-auto z-50">
+                      <div className="p-2">
+                        {providers.map((provider) => (
+                          <div key={provider} className="flex items-center space-x-2 py-2">
+                            <Checkbox
+                              id={`provider-${provider}`}
+                              checked={selectedProviders.includes(provider)}
+                              onCheckedChange={(checked) => handleProviderChange(provider, checked as boolean)}
+                            />
+                            <label htmlFor={`provider-${provider}`} className="text-sm cursor-pointer flex-1 font-bold">
+                              {provider}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Date Filter */}
                 <div className="relative" ref={dateFilterRef}>
                   <Button
@@ -521,43 +558,6 @@ export function ActionBar({
                             />
                             <label htmlFor={`category-${category}`} className="text-sm cursor-pointer flex-1">
                               {category}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Provider Filter */}
-                <div className="relative" ref={providerDropdownRef}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowProviderDropdown(!showProviderDropdown)}
-                    className="h-9 text-sm"
-                  >
-                    Provider
-                    {selectedProviders.length > 0 && (
-                      <span className="ml-1 bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
-                        {selectedProviders.length}
-                      </span>
-                    )}
-                    <ChevronDown className="ml-2 h-3 w-3" />
-                  </Button>
-
-                  {showProviderDropdown && (
-                    <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[200px] max-h-60 overflow-y-auto z-50">
-                      <div className="p-2">
-                        {providers.map((provider) => (
-                          <div key={provider} className="flex items-center space-x-2 py-2">
-                            <Checkbox
-                              id={`provider-${provider}`}
-                              checked={selectedProviders.includes(provider)}
-                              onCheckedChange={(checked) => handleProviderChange(provider, checked as boolean)}
-                            />
-                            <label htmlFor={`provider-${provider}`} className="text-sm cursor-pointer flex-1">
-                              {provider}
                             </label>
                           </div>
                         ))}
