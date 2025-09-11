@@ -13,8 +13,7 @@ export default function ChoicePage() {
   }
 
   const handleCenterChoice = () => {
-    // TODO: Navigate to Center dashboard
-    console.log("Center selected")
+    router.push("/contact-log?tab=today")
   }
 
   return (
@@ -47,8 +46,8 @@ export default function ChoicePage() {
                 </svg>
               </div>
               <div className="text-center">
-                <div className="font-semibold text-lg">Run</div>
-                <div className="text-sm text-muted-foreground">Field operations and outreach</div>
+                <div className="font-semibold text-lg text-foreground">Run</div>
+                <div className="text-sm text-muted-foreground">I'm on a run</div>
               </div>
             </Button>
 
@@ -68,8 +67,8 @@ export default function ChoicePage() {
                 </svg>
               </div>
               <div className="text-center">
-                <div className="font-semibold text-lg">Center</div>
-                <div className="text-sm text-muted-foreground">Administrative and coordination</div>
+                <div className="font-semibold text-lg text-foreground">Center</div>
+                <div className="text-sm text-muted-foreground">I'm in the Center</div>
               </div>
             </Button>
           </div>
