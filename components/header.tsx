@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Menu, User, Settings } from "lucide-react"
+import { Menu, User, Settings, ArrowLeftRight } from "lucide-react"
 import { useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { AlertHeaderIndicator } from "./alert-header-indicator"
@@ -31,6 +31,14 @@ export function Header() {
 
   const isActivePath = (path: string) => {
     return pathname === path
+  }
+
+  const isInMainApp = navigationItems.some((item) => pathname.startsWith(item.path))
+  const viewSwitchText = isInMainApp ? "Switch to Run View" : "Switch to Center View"
+  const viewSwitchPath = isInMainApp ? "/choice" : "/contact-log?tab=today"
+
+  const handleViewSwitch = () => {
+    router.push(viewSwitchPath)
   }
 
   return (
@@ -115,6 +123,10 @@ export function Header() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleViewSwitch} className="min-h-[44px] flex items-center">
+                  <ArrowLeftRight className="h-4 w-4 mr-2" />
+                  {viewSwitchText}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsStatsModalOpen(true)} className="min-h-[44px] flex items-center">
                   Database Statistics
                 </DropdownMenuItem>
@@ -170,6 +182,10 @@ export function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleViewSwitch} className="min-h-[44px] flex items-center">
+                    <ArrowLeftRight className="h-4 w-4 mr-2" />
+                    {viewSwitchText}
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => setIsStatsModalOpen(true)}
                     className="min-h-[44px] flex items-center"
