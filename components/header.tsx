@@ -41,6 +41,15 @@ export function Header() {
     router.push(viewSwitchPath)
   }
 
+  const handleSignOut = () => {
+    // Clear any session storage or local storage if needed
+    localStorage.clear()
+    sessionStorage.clear()
+
+    // Redirect to login page
+    router.push("/login")
+  }
+
   return (
     <header className="bg-white border-b border-gray-200 relative z-50">
       <div className="px-4 sm:px-6 py-4">
@@ -104,7 +113,7 @@ export function Header() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem className="min-h-[44px] flex items-center">
+                <DropdownMenuItem onClick={handleSignOut} className="min-h-[44px] flex items-center cursor-pointer">
                   <span className="text-blue-600 hover:text-blue-800">Sign Out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -168,7 +177,7 @@ export function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                  <DropdownMenuItem className="min-h-[44px] flex items-center">
+                  <DropdownMenuItem onClick={handleSignOut} className="min-h-[44px] flex items-center cursor-pointer">
                     <span className="text-blue-600 hover:text-blue-800">Sign Out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
