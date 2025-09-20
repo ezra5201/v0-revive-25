@@ -76,6 +76,7 @@ export default function RunLogPage() {
   const [clientSearch, setClientSearch] = useState("")
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [currentAddress, setCurrentAddress] = useState<string>("")
 
   const [formData, setFormData] = useState({
     run_id: "",
@@ -129,10 +130,7 @@ export default function RunLogPage() {
       (position) => {
         const { latitude, longitude } = position.coords
         setCurrentLocation({ lat: latitude, lng: longitude })
-        setFormData((prev) => ({
-          ...prev,
-          custom_location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-        }))
+        reverseGeocode(latitude, longitude)
         setIsGettingLocation(false)
       },
       (error) => {
@@ -143,6 +141,39 @@ export default function RunLogPage() {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
     )
+  }
+
+  const reverseGeocode = async (lat: number, lng: number) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        const address = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+        setCurrentAddress(address)
+        setFormData((prev) => ({
+          ...prev,
+          custom_location: address,
+        }))
+      } else {
+        const coordsString = `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+        setCurrentAddress(coordsString)
+        setFormData((prev) => ({
+          ...prev,
+          custom_location: coordsString,
+        }))
+      }
+    } catch (error) {
+      console.error("Error reverse geocoding:", error)
+      const coordsString = `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+      setCurrentAddress(coordsString)
+      setFormData((prev) => ({
+        ...prev,
+        custom_location: coordsString,
+      }))
+    }
   }
 
   const fetchStaffMembers = async () => {
@@ -283,6 +314,7 @@ export default function RunLogPage() {
     })
     setClientSearch("")
     setCurrentLocation(null)
+    setCurrentAddress("")
   }
 
   const toggleService = (service: string) => {
@@ -417,7 +449,9 @@ export default function RunLogPage() {
                               <Input
                                 value={formData.custom_location}
                                 onChange={(e) => setFormData({ ...formData, custom_location: e.target.value })}
-                                placeholder={isGettingLocation ? "Getting location..." : "Latitude, Longitude"}
+                                placeholder={
+                                  isGettingLocation ? "Getting location..." : "Street address or coordinates"
+                                }
                                 className="h-12 text-base pr-10"
                                 disabled={isGettingLocation}
                               />
