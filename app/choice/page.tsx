@@ -8,8 +8,7 @@ export default function ChoicePage() {
   const router = useRouter()
 
   const handleRunChoice = () => {
-    // TODO: Navigate to Run dashboard
-    console.log("Run selected")
+    router.push("/run-log")
   }
 
   const handleCenterChoice = () => {
