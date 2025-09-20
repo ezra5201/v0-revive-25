@@ -11,8 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Filter, Plus, Search, MapPin, Loader2 } from "lucide-react"
+import { Filter, Plus, Search, MapPin, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 
 interface RunContact {
   id: number
@@ -315,6 +314,7 @@ export default function RunLogPage() {
     setClientSearch("")
     setCurrentLocation(null)
     setCurrentAddress("")
+    setCurrentStep(1)
   }
 
   const toggleService = (service: string) => {
@@ -335,6 +335,345 @@ export default function RunLogPage() {
       fullName.includes(searchLower) || (client.ces_number && client.ces_number.toLowerCase().includes(searchLower))
     )
   })
+
+  const [currentStep, setCurrentStep] = useState(1)
+  const totalSteps = 4
+
+  const nextStep = () => {
+    if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
+  }
+
+  const canProceedToNextStep = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          formData.run_id &&
+          formData.staff_member &&
+          (formData.location_mode === "auto" ? formData.custom_location : formData.location_id)
+        )
+      case 2:
+        return formData.is_new_client
+          ? formData.new_client_first_name && formData.new_client_last_name
+          : formData.client_id
+      case 3:
+        return formData.services_provided.length > 0
+      case 4:
+        return true
+      default:
+        return false
+    }
+  }
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-8">
+            <div>
+              <Label htmlFor="run_id" className="text-xl font-semibold mb-4 block">
+                Today's Run
+              </Label>
+              <Select value={formData.run_id} onValueChange={(value) => setFormData({ ...formData, run_id: value })}>
+                <SelectTrigger className="h-16 text-lg border-2">
+                  <SelectValue placeholder="Select run" />
+                </SelectTrigger>
+                <SelectContent>
+                  {runs.map((run) => (
+                    <SelectItem key={run.id} value={run.id.toString()} className="text-lg py-4">
+                      {run.lead_staff} - {run.status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-xl font-semibold mb-4 block">Location</Label>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-4">
+                  <Button
+                    type="button"
+                    variant={formData.location_mode === "auto" ? "default" : "outline"}
+                    onClick={() => setFormData({ ...formData, location_mode: "auto", location_id: "" })}
+                    className="h-16 text-lg border-2 justify-start"
+                  >
+                    <MapPin className="w-6 h-6 mr-3" />
+                    Auto-detect Location
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={formData.location_mode === "manual" ? "default" : "outline"}
+                    onClick={() => setFormData({ ...formData, location_mode: "manual", custom_location: "" })}
+                    className="h-16 text-lg border-2 justify-start"
+                  >
+                    Select from List
+                  </Button>
+                </div>
+
+                {formData.location_mode === "auto" ? (
+                  <div className="relative">
+                    <Input
+                      value={formData.custom_location}
+                      onChange={(e) => setFormData({ ...formData, custom_location: e.target.value })}
+                      placeholder={isGettingLocation ? "Getting location..." : "Street address or coordinates"}
+                      className="h-16 text-lg pr-16 border-2"
+                      disabled={isGettingLocation}
+                    />
+                    {isGettingLocation ? (
+                      <Loader2 className="absolute right-4 top-1/2 transform -translate-y-1/2 h-6 w-6 animate-spin text-gray-400" />
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={getCurrentLocation}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 h-12 w-12 p-0"
+                      >
+                        <MapPin className="h-6 w-6" />
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.location_id}
+                    onValueChange={(value) => setFormData({ ...formData, location_id: value })}
+                  >
+                    <SelectTrigger className="h-16 text-lg border-2">
+                      <SelectValue placeholder="Select location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(formData.run_id ? getPlannedLocationsForRun(formData.run_id) : locations).map((location) => (
+                        <SelectItem key={location.id} value={location.id.toString()} className="text-lg py-4">
+                          {location.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="staff_member" className="text-xl font-semibold mb-4 block">
+                Staff Member
+              </Label>
+              <Select
+                value={formData.staff_member}
+                onValueChange={(value) => setFormData({ ...formData, staff_member: value })}
+              >
+                <SelectTrigger className="h-16 text-lg border-2">
+                  <SelectValue placeholder="Select staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staffMembers.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.name} className="text-lg py-4">
+                      {staff.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )
+
+      case 2:
+        return (
+          <div className="space-y-8">
+            <div className="text-center mb-8">
+              <Button
+                type="button"
+                variant={formData.is_new_client ? "default" : "outline"}
+                onClick={() => setFormData({ ...formData, is_new_client: true, client_id: "" })}
+                className="h-20 text-xl px-8 mr-4 border-2"
+              >
+                New Client
+              </Button>
+              <Button
+                type="button"
+                variant={!formData.is_new_client ? "default" : "outline"}
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    is_new_client: false,
+                    new_client_first_name: "",
+                    new_client_last_name: "",
+                  })
+                }
+                className="h-20 text-xl px-8 border-2"
+              >
+                Existing Client
+              </Button>
+            </div>
+
+            {formData.is_new_client ? (
+              <div className="space-y-6">
+                <div>
+                  <Label htmlFor="new_client_first_name" className="text-xl font-semibold mb-4 block">
+                    First Name
+                  </Label>
+                  <Input
+                    id="new_client_first_name"
+                    value={formData.new_client_first_name}
+                    onChange={(e) => setFormData({ ...formData, new_client_first_name: e.target.value })}
+                    placeholder="First name"
+                    className="h-16 text-lg border-2"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="new_client_last_name" className="text-xl font-semibold mb-4 block">
+                    Last Name
+                  </Label>
+                  <Input
+                    id="new_client_last_name"
+                    value={formData.new_client_last_name}
+                    onChange={(e) => setFormData({ ...formData, new_client_last_name: e.target.value })}
+                    placeholder="Last name"
+                    className="h-16 text-lg border-2"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="relative">
+                  <Input
+                    placeholder="Search existing clients..."
+                    value={clientSearch}
+                    onChange={(e) => setClientSearch(e.target.value)}
+                    className="pl-12 h-16 text-lg border-2"
+                  />
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400" />
+                </div>
+                <Select
+                  value={formData.client_id}
+                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+                >
+                  <SelectTrigger className="h-16 text-lg border-2">
+                    <SelectValue placeholder="Select existing client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredClients.map((client) => (
+                      <SelectItem key={client.id} value={client.id.toString()} className="text-lg py-4">
+                        {client.first_name} {client.last_name} {client.ces_number && `(${client.ces_number})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        )
+
+      case 3:
+        return (
+          <div className="space-y-8">
+            <div>
+              <Label className="text-xl font-semibold mb-6 block">Services Provided</Label>
+              <div className="grid grid-cols-1 gap-4">
+                {COMMON_SERVICES.map((service) => (
+                  <Button
+                    key={service}
+                    type="button"
+                    variant={formData.services_provided.includes(service) ? "default" : "outline"}
+                    onClick={() => toggleService(service)}
+                    className="h-16 text-lg justify-start border-2"
+                  >
+                    {service}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+
+      case 4:
+        return (
+          <div className="space-y-8">
+            <div>
+              <Label htmlFor="housing_status" className="text-xl font-semibold mb-4 block">
+                Housing Status
+              </Label>
+              <Select
+                value={formData.housing_status}
+                onValueChange={(value) => setFormData({ ...formData, housing_status: value })}
+              >
+                <SelectTrigger className="h-16 text-lg border-2">
+                  <SelectValue placeholder="Select housing status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unsheltered" className="text-lg py-4">
+                    Unsheltered
+                  </SelectItem>
+                  <SelectItem value="sheltered" className="text-lg py-4">
+                    Sheltered
+                  </SelectItem>
+                  <SelectItem value="transitional" className="text-lg py-4">
+                    Transitional Housing
+                  </SelectItem>
+                  <SelectItem value="temporary" className="text-lg py-4">
+                    Temporary Stay
+                  </SelectItem>
+                  <SelectItem value="unknown" className="text-lg py-4">
+                    Unknown
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="medical_concerns" className="text-xl font-semibold mb-4 block">
+                Medical Concerns (Optional)
+              </Label>
+              <Textarea
+                id="medical_concerns"
+                value={formData.medical_concerns}
+                onChange={(e) => setFormData({ ...formData, medical_concerns: e.target.value })}
+                placeholder="Any medical concerns or observations"
+                rows={4}
+                className="text-lg border-2"
+              />
+            </div>
+
+            <div className="space-y-4">
+              <Button
+                type="button"
+                variant={formData.follow_up_needed ? "default" : "outline"}
+                onClick={() => setFormData({ ...formData, follow_up_needed: !formData.follow_up_needed })}
+                className="h-16 text-lg w-full border-2"
+              >
+                {formData.follow_up_needed ? "✓ Follow-up Needed" : "Follow-up Needed?"}
+              </Button>
+
+              {formData.follow_up_needed && (
+                <div>
+                  <Label htmlFor="follow_up_notes" className="text-lg font-medium mb-3 block">
+                    Follow-up Notes
+                  </Label>
+                  <Textarea
+                    id="follow_up_notes"
+                    value={formData.follow_up_notes}
+                    onChange={(e) => setFormData({ ...formData, follow_up_notes: e.target.value })}
+                    placeholder="What follow-up is needed?"
+                    rows={4}
+                    className="text-lg border-2"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )
+
+      default:
+        return null
+    }
+  }
 
   if (loading) {
     return (
@@ -383,300 +722,68 @@ export default function RunLogPage() {
                     Contact
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl font-bold">Log Street Contact</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleAddContact} className="space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="run_id" className="text-base font-medium">
-                          Today's Run
-                        </Label>
-                        <Select
-                          value={formData.run_id}
-                          onValueChange={(value) => setFormData({ ...formData, run_id: value })}
-                        >
-                          <SelectTrigger className="h-12 text-base">
-                            <SelectValue placeholder="Select run" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {runs.map((run) => (
-                              <SelectItem key={run.id} value={run.id.toString()}>
-                                {run.lead_staff} - {run.status}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Label className="text-base font-medium">Location</Label>
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="radio"
-                                id="location-auto"
-                                name="location-mode"
-                                checked={formData.location_mode === "auto"}
-                                onChange={() => setFormData({ ...formData, location_mode: "auto", location_id: "" })}
-                                className="w-4 h-4"
-                              />
-                              <Label htmlFor="location-auto" className="text-sm">
-                                Auto-detect
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="radio"
-                                id="location-manual"
-                                name="location-mode"
-                                checked={formData.location_mode === "manual"}
-                                onChange={() =>
-                                  setFormData({ ...formData, location_mode: "manual", custom_location: "" })
-                                }
-                                className="w-4 h-4"
-                              />
-                              <Label htmlFor="location-manual" className="text-sm">
-                                Select from list
-                              </Label>
-                            </div>
-                          </div>
-
-                          {formData.location_mode === "auto" ? (
-                            <div className="relative">
-                              <Input
-                                value={formData.custom_location}
-                                onChange={(e) => setFormData({ ...formData, custom_location: e.target.value })}
-                                placeholder={
-                                  isGettingLocation ? "Getting location..." : "Street address or coordinates"
-                                }
-                                className="h-12 text-base pr-10"
-                                disabled={isGettingLocation}
-                              />
-                              {isGettingLocation ? (
-                                <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 animate-spin text-gray-400" />
-                              ) : (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={getCurrentLocation}
-                                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-10 w-10 p-0"
-                                >
-                                  <MapPin className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          ) : (
-                            <Select
-                              value={formData.location_id}
-                              onValueChange={(value) => setFormData({ ...formData, location_id: value })}
-                            >
-                              <SelectTrigger className="h-12 text-base">
-                                <SelectValue placeholder="Select location" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(formData.run_id ? getPlannedLocationsForRun(formData.run_id) : locations).map(
-                                  (location) => (
-                                    <SelectItem key={location.id} value={location.id.toString()}>
-                                      {location.name}
-                                    </SelectItem>
-                                  ),
-                                )}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="staff_member" className="text-base font-medium">
-                        Staff Member
-                      </Label>
-                      <Select
-                        value={formData.staff_member}
-                        onValueChange={(value) => setFormData({ ...formData, staff_member: value })}
-                      >
-                        <SelectTrigger className="h-12 text-base">
-                          <SelectValue placeholder="Select staff member" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {staffMembers.map((staff) => (
-                            <SelectItem key={staff.id} value={staff.name}>
-                              {staff.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-4 mb-3">
-                        <Label className="text-base font-medium">Client</Label>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="is_new_client"
-                            checked={formData.is_new_client}
-                            onCheckedChange={(checked) =>
-                              setFormData({ ...formData, is_new_client: !!checked, client_id: "" })
-                            }
+                <DialogContent className="sm:max-w-2xl max-h-[95vh] overflow-hidden flex flex-col">
+                  <DialogHeader className="flex-shrink-0">
+                    <DialogTitle className="text-2xl font-bold">Log Street Contact</DialogTitle>
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="flex space-x-2">
+                        {Array.from({ length: totalSteps }, (_, i) => (
+                          <div
+                            key={i}
+                            className={`w-4 h-4 rounded-full ${i + 1 <= currentStep ? "bg-primary" : "bg-muted"}`}
                           />
-                          <Label htmlFor="is_new_client" className="text-base">
-                            New client
-                          </Label>
-                        </div>
-                      </div>
-
-                      {formData.is_new_client ? (
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="new_client_first_name">First Name</Label>
-                            <Input
-                              id="new_client_first_name"
-                              value={formData.new_client_first_name}
-                              onChange={(e) => setFormData({ ...formData, new_client_first_name: e.target.value })}
-                              placeholder="First name"
-                              className="h-12 text-base"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="new_client_last_name">Last Name</Label>
-                            <Input
-                              id="new_client_last_name"
-                              value={formData.new_client_last_name}
-                              onChange={(e) => setFormData({ ...formData, new_client_last_name: e.target.value })}
-                              placeholder="Last name"
-                              className="h-12 text-base"
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="relative mb-2">
-                            <Input
-                              placeholder="Search existing clients..."
-                              value={clientSearch}
-                              onChange={(e) => setClientSearch(e.target.value)}
-                              className="pl-10 h-12 text-base"
-                            />
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                          </div>
-                          <Select
-                            value={formData.client_id}
-                            onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-                          >
-                            <SelectTrigger className="h-12 text-base">
-                              <SelectValue placeholder="Select existing client" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {filteredClients.map((client) => (
-                                <SelectItem key={client.id} value={client.id.toString()}>
-                                  {client.first_name} {client.last_name} {client.ces_number && `(${client.ces_number})`}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label className="text-base font-medium">Services Provided</Label>
-                      <div className="grid grid-cols-2 gap-3 mt-3">
-                        {COMMON_SERVICES.map((service) => (
-                          <div key={service} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`service-${service}`}
-                              checked={formData.services_provided.includes(service)}
-                              onCheckedChange={() => toggleService(service)}
-                            />
-                            <Label htmlFor={`service-${service}`} className="text-sm">
-                              {service}
-                            </Label>
-                          </div>
                         ))}
                       </div>
+                      <span className="text-lg font-medium text-muted-foreground">
+                        Step {currentStep} of {totalSteps}
+                      </span>
                     </div>
+                  </DialogHeader>
 
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="medical_concerns" className="text-base font-medium">
-                          Medical Concerns
-                        </Label>
-                        <Textarea
-                          id="medical_concerns"
-                          value={formData.medical_concerns}
-                          onChange={(e) => setFormData({ ...formData, medical_concerns: e.target.value })}
-                          placeholder="Any medical concerns or observations"
-                          rows={3}
-                          className="text-base"
-                        />
-                      </div>
+                  <form onSubmit={handleAddContact} className="flex-1 flex flex-col overflow-hidden">
+                    <div className="flex-1 overflow-y-auto px-1 py-4">{renderStepContent()}</div>
 
-                      <div>
-                        <Label htmlFor="housing_status" className="text-base font-medium">
-                          Housing Status
-                        </Label>
-                        <Select
-                          value={formData.housing_status}
-                          onValueChange={(value) => setFormData({ ...formData, housing_status: value })}
+                    <div className="flex-shrink-0 flex gap-3 pt-6 border-t">
+                      {currentStep > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={prevStep}
+                          className="h-16 text-lg px-8 border-2 bg-transparent"
                         >
-                          <SelectTrigger className="h-12 text-base">
-                            <SelectValue placeholder="Select housing status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="unsheltered">Unsheltered</SelectItem>
-                            <SelectItem value="sheltered">Sheltered</SelectItem>
-                            <SelectItem value="transitional">Transitional Housing</SelectItem>
-                            <SelectItem value="temporary">Temporary Stay</SelectItem>
-                            <SelectItem value="unknown">Unknown</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="follow_up_needed"
-                          checked={formData.follow_up_needed}
-                          onCheckedChange={(checked) => setFormData({ ...formData, follow_up_needed: !!checked })}
-                        />
-                        <Label htmlFor="follow_up_needed" className="text-base font-medium">
-                          Follow-up Needed
-                        </Label>
-                      </div>
-
-                      {formData.follow_up_needed && (
-                        <div>
-                          <Label htmlFor="follow_up_notes" className="text-base font-medium">
-                            Follow-up Notes
-                          </Label>
-                          <Textarea
-                            id="follow_up_notes"
-                            value={formData.follow_up_notes}
-                            onChange={(e) => setFormData({ ...formData, follow_up_notes: e.target.value })}
-                            placeholder="What follow-up is needed?"
-                            rows={3}
-                            className="text-base"
-                          />
-                        </div>
+                          <ChevronLeft className="w-5 h-5 mr-2" />
+                          Back
+                        </Button>
                       )}
-                    </div>
 
-                    <div className="flex gap-3 pt-4">
-                      <Button type="submit" className="flex-1 h-12 text-base font-semibold">
-                        Log Contact
-                      </Button>
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => setShowAddDialog(false)}
-                        className="h-12 text-base"
+                        className="h-16 text-lg px-6 border-2"
                       >
                         Cancel
                       </Button>
+
+                      {currentStep < totalSteps ? (
+                        <Button
+                          type="button"
+                          onClick={nextStep}
+                          disabled={!canProceedToNextStep()}
+                          className="flex-1 h-16 text-lg font-semibold"
+                        >
+                          Next
+                          <ChevronRight className="w-5 h-5 ml-2" />
+                        </Button>
+                      ) : (
+                        <Button
+                          type="submit"
+                          disabled={!canProceedToNextStep()}
+                          className="flex-1 h-16 text-lg font-semibold"
+                        >
+                          Log Contact
+                        </Button>
+                      )}
                     </div>
                   </form>
                 </DialogContent>
