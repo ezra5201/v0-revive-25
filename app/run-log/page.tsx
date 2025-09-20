@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Filter, Plus, Search } from "lucide-react"
+import { Filter, Plus, Search, MapPin, Loader2 } from "lucide-react"
 
 interface RunContact {
   id: number
@@ -26,6 +26,8 @@ interface RunContact {
 interface OutreachLocation {
   id: number
   name: string
+  latitude?: number
+  longitude?: number
 }
 
 interface OutreachClient {
@@ -40,6 +42,12 @@ interface OutreachRun {
   run_date: string
   lead_staff: string
   status: string
+  planned_locations?: string[]
+}
+
+interface StaffMember {
+  id: number
+  name: string
 }
 
 const COMMON_SERVICES = [
@@ -62,15 +70,20 @@ export default function RunLogPage() {
   const [locations, setLocations] = useState<OutreachLocation[]>([])
   const [clients, setClients] = useState<OutreachClient[]>([])
   const [runs, setRuns] = useState<OutreachRun[]>([])
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [clientSearch, setClientSearch] = useState("")
+  const [isGettingLocation, setIsGettingLocation] = useState(false)
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null)
 
   const [formData, setFormData] = useState({
     run_id: "",
     client_id: "",
     location_id: "",
     staff_member: "",
+    location_mode: "manual",
+    custom_location: "",
     services_provided: [] as string[],
     medical_concerns: "",
     housing_status: "",
@@ -81,7 +94,6 @@ export default function RunLogPage() {
     is_new_client: false,
   })
 
-  // Get today's date
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -89,7 +101,6 @@ export default function RunLogPage() {
     day: "numeric",
   })
 
-  // Mock user name - in real app this would come from auth
   const userName = "John Doe"
 
   useEffect(() => {
@@ -97,7 +108,71 @@ export default function RunLogPage() {
     fetchLocations()
     fetchClients()
     fetchActiveRuns()
+    fetchStaffMembers()
+    setFormData((prev) => ({ ...prev, staff_member: userName }))
   }, [])
+
+  useEffect(() => {
+    if (formData.location_mode === "auto" && !currentLocation) {
+      getCurrentLocation()
+    }
+  }, [formData.location_mode])
+
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by this browser.")
+      return
+    }
+
+    setIsGettingLocation(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        setCurrentLocation({ lat: latitude, lng: longitude })
+        setFormData((prev) => ({
+          ...prev,
+          custom_location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+        }))
+        setIsGettingLocation(false)
+      },
+      (error) => {
+        console.error("Error getting location:", error)
+        alert("Unable to get your location. Please select manually.")
+        setFormData((prev) => ({ ...prev, location_mode: "manual" }))
+        setIsGettingLocation(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+    )
+  }
+
+  const fetchStaffMembers = async () => {
+    try {
+      const response = await fetch("/api/outreach/staff")
+      if (response.ok) {
+        const data = await response.json()
+        setStaffMembers(data)
+      }
+    } catch (error) {
+      console.error("Error fetching staff members:", error)
+    }
+  }
+
+  const getPlannedLocationsForRun = (runId: string) => {
+    const selectedRun = runs.find((run) => run.id.toString() === runId)
+    if (!selectedRun?.planned_locations) return locations
+
+    try {
+      const plannedLocationNames = Array.isArray(selectedRun.planned_locations)
+        ? selectedRun.planned_locations
+        : JSON.parse(selectedRun.planned_locations)
+
+      return locations.filter((loc) =>
+        plannedLocationNames.some((planned: string) => loc.name.toLowerCase().includes(planned.toLowerCase())),
+      )
+    } catch {
+      return locations
+    }
+  }
 
   const fetchTodayContacts = async () => {
     try {
@@ -167,10 +242,16 @@ export default function RunLogPage() {
   const handleAddContact = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      const submitData = {
+        ...formData,
+        location_id: formData.location_mode === "auto" ? null : formData.location_id,
+        custom_location: formData.location_mode === "auto" ? formData.custom_location : null,
+      }
+
       const response = await fetch("/api/outreach/contacts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       })
 
       if (response.ok) {
@@ -188,7 +269,9 @@ export default function RunLogPage() {
       run_id: "",
       client_id: "",
       location_id: "",
-      staff_member: "",
+      staff_member: userName,
+      location_mode: "manual",
+      custom_location: "",
       services_provided: [],
       medical_concerns: "",
       housing_status: "",
@@ -199,6 +282,7 @@ export default function RunLogPage() {
       is_new_client: false,
     })
     setClientSearch("")
+    setCurrentLocation(null)
   }
 
   const toggleService = (service: string) => {
@@ -230,7 +314,6 @@ export default function RunLogPage() {
 
   return (
     <div className="min-h-screen bg-background p-4">
-      {/* Header Section */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-4">
           <Image
@@ -245,7 +328,6 @@ export default function RunLogPage() {
         </div>
       </div>
 
-      {/* Main Content */}
       <Card className="shadow-lg border-2">
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
@@ -274,7 +356,6 @@ export default function RunLogPage() {
                     <DialogTitle className="text-xl font-bold">Log Street Contact</DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleAddContact} className="space-y-6">
-                    {/* Run and Location Selection */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="run_id" className="text-base font-medium">
@@ -298,24 +379,82 @@ export default function RunLogPage() {
                       </div>
 
                       <div>
-                        <Label htmlFor="location_id" className="text-base font-medium">
-                          Location
-                        </Label>
-                        <Select
-                          value={formData.location_id}
-                          onValueChange={(value) => setFormData({ ...formData, location_id: value })}
-                        >
-                          <SelectTrigger className="h-12 text-base">
-                            <SelectValue placeholder="Select location" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {locations.map((location) => (
-                              <SelectItem key={location.id} value={location.id.toString()}>
-                                {location.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Label className="text-base font-medium">Location</Label>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                id="location-auto"
+                                name="location-mode"
+                                checked={formData.location_mode === "auto"}
+                                onChange={() => setFormData({ ...formData, location_mode: "auto", location_id: "" })}
+                                className="w-4 h-4"
+                              />
+                              <Label htmlFor="location-auto" className="text-sm">
+                                Auto-detect
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                id="location-manual"
+                                name="location-mode"
+                                checked={formData.location_mode === "manual"}
+                                onChange={() =>
+                                  setFormData({ ...formData, location_mode: "manual", custom_location: "" })
+                                }
+                                className="w-4 h-4"
+                              />
+                              <Label htmlFor="location-manual" className="text-sm">
+                                Select from list
+                              </Label>
+                            </div>
+                          </div>
+
+                          {formData.location_mode === "auto" ? (
+                            <div className="relative">
+                              <Input
+                                value={formData.custom_location}
+                                onChange={(e) => setFormData({ ...formData, custom_location: e.target.value })}
+                                placeholder={isGettingLocation ? "Getting location..." : "Latitude, Longitude"}
+                                className="h-12 text-base pr-10"
+                                disabled={isGettingLocation}
+                              />
+                              {isGettingLocation ? (
+                                <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 animate-spin text-gray-400" />
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={getCurrentLocation}
+                                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-10 w-10 p-0"
+                                >
+                                  <MapPin className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <Select
+                              value={formData.location_id}
+                              onValueChange={(value) => setFormData({ ...formData, location_id: value })}
+                            >
+                              <SelectTrigger className="h-12 text-base">
+                                <SelectValue placeholder="Select location" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(formData.run_id ? getPlannedLocationsForRun(formData.run_id) : locations).map(
+                                  (location) => (
+                                    <SelectItem key={location.id} value={location.id.toString()}>
+                                      {location.name}
+                                    </SelectItem>
+                                  ),
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -323,17 +462,23 @@ export default function RunLogPage() {
                       <Label htmlFor="staff_member" className="text-base font-medium">
                         Staff Member
                       </Label>
-                      <Input
-                        id="staff_member"
+                      <Select
                         value={formData.staff_member}
-                        onChange={(e) => setFormData({ ...formData, staff_member: e.target.value })}
-                        placeholder="Your name"
-                        className="h-12 text-base"
-                        required
-                      />
+                        onValueChange={(value) => setFormData({ ...formData, staff_member: value })}
+                      >
+                        <SelectTrigger className="h-12 text-base">
+                          <SelectValue placeholder="Select staff member" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {staffMembers.map((staff) => (
+                            <SelectItem key={staff.id} value={staff.name}>
+                              {staff.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
-                    {/* Client Selection */}
                     <div>
                       <div className="flex items-center gap-4 mb-3">
                         <Label className="text-base font-medium">Client</Label>
@@ -404,7 +549,6 @@ export default function RunLogPage() {
                       )}
                     </div>
 
-                    {/* Services Provided */}
                     <div>
                       <Label className="text-base font-medium">Services Provided</Label>
                       <div className="grid grid-cols-2 gap-3 mt-3">
@@ -423,7 +567,6 @@ export default function RunLogPage() {
                       </div>
                     </div>
 
-                    {/* Additional Fields */}
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="medical_concerns" className="text-base font-medium">
@@ -509,7 +652,6 @@ export default function RunLogPage() {
         </CardHeader>
 
         <CardContent>
-          {/* Contacts Table */}
           <div className="border-2 border-border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
