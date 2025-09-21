@@ -416,7 +416,7 @@ export default function RunLogPage() {
     console.log("[v0] Can proceed:", canProceedToNextStep())
     console.log("[v0] Form data:", formData)
 
-    if (currentStep < totalSteps && canProceedToNextStep()) {
+    if (currentStep < totalSteps && currentStep < 4 && canProceedToNextStep()) {
       console.log("[v0] Moving to step:", currentStep + 1)
       setCurrentStep(currentStep + 1)
     } else {
