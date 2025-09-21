@@ -109,7 +109,7 @@ export default function RunLogPage() {
     fetchClients()
     fetchActiveRuns()
     fetchStaffMembers()
-    setFormData((prev) => ({ ...prev, staff_member: userName }))
+    setFormData((prev) => ({ ...prev, staff_member: "Andrea Leflore" }))
   }, [])
 
   useEffect(() => {
@@ -299,7 +299,7 @@ export default function RunLogPage() {
       run_id: "",
       client_id: "",
       location_id: "",
-      staff_member: userName,
+      staff_member: "Andrea Leflore",
       location_mode: "manual",
       custom_location: "",
       services_provided: [],
@@ -355,9 +355,7 @@ export default function RunLogPage() {
     switch (currentStep) {
       case 1:
         return (
-          formData.run_id &&
-          formData.staff_member &&
-          (formData.location_mode === "auto" ? formData.custom_location : formData.location_id)
+          formData.staff_member && (formData.location_mode === "auto" ? formData.custom_location : formData.location_id)
         )
       case 2:
         return formData.is_new_client
@@ -379,11 +377,11 @@ export default function RunLogPage() {
           <div className="space-y-8">
             <div>
               <Label htmlFor="run_id" className="text-xl font-semibold mb-4 block">
-                Today's Run
+                Today's Run (Optional)
               </Label>
               <Select value={formData.run_id} onValueChange={(value) => setFormData({ ...formData, run_id: value })}>
                 <SelectTrigger className="h-16 text-lg border-2">
-                  <SelectValue placeholder="Select run" />
+                  <SelectValue placeholder="Select run (optional)" />
                 </SelectTrigger>
                 <SelectContent>
                   {runs.map((run) => (
