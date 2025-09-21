@@ -267,7 +267,7 @@ export default function RunLogPage() {
 
         const todayRuns = data.filter((run: any) => {
           const runDate = new Date(run.run_date).toISOString().split("T")[0]
-          console.log("[v0] Comparing run date:", runDate, "with today:", today)
+          console.log("[v0] Compare run date:", runDate, "with today:", today)
           return runDate === today
         })
 
@@ -303,7 +303,9 @@ export default function RunLogPage() {
       if (response.ok) {
         await fetchTodayContacts()
         setShowAddDialog(false)
-        resetForm()
+        setTimeout(() => {
+          resetForm()
+        }, 100)
       }
     } catch (error) {
       console.error("Error adding contact:", error)
