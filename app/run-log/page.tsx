@@ -265,7 +265,7 @@ export default function RunLogPage() {
         console.log("[v0] Today's date:", today)
 
         const todayRuns = data.filter((run: any) => {
-          const runDate = run.run_date
+          const runDate = new Date(run.run_date).toISOString().split("T")[0]
           console.log("[v0] Comparing run date:", runDate, "with today:", today)
           return runDate === today
         })
