@@ -42,6 +42,7 @@ interface OutreachRun {
   lead_staff: string
   status: string
   planned_locations?: string[]
+  scheduled_time?: string
 }
 
 interface StaffMember {
@@ -270,8 +271,14 @@ export default function RunLogPage() {
           return runDate === today
         })
 
-        console.log("[v0] Today's runs found:", todayRuns)
-        setRuns(todayRuns)
+        const sortedRuns = todayRuns.sort((a: any, b: any) => {
+          const timeA = a.scheduled_time || "00:00"
+          const timeB = b.scheduled_time || "00:00"
+          return timeA.localeCompare(timeB)
+        })
+
+        console.log("[v0] Today's runs found:", sortedRuns)
+        setRuns(sortedRuns)
       }
     } catch (error) {
       console.error("Error fetching runs:", error)
@@ -395,7 +402,9 @@ export default function RunLogPage() {
                 <SelectContent>
                   {runs.map((run) => (
                     <SelectItem key={run.id} value={run.id.toString()} className="text-lg py-4">
-                      {run.lead_staff} - {run.status}
+                      {run.planned_locations && run.planned_locations.length > 0
+                        ? `${Array.isArray(run.planned_locations) ? run.planned_locations[0] : JSON.parse(run.planned_locations)[0]} - ${run.scheduled_time || "No time"}`
+                        : `Run ${run.id} - ${run.scheduled_time || "No time"}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
