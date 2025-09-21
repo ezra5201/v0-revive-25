@@ -73,6 +73,8 @@ export default function RunLogPage() {
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [clientSearch, setClientSearch] = useState("")
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null)
@@ -289,6 +291,7 @@ export default function RunLogPage() {
     e.preventDefault()
 
     console.log("[v0] Submitting form...")
+    setIsSaving(true)
 
     try {
       const submitData = {
@@ -306,14 +309,19 @@ export default function RunLogPage() {
       if (response.ok) {
         console.log("[v0] Form submitted successfully")
         await fetchTodayContacts()
-        // Show success message and reset form for next entry
-        resetForm()
-        // Keep dialog open for additional entries
+        setShowSaveConfirmation(true)
+        setTimeout(() => {
+          setShowSaveConfirmation(false)
+          setShowAddDialog(false)
+          resetForm()
+        }, 2000)
       } else {
         console.error("[v0] Form submission failed")
       }
     } catch (error) {
       console.error("Error adding contact:", error)
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -386,7 +394,6 @@ export default function RunLogPage() {
     if (currentStep < totalSteps && canProceedToNextStep()) {
       console.log("[v0] Moving to step:", currentStep + 1)
       setCurrentStep(currentStep + 1)
-      // Auto-save progress when moving to next step
       autoSaveFormData()
     } else {
       console.log("[v0] Cannot proceed or already at last step")
@@ -405,25 +412,31 @@ export default function RunLogPage() {
       case 1:
         canProceed =
           formData.staff_member && (formData.location_mode === "auto" ? formData.custom_location : formData.location_id)
+        console.log(
+          "[v0] Step 1 can proceed:",
+          canProceed ? formData.custom_location || "location selected" : "missing data",
+        )
         break
       case 2:
         canProceed = formData.is_new_client
           ? formData.new_client_first_name && formData.new_client_last_name
           : formData.client_id || formData.new_client_first_name
+        console.log(
+          "[v0] Step 2 can proceed:",
+          canProceed ? formData.new_client_first_name || "client selected" : "missing data",
+        )
         break
       case 3:
         canProceed = formData.services_provided.length > 0
+        console.log("[v0] Step 3 can proceed:", canProceed)
+        console.log("[v0] Services selected:", formData.services_provided)
         break
       case 4:
         canProceed = true
+        console.log("[v0] Step 4 can proceed:", canProceed)
         break
       default:
         canProceed = false
-    }
-
-    console.log("[v0] Step", currentStep, "can proceed:", canProceed)
-    if (currentStep === 3) {
-      console.log("[v0] Services selected:", formData.services_provided)
     }
 
     return canProceed
@@ -769,52 +782,69 @@ export default function RunLogPage() {
                     </div>
                   </DialogHeader>
 
-                  <form onSubmit={handleAddContact} className="flex-1 flex flex-col overflow-hidden">
-                    <div className="flex-1 overflow-y-auto px-1 py-4">{renderStepContent()}</div>
+                  {showSaveConfirmation ? (
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="text-center space-y-4">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                          <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <h3 className="text-xl font-semibold text-green-600">Contact Saved Successfully!</h3>
+                        <p className="text-muted-foreground">The contact has been logged to today's run.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleAddContact} className="flex-1 flex flex-col overflow-hidden">
+                      <div className="flex-1 overflow-y-auto px-1 py-4">{renderStepContent()}</div>
 
-                    <div className="flex-shrink-0 flex gap-3 pt-6 border-t">
-                      {currentStep > 1 && (
+                      <div className="flex-shrink-0 flex gap-3 pt-6 border-t">
+                        {currentStep > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={prevStep}
+                            className="h-16 text-lg px-8 border-2 bg-transparent"
+                          >
+                            <ChevronLeft className="w-5 h-5 mr-2" />
+                            Back
+                          </Button>
+                        )}
+
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={prevStep}
-                          className="h-16 text-lg px-8 border-2 bg-transparent"
+                          onClick={() => setShowAddDialog(false)}
+                          className="h-16 text-lg px-6 border-2"
                         >
-                          <ChevronLeft className="w-5 h-5 mr-2" />
-                          Back
+                          Cancel
                         </Button>
-                      )}
 
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setShowAddDialog(false)}
-                        className="h-16 text-lg px-6 border-2"
-                      >
-                        Cancel
-                      </Button>
-
-                      {currentStep < totalSteps ? (
-                        <Button
-                          type="button"
-                          onClick={nextStep}
-                          disabled={!canProceedToNextStep()}
-                          className="flex-1 h-16 text-lg font-semibold"
-                        >
-                          Next
-                          <ChevronRight className="w-5 h-5 ml-2" />
-                        </Button>
-                      ) : (
-                        <Button
-                          type="submit"
-                          disabled={!canProceedToNextStep()}
-                          className="flex-1 h-16 text-lg font-semibold"
-                        >
-                          Log Contact
-                        </Button>
-                      )}
-                    </div>
-                  </form>
+                        {currentStep < totalSteps ? (
+                          <Button
+                            type="button"
+                            onClick={nextStep}
+                            disabled={!canProceedToNextStep()}
+                            className="flex-1 h-16 text-lg font-semibold"
+                          >
+                            Next
+                            <ChevronRight className="w-5 h-5 ml-2" />
+                          </Button>
+                        ) : (
+                          <Button type="submit" disabled={isSaving} className="flex-1 h-16 text-lg font-semibold">
+                            {isSaving ? (
+                              <>
+                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              "Save Contact"
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </form>
+                  )}
                 </DialogContent>
               </Dialog>
             </div>
