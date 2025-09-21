@@ -485,101 +485,56 @@ export default function RunLogPage() {
       case 2:
         return (
           <div className="space-y-8">
-            {!formData.is_new_client && (
-              <div className="space-y-6">
-                <div>
-                  <Label className="text-xl font-semibold mb-4 block">Street Contacts for This Run</Label>
-                  <div className="max-h-80 overflow-y-auto border-2 rounded-lg">
-                    {contacts.length > 0 ? (
-                      <div className="space-y-2 p-2">
-                        {contacts.map((contact) => (
-                          <Button
-                            key={contact.id}
-                            type="button"
-                            variant={formData.client_id === contact.id.toString() ? "default" : "outline"}
-                            onClick={() => setFormData({ ...formData, client_id: contact.id.toString() })}
-                            className="w-full h-16 text-lg justify-start border-2 px-4"
-                          >
-                            <div className="text-left">
-                              <div className="font-semibold">{contact.client_name}</div>
-                              <div className="text-sm opacity-75">{contact.location_name}</div>
-                            </div>
-                          </Button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-8 text-center text-muted-foreground">No contacts logged for this run yet</div>
-                    )}
+            <div>
+              <Label className="text-xl font-semibold mb-4 block">Select Person</Label>
+
+              {contacts.length > 0 && (
+                <div className="space-y-4 mb-8">
+                  <div className="text-lg font-medium text-muted-foreground">People already logged today:</div>
+                  <div className="max-h-64 overflow-y-auto border-2 rounded-lg">
+                    <div className="space-y-2 p-2">
+                      {contacts.map((contact) => (
+                        <Button
+                          key={contact.id}
+                          type="button"
+                          variant={formData.client_id === contact.id.toString() ? "default" : "outline"}
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              client_id: contact.id.toString(),
+                              new_client_first_name: "", // Clear manual input when selecting from list
+                            })
+                          }
+                          className="w-full h-16 text-lg justify-start border-2 px-4"
+                        >
+                          <div className="text-left">
+                            <div className="font-semibold">{contact.client_name}</div>
+                            <div className="text-sm opacity-75">{contact.location_name}</div>
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 </div>
+              )}
 
-                <div className="border-t-2 pt-6">
-                  <Label htmlFor="manual_client_name" className="text-xl font-semibold mb-4 block">
-                    Or Enter Name Manually
-                  </Label>
-                  <Input
-                    id="manual_client_name"
-                    value={formData.new_client_first_name}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        new_client_first_name: e.target.value,
-                        client_id: "", // Clear selection when typing manually
-                      })
-                    }
-                    placeholder="Type person's name if not found above"
-                    className="h-16 text-lg border-2"
-                  />
+              <div className="space-y-4">
+                <div className="text-lg font-medium text-muted-foreground">
+                  {contacts.length > 0 ? "Or enter new person's name:" : "Enter person's name:"}
                 </div>
+                <Input
+                  value={formData.new_client_first_name}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      new_client_first_name: e.target.value,
+                      client_id: "", // Clear selection when typing manually
+                    })
+                  }
+                  placeholder="Type person's full name"
+                  className="h-16 text-lg border-2"
+                />
               </div>
-            )}
-
-            {formData.is_new_client && (
-              <div className="space-y-6">
-                <div>
-                  <Label htmlFor="new_client_first_name" className="text-xl font-semibold mb-4 block">
-                    First Name
-                  </Label>
-                  <Input
-                    id="new_client_first_name"
-                    value={formData.new_client_first_name}
-                    onChange={(e) => setFormData({ ...formData, new_client_first_name: e.target.value })}
-                    placeholder="First name"
-                    className="h-16 text-lg border-2"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="new_client_last_name" className="text-xl font-semibold mb-4 block">
-                    Last Name
-                  </Label>
-                  <Input
-                    id="new_client_last_name"
-                    value={formData.new_client_last_name}
-                    onChange={(e) => setFormData({ ...formData, new_client_last_name: e.target.value })}
-                    placeholder="Last name"
-                    className="h-16 text-lg border-2"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="text-center">
-              <Button
-                type="button"
-                variant={formData.is_new_client ? "default" : "outline"}
-                onClick={() =>
-                  setFormData({
-                    ...formData,
-                    is_new_client: !formData.is_new_client,
-                    client_id: "",
-                    new_client_first_name: "",
-                    new_client_last_name: "",
-                  })
-                }
-                className="h-16 text-lg px-8 border-2"
-              >
-                {formData.is_new_client ? "Switch to Existing Contacts" : "Add New Person"}
-              </Button>
             </div>
           </div>
         )
