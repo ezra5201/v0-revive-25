@@ -310,6 +310,7 @@ export default function RunLogPage() {
         ...formData,
         location_id: formData.location_mode === "auto" ? null : formData.location_id,
         custom_location: formData.location_mode === "auto" ? formData.custom_location : null,
+        client_name: formData.new_client_first_name || formData.client_id,
       }
 
       console.log("[v0] Submit data:", submitData)
@@ -335,9 +336,11 @@ export default function RunLogPage() {
         console.error("[v0] Form submission failed, status:", response.status)
         const errorText = await response.text()
         console.error("[v0] Error response:", errorText)
+        alert("Failed to save contact. Please check your network connection and try again.")
       }
     } catch (error) {
       console.error("[v0] Error adding contact:", error)
+      alert("Failed to save contact. Please check your network connection and try again.")
     } finally {
       setIsSaving(false)
     }
