@@ -20,6 +20,8 @@ interface RunContact {
   contact_time: string
   services_provided: string[]
   follow_up_needed: boolean
+  narcan_administered: boolean
+  supplies_given: string | null
 }
 
 interface OutreachLocation {
@@ -225,11 +227,18 @@ export default function RunLogPage() {
           })
           .map((contact: any) => ({
             id: contact.id,
-            client_name: contact.client_name || contact.new_client_first_name || "Unknown Client",
+            client_name:
+              contact.client_name !== "Unknown Client"
+                ? contact.client_name
+                : contact.new_client_first_name
+                  ? `${contact.new_client_first_name} ${contact.new_client_last_name || ""}`.trim()
+                  : "Unknown Client",
             location_name: contact.location_name || contact.custom_location || "Unknown Location",
             contact_time: contact.contact_time || "Unknown Time",
             services_provided: contact.services_provided || [],
             follow_up_needed: contact.follow_up_needed || false,
+            narcan_administered: contact.narcan_administered || false,
+            supplies_given: contact.supplies_given || null,
           }))
         console.log("[v0] Filtered today's contacts:", todayContacts)
         setContacts(todayContacts)
@@ -307,10 +316,21 @@ export default function RunLogPage() {
 
     try {
       const submitData = {
-        ...formData,
-        location_id: formData.location_mode === "auto" ? null : formData.location_id,
+        run_id: formData.run_id || null,
+        client_id: formData.client_id || null,
+        location_id: formData.location_mode === "manual" ? formData.location_id : null,
         custom_location: formData.location_mode === "auto" ? formData.custom_location : null,
-        client_name: formData.new_client_first_name || formData.client_id,
+        staff_member: formData.staff_member,
+        services_provided: formData.services_provided,
+        medical_concerns: formData.medical_concerns || null,
+        housing_status: formData.housing_status || null,
+        follow_up_needed: formData.follow_up_needed,
+        follow_up_notes: formData.follow_up_notes || null,
+        is_new_client: !!formData.new_client_first_name && !formData.client_id,
+        new_client_first_name: formData.new_client_first_name || null,
+        new_client_last_name: formData.new_client_last_name || null,
+        narcan_administered: false,
+        supplies_given: null,
       }
 
       console.log("[v0] Submit data:", submitData)
