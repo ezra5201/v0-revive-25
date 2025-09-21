@@ -548,7 +548,7 @@ export default function RunLogPage() {
 
               {contacts.length > 0 && (
                 <div className="space-y-4 mb-8">
-                  <div className="text-lg font-medium text-muted-foreground">People already logged today:</div>
+                  <div className="text-lg font-medium text-muted-foreground">People already logged for this run:</div>
                   <div className="max-h-64 overflow-y-auto border-2 rounded-lg">
                     <div className="space-y-2 p-2">
                       {contacts.map((contact) => (
@@ -589,7 +589,7 @@ export default function RunLogPage() {
                       client_id: "", // Clear selection when typing manually
                     })
                   }
-                  placeholder="Type person's full name"
+                  placeholder="Type the person's name or nickname."
                   className="h-16 text-lg border-2"
                 />
               </div>
