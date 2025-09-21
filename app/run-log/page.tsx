@@ -77,6 +77,8 @@ export default function RunLogPage() {
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [currentAddress, setCurrentAddress] = useState<string>("")
 
+  const [runContacts, setRunContacts] = useState<RunContact[]>([])
+
   const [formData, setFormData] = useState({
     run_id: "",
     client_id: "",
@@ -375,6 +377,7 @@ export default function RunLogPage() {
     setCurrentLocation(null)
     setCurrentAddress("")
     setCurrentStep(1)
+    setRunContacts([]) // Clear run-specific contacts on reset
   }
 
   const toggleService = (service: string) => {
@@ -426,6 +429,39 @@ export default function RunLogPage() {
     return canProceed
   }
 
+  const fetchRunContacts = async (runId: string) => {
+    if (!runId) {
+      setRunContacts([])
+      return
+    }
+
+    try {
+      console.log("[v0] Fetching contacts for run:", runId)
+      const response = await fetch(`/api/outreach/contacts?run_id=${runId}`)
+      if (response.ok) {
+        const data = await response.json()
+        const runSpecificContacts = data.map((contact: any) => ({
+          id: contact.id,
+          client_name: contact.client_name || contact.new_client_first_name || "Unknown Client",
+          location_name: contact.location_name || contact.custom_location || "Unknown Location",
+          contact_time: contact.contact_time || "Unknown Time",
+          services_provided: contact.services_provided || [],
+          follow_up_needed: contact.follow_up_needed || false,
+        }))
+        console.log("[v0] Run contacts found:", runSpecificContacts)
+        setRunContacts(runSpecificContacts)
+      }
+    } catch (error) {
+      console.error("Error fetching run contacts:", error)
+      setRunContacts([])
+    }
+  }
+
+  const handleRunChange = (runId: string) => {
+    setFormData({ ...formData, run_id: runId })
+    fetchRunContacts(runId)
+  }
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
@@ -435,7 +471,7 @@ export default function RunLogPage() {
               <Label htmlFor="run_id" className="text-xl font-semibold mb-4 block">
                 Today's Run (Optional)
               </Label>
-              <Select value={formData.run_id} onValueChange={(value) => setFormData({ ...formData, run_id: value })}>
+              <Select value={formData.run_id} onValueChange={handleRunChange}>
                 <SelectTrigger className="h-16 text-lg border-2">
                   <SelectValue placeholder="Select run (optional)" />
                 </SelectTrigger>
@@ -546,12 +582,12 @@ export default function RunLogPage() {
             <div>
               <Label className="text-xl font-semibold mb-4 block">Select Person</Label>
 
-              {contacts.length > 0 && (
+              {runContacts.length > 0 && (
                 <div className="space-y-4 mb-8">
                   <div className="text-lg font-medium text-muted-foreground">People already logged for this run:</div>
                   <div className="max-h-64 overflow-y-auto border-2 rounded-lg">
                     <div className="space-y-2 p-2">
-                      {contacts.map((contact) => (
+                      {runContacts.map((contact) => (
                         <Button
                           key={contact.id}
                           type="button"
@@ -578,7 +614,7 @@ export default function RunLogPage() {
 
               <div className="space-y-4">
                 <div className="text-lg font-medium text-muted-foreground">
-                  {contacts.length > 0 ? "Or enter new person's name:" : "Enter person's name:"}
+                  {runContacts.length > 0 ? "Or enter new person's name:" : "Enter person's name:"}
                 </div>
                 <Input
                   value={formData.new_client_first_name}
