@@ -209,12 +209,19 @@ export default function RunLogPage() {
 
   const fetchTodayContacts = async () => {
     try {
+      console.log("[v0] Fetching today's contacts...")
       const response = await fetch("/api/outreach/contacts")
       if (response.ok) {
         const data = await response.json()
+        console.log("[v0] All contacts data:", data)
         const today = new Date().toISOString().split("T")[0]
+        console.log("[v0] Today's date for filtering:", today)
         const todayContacts = data
-          .filter((contact: any) => contact.contact_date === today)
+          .filter((contact: any) => {
+            const contactDate = contact.contact_date
+            console.log("[v0] Comparing contact date:", contactDate, "with today:", today)
+            return contactDate === today
+          })
           .map((contact: any) => ({
             id: contact.id,
             client_name: contact.client_name || "Unknown Client",
@@ -223,10 +230,14 @@ export default function RunLogPage() {
             services_provided: contact.services_provided || [],
             follow_up_needed: contact.follow_up_needed || false,
           }))
+        console.log("[v0] Filtered today's contacts:", todayContacts)
         setContacts(todayContacts)
+        console.log("[v0] Contacts state updated, length:", todayContacts.length)
+      } else {
+        console.error("[v0] Failed to fetch contacts, status:", response.status)
       }
     } catch (error) {
-      console.error("Error fetching contacts:", error)
+      console.error("[v0] Error fetching contacts:", error)
     } finally {
       setLoading(false)
     }
@@ -300,6 +311,8 @@ export default function RunLogPage() {
         custom_location: formData.location_mode === "auto" ? formData.custom_location : null,
       }
 
+      console.log("[v0] Submit data:", submitData)
+
       const response = await fetch("/api/outreach/contacts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -307,7 +320,9 @@ export default function RunLogPage() {
       })
 
       if (response.ok) {
-        console.log("[v0] Form submitted successfully")
+        const result = await response.json()
+        console.log("[v0] Form submitted successfully, result:", result)
+        console.log("[v0] Refreshing contacts list...")
         await fetchTodayContacts()
         setShowSaveConfirmation(true)
         setTimeout(() => {
@@ -316,10 +331,12 @@ export default function RunLogPage() {
           resetForm()
         }, 2000)
       } else {
-        console.error("[v0] Form submission failed")
+        console.error("[v0] Form submission failed, status:", response.status)
+        const errorText = await response.text()
+        console.error("[v0] Error response:", errorText)
       }
     } catch (error) {
-      console.error("Error adding contact:", error)
+      console.error("[v0] Error adding contact:", error)
     } finally {
       setIsSaving(false)
     }
