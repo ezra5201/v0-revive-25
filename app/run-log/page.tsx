@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Filter, Plus, Search, MapPin, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Filter, Plus, MapPin, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 
 interface RunContact {
   id: number
@@ -360,7 +360,7 @@ export default function RunLogPage() {
       case 2:
         return formData.is_new_client
           ? formData.new_client_first_name && formData.new_client_last_name
-          : formData.client_id
+          : formData.client_id || formData.new_client_first_name
       case 3:
         return formData.services_provided.length > 0
       case 4:
@@ -485,33 +485,56 @@ export default function RunLogPage() {
       case 2:
         return (
           <div className="space-y-8">
-            <div className="text-center mb-8">
-              <Button
-                type="button"
-                variant={formData.is_new_client ? "default" : "outline"}
-                onClick={() => setFormData({ ...formData, is_new_client: true, client_id: "" })}
-                className="h-20 text-xl px-8 mr-4 border-2"
-              >
-                New Client
-              </Button>
-              <Button
-                type="button"
-                variant={!formData.is_new_client ? "default" : "outline"}
-                onClick={() =>
-                  setFormData({
-                    ...formData,
-                    is_new_client: false,
-                    new_client_first_name: "",
-                    new_client_last_name: "",
-                  })
-                }
-                className="h-20 text-xl px-8 border-2"
-              >
-                Existing Client
-              </Button>
-            </div>
+            {!formData.is_new_client && (
+              <div className="space-y-6">
+                <div>
+                  <Label className="text-xl font-semibold mb-4 block">Street Contacts for This Run</Label>
+                  <div className="max-h-80 overflow-y-auto border-2 rounded-lg">
+                    {contacts.length > 0 ? (
+                      <div className="space-y-2 p-2">
+                        {contacts.map((contact) => (
+                          <Button
+                            key={contact.id}
+                            type="button"
+                            variant={formData.client_id === contact.id.toString() ? "default" : "outline"}
+                            onClick={() => setFormData({ ...formData, client_id: contact.id.toString() })}
+                            className="w-full h-16 text-lg justify-start border-2 px-4"
+                          >
+                            <div className="text-left">
+                              <div className="font-semibold">{contact.client_name}</div>
+                              <div className="text-sm opacity-75">{contact.location_name}</div>
+                            </div>
+                          </Button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center text-muted-foreground">No contacts logged for this run yet</div>
+                    )}
+                  </div>
+                </div>
 
-            {formData.is_new_client ? (
+                <div className="border-t-2 pt-6">
+                  <Label htmlFor="manual_client_name" className="text-xl font-semibold mb-4 block">
+                    Or Enter Name Manually
+                  </Label>
+                  <Input
+                    id="manual_client_name"
+                    value={formData.new_client_first_name}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        new_client_first_name: e.target.value,
+                        client_id: "", // Clear selection when typing manually
+                      })
+                    }
+                    placeholder="Type person's name if not found above"
+                    className="h-16 text-lg border-2"
+                  />
+                </div>
+              </div>
+            )}
+
+            {formData.is_new_client && (
               <div className="space-y-6">
                 <div>
                   <Label htmlFor="new_client_first_name" className="text-xl font-semibold mb-4 block">
@@ -538,34 +561,26 @@ export default function RunLogPage() {
                   />
                 </div>
               </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="relative">
-                  <Input
-                    placeholder="Search existing clients..."
-                    value={clientSearch}
-                    onChange={(e) => setClientSearch(e.target.value)}
-                    className="pl-12 h-16 text-lg border-2"
-                  />
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400" />
-                </div>
-                <Select
-                  value={formData.client_id}
-                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-                >
-                  <SelectTrigger className="h-16 text-lg border-2">
-                    <SelectValue placeholder="Select existing client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredClients.map((client) => (
-                      <SelectItem key={client.id} value={client.id.toString()} className="text-lg py-4">
-                        {client.first_name} {client.last_name} {client.ces_number && `(${client.ces_number})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             )}
+
+            <div className="text-center">
+              <Button
+                type="button"
+                variant={formData.is_new_client ? "default" : "outline"}
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    is_new_client: !formData.is_new_client,
+                    client_id: "",
+                    new_client_first_name: "",
+                    new_client_last_name: "",
+                  })
+                }
+                className="h-16 text-lg px-8 border-2"
+              >
+                {formData.is_new_client ? "Switch to Existing Contacts" : "Add New Person"}
+              </Button>
+            </div>
           </div>
         )
 
