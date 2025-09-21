@@ -214,18 +214,19 @@ export default function RunLogPage() {
       if (response.ok) {
         const data = await response.json()
         console.log("[v0] All contacts data:", data)
-        const today = new Date().toISOString().split("T")[0]
-        console.log("[v0] Today's date for filtering:", today)
+        const today = new Date()
+        const todayString = today.toISOString().split("T")[0]
+        console.log("[v0] Today's date for filtering:", todayString)
         const todayContacts = data
           .filter((contact: any) => {
-            const contactDate = contact.contact_date
-            console.log("[v0] Comparing contact date:", contactDate, "with today:", today)
-            return contactDate === today
+            const contactDate = new Date(contact.contact_date).toISOString().split("T")[0]
+            console.log("[v0] Comparing contact date:", contactDate, "with today:", todayString)
+            return contactDate === todayString
           })
           .map((contact: any) => ({
             id: contact.id,
-            client_name: contact.client_name || "Unknown Client",
-            location_name: contact.location_name || "Unknown Location",
+            client_name: contact.client_name || contact.new_client_first_name || "Unknown Client",
+            location_name: contact.location_name || contact.custom_location || "Unknown Location",
             contact_time: contact.contact_time || "Unknown Time",
             services_provided: contact.services_provided || [],
             follow_up_needed: contact.follow_up_needed || false,
@@ -387,22 +388,6 @@ export default function RunLogPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 4
 
-  const autoSaveFormData = async () => {
-    try {
-      const response = await fetch("/api/outreach/contacts/draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, draft: true }),
-      })
-
-      if (response.ok) {
-        console.log("[v0] Form auto-saved")
-      }
-    } catch (error) {
-      console.error("Error auto-saving form:", error)
-    }
-  }
-
   const nextStep = () => {
     console.log("[v0] Current step:", currentStep, "Total steps:", totalSteps)
     console.log("[v0] Can proceed:", canProceedToNextStep())
@@ -411,7 +396,6 @@ export default function RunLogPage() {
     if (currentStep < totalSteps && canProceedToNextStep()) {
       console.log("[v0] Moving to step:", currentStep + 1)
       setCurrentStep(currentStep + 1)
-      autoSaveFormData()
     } else {
       console.log("[v0] Cannot proceed or already at last step")
     }
