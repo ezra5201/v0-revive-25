@@ -287,6 +287,9 @@ export default function RunLogPage() {
 
   const handleAddContact = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    console.log("[v0] Submitting form...")
+
     try {
       const submitData = {
         ...formData,
@@ -301,11 +304,14 @@ export default function RunLogPage() {
       })
 
       if (response.ok) {
+        console.log("[v0] Form submitted successfully")
         await fetchTodayContacts()
         setShowAddDialog(false)
         setTimeout(() => {
           resetForm()
         }, 100)
+      } else {
+        console.error("[v0] Form submission failed")
       }
     } catch (error) {
       console.error("Error adding contact:", error)
@@ -357,16 +363,34 @@ export default function RunLogPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 4
 
+  const autoSaveFormData = async () => {
+    try {
+      const response = await fetch("/api/outreach/contacts/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...formData, draft: true }),
+      })
+
+      if (response.ok) {
+        console.log("[v0] Form auto-saved")
+      }
+    } catch (error) {
+      console.error("Error auto-saving form:", error)
+    }
+  }
+
   const nextStep = () => {
     console.log("[v0] Current step:", currentStep, "Total steps:", totalSteps)
     console.log("[v0] Can proceed:", canProceedToNextStep())
     console.log("[v0] Form data:", formData)
 
-    if (currentStep < totalSteps) {
+    if (currentStep < totalSteps && canProceedToNextStep()) {
       console.log("[v0] Moving to step:", currentStep + 1)
       setCurrentStep(currentStep + 1)
+      // Auto-save progress when moving to next step
+      autoSaveFormData()
     } else {
-      console.log("[v0] Already at last step")
+      console.log("[v0] Cannot proceed or already at last step")
     }
   }
 
