@@ -94,6 +94,11 @@ export default function RunLogPage() {
     is_new_client: false,
   })
 
+  const [currentStep, setCurrentStep] = useState(1)
+  const totalSteps = 4
+  const [contactSaved, setContactSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -102,6 +107,14 @@ export default function RunLogPage() {
   })
 
   const userName = "John Doe"
+
+  const prevStep = () => {
+    setCurrentStep((prev) => Math.max(prev - 1, 1))
+  }
+
+  const nextStep = () => {
+    setCurrentStep((prev) => Math.min(prev + 1, totalSteps))
+  }
 
   useEffect(() => {
     fetchTodayContacts()
@@ -288,13 +301,22 @@ export default function RunLogPage() {
     e.preventDefault()
 
     console.log("[v0] Submitting form...")
+    setSaveError(null)
 
     try {
       const submitData = {
         ...formData,
         location_id: formData.location_mode === "auto" ? null : formData.location_id,
         custom_location: formData.location_mode === "auto" ? formData.custom_location : null,
+        client_name: formData.is_new_client
+          ? `${formData.new_client_first_name} ${formData.new_client_last_name}`.trim()
+          : formData.new_client_first_name || "Unknown Client",
+        is_new_client: formData.new_client_first_name && !formData.client_id,
+        new_client_first_name: formData.new_client_first_name,
+        new_client_last_name: formData.new_client_last_name,
       }
+
+      console.log("[v0] Submit data:", submitData)
 
       const response = await fetch("/api/outreach/contacts", {
         method: "POST",
@@ -304,17 +326,32 @@ export default function RunLogPage() {
 
       if (response.ok) {
         console.log("[v0] Form submitted successfully")
+        setContactSaved(true)
         await fetchTodayContacts()
-        setShowAddDialog(false)
-        setTimeout(() => {
-          resetForm()
-        }, 100)
       } else {
-        console.error("[v0] Form submission failed")
+        const errorData = await response.json()
+        console.error("[v0] Form submission failed:", errorData)
+        setSaveError(errorData.message || "Failed to save contact. Please check your network connection and try again.")
       }
     } catch (error) {
       console.error("Error adding contact:", error)
+      setSaveError(
+        "Network error. Please check your connection and try again, or make a hard copy of this information.",
+      )
     }
+  }
+
+  const handleSaveContact = async () => {
+    await handleAddContact(new Event("submit") as any)
+  }
+
+  const handleCloseModal = () => {
+    setShowAddDialog(false)
+    setContactSaved(false)
+    setSaveError(null)
+    setTimeout(() => {
+      resetForm()
+    }, 100)
   }
 
   const resetForm = () => {
@@ -358,46 +395,6 @@ export default function RunLogPage() {
       fullName.includes(searchLower) || (client.ces_number && client.ces_number.toLowerCase().includes(searchLower))
     )
   })
-
-  const [currentStep, setCurrentStep] = useState(1)
-  const totalSteps = 4
-
-  const autoSaveFormData = async () => {
-    try {
-      const response = await fetch("/api/outreach/contacts/draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, draft: true }),
-      })
-
-      if (response.ok) {
-        console.log("[v0] Form auto-saved")
-      }
-    } catch (error) {
-      console.error("Error auto-saving form:", error)
-    }
-  }
-
-  const nextStep = () => {
-    console.log("[v0] Current step:", currentStep, "Total steps:", totalSteps)
-    console.log("[v0] Can proceed:", canProceedToNextStep())
-    console.log("[v0] Form data:", formData)
-
-    if (currentStep < totalSteps && canProceedToNextStep()) {
-      console.log("[v0] Moving to step:", currentStep + 1)
-      setCurrentStep(currentStep + 1)
-      // Auto-save progress when moving to next step
-      autoSaveFormData()
-    } else {
-      console.log("[v0] Cannot proceed or already at last step")
-    }
-  }
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
-    }
-  }
 
   const canProceedToNextStep = () => {
     let canProceed = false
@@ -625,6 +622,20 @@ export default function RunLogPage() {
       case 4:
         return (
           <div className="space-y-8">
+            {contactSaved && (
+              <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
+                <div className="text-green-800 font-semibold text-lg mb-2">✓ Contact Saved Successfully!</div>
+                <div className="text-green-700">The contact has been logged and added to today's list.</div>
+              </div>
+            )}
+
+            {saveError && (
+              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6">
+                <div className="text-red-800 font-semibold text-lg mb-2">⚠ Save Failed</div>
+                <div className="text-red-700">{saveError}</div>
+              </div>
+            )}
+
             <div>
               <Label htmlFor="housing_status" className="text-xl font-semibold mb-4 block">
                 Housing Status
@@ -779,6 +790,7 @@ export default function RunLogPage() {
                           variant="outline"
                           onClick={prevStep}
                           className="h-16 text-lg px-8 border-2 bg-transparent"
+                          disabled={contactSaved}
                         >
                           <ChevronLeft className="w-5 h-5 mr-2" />
                           Back
@@ -788,10 +800,10 @@ export default function RunLogPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setShowAddDialog(false)}
-                        className="h-16 text-lg px-6 border-2"
+                        onClick={handleCloseModal}
+                        className="h-16 text-lg px-6 border-2 bg-transparent"
                       >
-                        Cancel
+                        {contactSaved ? "Close" : "Cancel"}
                       </Button>
 
                       {currentStep < totalSteps ? (
@@ -806,11 +818,12 @@ export default function RunLogPage() {
                         </Button>
                       ) : (
                         <Button
-                          type="submit"
-                          disabled={!canProceedToNextStep()}
+                          type="button"
+                          onClick={handleSaveContact}
+                          disabled={!canProceedToNextStep() || contactSaved}
                           className="flex-1 h-16 text-lg font-semibold"
                         >
-                          Log Contact
+                          {contactSaved ? "✓ Contact Saved" : "Save Contact"}
                         </Button>
                       )}
                     </div>
