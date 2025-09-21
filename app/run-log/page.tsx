@@ -255,13 +255,22 @@ export default function RunLogPage() {
 
   const fetchActiveRuns = async () => {
     try {
+      console.log("[v0] Fetching runs...")
       const response = await fetch("/api/outreach/runs")
       if (response.ok) {
         const data = await response.json()
+        console.log("[v0] All runs data:", data)
+
         const today = new Date().toISOString().split("T")[0]
-        const todayRuns = data.filter(
-          (run: any) => run.run_date === today && (run.status === "in_progress" || run.status === "scheduled"),
-        )
+        console.log("[v0] Today's date:", today)
+
+        const todayRuns = data.filter((run: any) => {
+          const runDate = run.run_date
+          console.log("[v0] Comparing run date:", runDate, "with today:", today)
+          return runDate === today
+        })
+
+        console.log("[v0] Today's runs found:", todayRuns)
         setRuns(todayRuns)
       }
     } catch (error) {
