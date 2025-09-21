@@ -306,10 +306,9 @@ export default function RunLogPage() {
       if (response.ok) {
         console.log("[v0] Form submitted successfully")
         await fetchTodayContacts()
-        setShowAddDialog(false)
-        setTimeout(() => {
-          resetForm()
-        }, 100)
+        // Show success message and reset form for next entry
+        resetForm()
+        // Keep dialog open for additional entries
       } else {
         console.error("[v0] Form submission failed")
       }
