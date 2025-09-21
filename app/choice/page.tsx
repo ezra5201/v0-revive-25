@@ -8,8 +8,7 @@ export default function ChoicePage() {
   const router = useRouter()
 
   const handleRunChoice = () => {
-    // TODO: Navigate to Run dashboard
-    console.log("Run selected")
+    router.push("/run-log")
   }
 
   const handleCenterChoice = () => {
@@ -30,8 +29,8 @@ export default function ChoicePage() {
               priority
             />
           </div>
-          <CardTitle className="text-2xl font-bold text-foreground">Choose Your Role</CardTitle>
-          <CardDescription className="text-muted-foreground">Select how you'll be working today</CardDescription>
+          <CardTitle className="text-2xl font-bold text-foreground">Select Your Location</CardTitle>
+          <CardDescription className="text-muted-foreground">Select where you'll be working today</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
