@@ -356,8 +356,15 @@ export default function RunLogPage() {
   const totalSteps = 4
 
   const nextStep = () => {
+    console.log("[v0] Current step:", currentStep, "Total steps:", totalSteps)
+    console.log("[v0] Can proceed:", canProceedToNextStep())
+    console.log("[v0] Form data:", formData)
+
     if (currentStep < totalSteps) {
+      console.log("[v0] Moving to step:", currentStep + 1)
       setCurrentStep(currentStep + 1)
+    } else {
+      console.log("[v0] Already at last step")
     }
   }
 
@@ -368,22 +375,33 @@ export default function RunLogPage() {
   }
 
   const canProceedToNextStep = () => {
+    let canProceed = false
     switch (currentStep) {
       case 1:
-        return (
+        canProceed =
           formData.staff_member && (formData.location_mode === "auto" ? formData.custom_location : formData.location_id)
-        )
+        break
       case 2:
-        return formData.is_new_client
+        canProceed = formData.is_new_client
           ? formData.new_client_first_name && formData.new_client_last_name
           : formData.client_id || formData.new_client_first_name
+        break
       case 3:
-        return formData.services_provided.length > 0
+        canProceed = formData.services_provided.length > 0
+        break
       case 4:
-        return true
+        canProceed = true
+        break
       default:
-        return false
+        canProceed = false
     }
+
+    console.log("[v0] Step", currentStep, "can proceed:", canProceed)
+    if (currentStep === 3) {
+      console.log("[v0] Services selected:", formData.services_provided)
+    }
+
+    return canProceed
   }
 
   const renderStepContent = () => {
