@@ -6,11 +6,12 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Filter, Plus, MapPin, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Filter, Plus, MapPin, Loader2, ChevronLeft, ChevronRight, LogOut, ChevronDown } from "lucide-react"
 
 interface RunContact {
   id: number
@@ -779,7 +780,30 @@ export default function RunLogPage() {
                 className="h-8 w-auto"
                 priority
               />
-              <div className="text-lg font-semibold text-foreground">{userName}</div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="text-lg font-semibold text-foreground hover:bg-muted/50 px-3 py-2 h-auto"
+                  >
+                    {userName}
+                    <ChevronDown className="w-4 h-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem
+                    className="text-lg font-medium py-3 cursor-pointer"
+                    onClick={() => {
+                      // Handle logout logic here
+                      console.log("Logging out...")
+                      // You can add actual logout functionality here
+                    }}
+                  >
+                    <LogOut className="w-5 h-5 mr-3" />
+                    Log Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
