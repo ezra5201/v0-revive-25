@@ -784,7 +784,7 @@ export default function RunLogPage() {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="text-lg font-semibold text-foreground hover:bg-muted/50 px-3 py-2 h-auto"
+                    className="text-lg font-semibold text-foreground hover:bg-slate-100 hover:text-slate-900 px-3 py-2 h-auto"
                   >
                     {userName}
                     <ChevronDown className="w-4 h-4 ml-2" />
@@ -792,7 +792,7 @@ export default function RunLogPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48">
                   <DropdownMenuItem
-                    className="text-lg font-medium py-3 cursor-pointer"
+                    className="text-lg font-medium py-3 cursor-pointer hover:bg-slate-100 hover:text-slate-900 focus:bg-slate-100 focus:text-slate-900"
                     onClick={() => {
                       // Handle logout logic here
                       console.log("Logging out...")
@@ -817,7 +817,7 @@ export default function RunLogPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="border-2 hover:bg-muted/50 bg-transparent text-lg font-semibold h-14"
+                className="border-2 hover:bg-slate-100 hover:text-slate-900 bg-transparent text-lg font-semibold h-14"
               >
                 <Filter className="w-5 h-5 mr-2" />
                 Filters
@@ -827,7 +827,7 @@ export default function RunLogPage() {
                 <DialogTrigger asChild>
                   <Button
                     size="lg"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 text-xl h-14"
+                    className="bg-primary hover:bg-primary/80 text-primary-foreground font-bold px-6 text-xl h-14"
                   >
                     <Plus className="w-5 h-5 mr-2" />
                     Contact
@@ -860,7 +860,7 @@ export default function RunLogPage() {
                           type="button"
                           variant="outline"
                           onClick={prevStep}
-                          className="h-16 text-xl font-semibold px-8 border-2 bg-transparent"
+                          className="h-16 text-xl font-semibold px-8 border-2 bg-transparent hover:bg-slate-100 hover:text-slate-900"
                           disabled={contactSaved}
                         >
                           <ChevronLeft className="w-5 h-5 mr-2" />
@@ -872,7 +872,7 @@ export default function RunLogPage() {
                         type="button"
                         variant="outline"
                         onClick={handleCloseModal}
-                        className="h-16 text-xl font-semibold px-6 border-2 bg-transparent"
+                        className="h-16 text-xl font-semibold px-6 border-2 bg-transparent hover:bg-slate-100 hover:text-slate-900"
                       >
                         {contactSaved ? "Close" : "Cancel"}
                       </Button>
