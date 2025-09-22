@@ -14,7 +14,7 @@ import { MapPin, Calendar, Package, Users } from "lucide-react"
 export default function OutreachPage() {
   // Use the same database initialization logic as Contact Log
   const { isInitialized, isLoading: dbLoading } = useDatabase()
-  const [activeTab, setActiveTab] = useState("locations")
+  const [activeTab, setActiveTab] = useState("runs")
 
   // Show database setup if not initialized
   if (!isInitialized && !dbLoading) {
@@ -47,10 +47,6 @@ export default function OutreachPage() {
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
               <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
-                <TabsTrigger value="locations" className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  <span className="hidden sm:inline">Locations</span>
-                </TabsTrigger>
                 <TabsTrigger value="runs" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   <span className="hidden sm:inline">Runs</span>
@@ -63,11 +59,11 @@ export default function OutreachPage() {
                   <Users className="h-4 w-4" />
                   <span className="hidden sm:inline">Contacts</span>
                 </TabsTrigger>
+                <TabsTrigger value="locations" className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  <span className="hidden sm:inline">Locations</span>
+                </TabsTrigger>
               </TabsList>
-
-              <TabsContent value="locations">
-                <OutreachLocations />
-              </TabsContent>
 
               <TabsContent value="runs">
                 <OutreachRuns />
@@ -79,6 +75,10 @@ export default function OutreachPage() {
 
               <TabsContent value="contacts">
                 <OutreachContacts />
+              </TabsContent>
+
+              <TabsContent value="locations">
+                <OutreachLocations />
               </TabsContent>
             </Tabs>
           </div>

@@ -14,40 +14,40 @@ body {
 
 @layer base {
   :root {
-    /* Updated color tokens to match ReVive IMPACT branding */
-    --background: 240 20% 97%; /* Light Gray #F0F4F8 */
-    --foreground: 210 22% 22%; /* Dark Gray #2C3E50 */
-    --card: 0 0% 100%; /* White */
-    --card-foreground: 210 22% 22%; /* Dark Gray #2C3E50 */
-    --popover: 0 0% 100%; /* White */
-    --popover-foreground: 210 22% 22%; /* Dark Gray #2C3E50 */
-    --primary: 207 90% 54%; /* Blue #1E90FF */
-    --primary-foreground: 0 0% 100%; /* White */
-    --secondary: 39 100% 50%; /* Orange #FFA500 */
-    --secondary-foreground: 0 0% 100%; /* White */
-    --muted: 240 20% 97%; /* Light Gray #F0F4F8 */
-    --muted-foreground: 210 22% 22%; /* Dark Gray #2C3E50 */
-    --accent: 39 100% 50%; /* Orange #FFA500 */
-    --accent-foreground: 0 0% 100%; /* White */
+    /* High contrast color tokens optimized for outdoor/glare conditions */
+    --background: 0 0% 100%; /* Pure white for maximum contrast */
+    --foreground: 210 22% 15%; /* Very dark gray for high contrast text */
+    --card: 0 0% 100%; /* White cards */
+    --card-foreground: 210 22% 15%; /* Dark text on cards */
+    --popover: 0 0% 100%; /* White popovers */
+    --popover-foreground: 210 22% 15%; /* Dark text on popovers */
+    --primary: 207 90% 54%; /* ReVive blue #1E90FF */
+    --primary-foreground: 0 0% 100%; /* White text on primary */
+    --secondary: 39 100% 50%; /* ReVive orange #FFA500 */
+    --secondary-foreground: 0 0% 100%; /* White text on secondary */
+    --muted: 220 14% 96%; /* Very light gray for subtle backgrounds */
+    --muted-foreground: 210 22% 15%; /* Dark text on muted */
+    --accent: 39 100% 50%; /* Orange accent */
+    --accent-foreground: 0 0% 100%; /* White text on accent */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 210 22% 22%; /* Dark Gray #2C3E50 */
-    --input: 220 14% 96%; /* Light input background #F7F9FC */
-    --ring: 207 90% 54%; /* Blue focus ring #1E90FF */
+    --border: 210 22% 85%; /* Light border for subtle separation */
+    --input: 0 0% 100%; /* White input backgrounds */
+    --ring: 207 90% 54%; /* Blue focus ring */
     --chart-1: 207 90% 54%; /* Blue */
     --chart-2: 39 100% 50%; /* Orange */
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 100%; /* White */
-    --sidebar-foreground: 210 22% 22%; /* Dark Gray */
+    --sidebar-background: 0 0% 100%; /* White sidebar */
+    --sidebar-foreground: 210 22% 15%; /* Dark sidebar text */
     --sidebar-primary: 207 90% 54%; /* Blue */
     --sidebar-primary-foreground: 0 0% 100%; /* White */
     --sidebar-accent: 39 100% 50%; /* Orange */
     --sidebar-accent-foreground: 0 0% 100%; /* White */
-    --sidebar-border: 210 22% 22%; /* Dark Gray */
-    --sidebar-ring: 207 90% 54%; /* Blue */
+    --sidebar-border: 210 22% 85%; /* Light border */
+    --sidebar-ring: 207 90% 54%; /* Blue focus ring */
   }
   .dark {
     --background: 0 0% 3.9%;
