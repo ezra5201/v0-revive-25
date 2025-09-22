@@ -158,7 +158,7 @@ export default function RunLogPage() {
 
   const fetchStaffMembers = async () => {
     try {
-      const response = await fetch("/api/outreach/staffMembers")
+      const response = await fetch("/api/outreach/staff")
       if (response.ok) {
         const data = await response.json()
         setStaffMembers(data)
