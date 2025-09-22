@@ -57,10 +57,10 @@ export default function ChoicePage() {
             <Button
               onClick={handleCenterChoice}
               variant="outline"
-              className="h-32 flex flex-col items-center justify-center space-y-3 bg-transparent hover:bg-accent/5 border-2 hover:border-accent transition-all duration-200"
+              className="h-32 flex flex-col items-center justify-center space-y-3 bg-transparent hover:bg-emerald-50 border-2 hover:border-emerald-500 transition-all duration-200"
             >
-              <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
-                <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
