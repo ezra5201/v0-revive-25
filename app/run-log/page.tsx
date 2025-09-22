@@ -93,6 +93,8 @@ export default function RunLogPage() {
 
   const [runContacts, setRunContacts] = useState<RunContact[]>([])
 
+  const [todaysRuns, setTodaysRuns] = useState<OutreachRun[]>([])
+
   const [formData, setFormData] = useState({
     run_id: "",
     client_id: "",
@@ -145,7 +147,7 @@ export default function RunLogPage() {
     fetchTodayContacts()
     fetchLocations()
     fetchClients()
-    fetchActiveRuns()
+    fetchRuns()
     fetchStaffMembers()
     setFormData((prev) => ({ ...prev, staff_member: "Andrea Leflore" }))
   }, [])
@@ -289,31 +291,19 @@ export default function RunLogPage() {
     }
   }
 
-  const fetchActiveRuns = async () => {
+  // Fetch runs and filter for today's scheduled runs
+  const fetchRuns = async () => {
     try {
-      console.log("[v0] Fetching runs...")
       const response = await fetch("/api/outreach/runs")
       if (response.ok) {
         const data = await response.json()
-        console.log("[v0] All runs data:", data)
+        setRuns(data)
 
         const today = new Date().toISOString().split("T")[0]
-        console.log("[v0] Today's date:", today)
-
-        const todayRuns = data.filter((run: any) => {
-          const runDate = new Date(run.run_date).toISOString().split("T")[0]
-          console.log("[v0] Compare run date:", runDate, "with today:", today)
-          return runDate === today
-        })
-
-        const sortedRuns = todayRuns.sort((a: any, b: any) => {
-          const timeA = a.scheduled_time || "00:00"
-          const timeB = b.scheduled_time || "00:00"
-          return timeA.localeCompare(timeB)
-        })
-
-        console.log("[v0] Today's runs found:", sortedRuns)
-        setRuns(sortedRuns)
+        const scheduledToday = data.filter(
+          (run: OutreachRun) => run.run_date === today && (run.status === "scheduled" || run.status === "in_progress"),
+        )
+        setTodaysRuns(scheduledToday)
       }
     } catch (error) {
       console.error("Error fetching runs:", error)
@@ -512,48 +502,63 @@ export default function RunLogPage() {
                 </div>
 
                 {formData.location_mode === "auto" ? (
-                  <div className="relative">
-                    <Input
-                      value={formData.custom_location}
-                      onChange={(e) => setFormData({ ...formData, custom_location: e.target.value })}
-                      placeholder={isGettingLocation ? "Getting location..." : "Street address or coordinates"}
-                      className="h-16 text-xl font-medium pr-16 border-2"
-                      disabled={isGettingLocation}
-                    />
-                    {isGettingLocation ? (
-                      <Loader2 className="absolute right-4 top-1/2 transform -translate-y-1/2 h-6 w-6 animate-spin text-gray-400" />
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={getCurrentLocation}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 h-12 w-12 p-0"
-                      >
-                        <MapPin className="h-6 w-6" />
-                      </Button>
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <Input
+                        value={formData.custom_location}
+                        onChange={(e) => setFormData({ ...formData, custom_location: e.target.value })}
+                        placeholder={isGettingLocation ? "Getting location..." : "Street address or coordinates"}
+                        className="h-16 text-lg font-medium pr-16 border-2"
+                        disabled={isGettingLocation}
+                      />
+                      {isGettingLocation ? (
+                        <Loader2 className="absolute right-4 top-1/2 transform -translate-y-1/2 h-6 w-6 animate-spin text-gray-400" />
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={getCurrentLocation}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-12 w-12 p-0"
+                        >
+                          <MapPin className="h-6 w-6" />
+                        </Button>
+                      )}
+                    </div>
+
+                    {currentAddress && (
+                      <div className="bg-slate-50 border-2 border-slate-200 rounded-lg p-4">
+                        <Label className="text-lg font-semibold text-foreground mb-2 block">
+                          Auto-detected Address:
+                        </Label>
+                        <p className="text-lg font-medium text-foreground leading-relaxed">{currentAddress}</p>
+                      </div>
                     )}
                   </div>
                 ) : (
-                  <Select
-                    value={formData.location_id}
-                    onValueChange={(value) => setFormData({ ...formData, location_id: value })}
-                  >
-                    <SelectTrigger className="h-16 text-xl font-medium border-2">
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(formData.run_id ? getPlannedLocationsForRun(formData.run_id) : locations).map((location) => (
-                        <SelectItem
-                          key={location.id}
-                          value={location.id.toString()}
-                          className="text-xl font-medium py-4"
-                        >
-                          {location.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div>
+                    <Select
+                      value={formData.location_id}
+                      onValueChange={(value) => setFormData({ ...formData, location_id: value })}
+                    >
+                      <SelectTrigger className="h-16 text-lg font-medium border-2">
+                        <SelectValue placeholder="Select from scheduled runs" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {todaysRuns.length > 0 ? (
+                          todaysRuns.map((run) => (
+                            <SelectItem key={run.id} value={run.id.toString()} className="text-lg font-medium py-4">
+                              {run.lead_staff} - {run.scheduled_time || "No time set"} ({run.status})
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-runs" disabled className="text-lg font-medium py-4">
+                            No runs scheduled for today
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 )}
               </div>
             </div>
