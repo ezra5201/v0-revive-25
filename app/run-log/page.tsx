@@ -334,8 +334,6 @@ export default function RunLogPage() {
 
   const handleAddContact = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    console.log("[v0] Submitting form...")
     setSaveError(null)
 
     try {
@@ -358,6 +356,7 @@ export default function RunLogPage() {
         console.log("[v0] Form submitted successfully")
         setContactSaved(true)
         await fetchTodayContacts()
+        updateRunSummary()
       } else {
         const errorData = await response.json()
         console.error("[v0] Form submission failed:", errorData)
