@@ -24,7 +24,6 @@ import {
   Package,
   Clock,
   Activity,
-  List,
 } from "lucide-react"
 
 interface RunContact {
@@ -94,8 +93,6 @@ export default function RunLogPage() {
 
   const [runContacts, setRunContacts] = useState<RunContact[]>([])
 
-  const [todaysRuns, setTodaysRuns] = useState<OutreachRun[]>([])
-
   const [formData, setFormData] = useState({
     run_id: "",
     client_id: "",
@@ -144,15 +141,73 @@ export default function RunLogPage() {
     setCurrentStep((prev) => Math.min(prev + 1, totalSteps))
   }
 
-  const fetchTodayContacts = async () => {
+  useEffect(() => {
+    fetchTodayContacts()
+    fetchLocations()
+    fetchClients()
+    fetchActiveRuns()
+    fetchStaffMembers()
+    setFormData((prev) => ({ ...prev, staff_member: "Andrea Leflore" }))
+  }, [])
+
+  useEffect(() => {
+    updateRunSummary()
+  }, [contacts])
+
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by this browser.")
+      return
+    }
+
+    setIsGettingLocation(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        setCurrentLocation({ lat: latitude, lng: longitude })
+        reverseGeocode(latitude, longitude)
+        setIsGettingLocation(false)
+      },
+      (error) => {
+        console.error("Error getting location:", error)
+        alert("Unable to get your location. Please select manually.")
+        setFormData((prev) => ({ ...prev, location_mode: "manual" }))
+        setIsGettingLocation(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+    )
+  }
+
+  const reverseGeocode = async (lat: number, lng: number) => {
     try {
-      const response = await fetch("/api/outreach/todayContacts")
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      )
+
       if (response.ok) {
         const data = await response.json()
-        setContacts(data)
+        const address = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+        setCurrentAddress(address)
+        setFormData((prev) => ({
+          ...prev,
+          custom_location: address,
+        }))
+      } else {
+        const coordsString = `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+        setCurrentAddress(coordsString)
+        setFormData((prev) => ({
+          ...prev,
+          custom_location: coordsString,
+        }))
       }
     } catch (error) {
-      console.error("Error fetching today's contacts:", error)
+      console.error("Error reverse geocoding:", error)
+      const coordsString = `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+      setCurrentAddress(coordsString)
+      setFormData((prev) => ({
+        ...prev,
+        custom_location: coordsString,
+      }))
     }
   }
 
@@ -168,107 +223,46 @@ export default function RunLogPage() {
     }
   }
 
-  useEffect(() => {
-    fetchTodayContacts()
-    fetchLocations()
-    fetchClients()
-    fetchRuns()
-    fetchStaffMembers()
-    setFormData((prev) => ({ ...prev, staff_member: "Andrea Leflore" }))
-  }, [])
+  const getPlannedLocationsForRun = (runId: string) => {
+    const selectedRun = runs.find((run) => run.id.toString() === runId)
+    if (!selectedRun?.planned_locations) return locations
 
-  useEffect(() => {
-    updateRunSummary()
-  }, [contacts])
+    try {
+      const plannedLocationNames = Array.isArray(selectedRun.planned_locations)
+        ? selectedRun.planned_locations
+        : JSON.parse(selectedRun.planned_locations)
 
-  const getCurrentLocation = async () => {
-    if (!navigator.geolocation) {
-      alert("Geolocation is not supported by this browser.")
-      return
+      return locations.filter((loc) =>
+        plannedLocationNames.some((planned: string) => loc.name.toLowerCase().includes(planned.toLowerCase())),
+      )
+    } catch {
+      return locations
     }
+  }
 
-    setIsGettingLocation(true)
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords
-
-        try {
-          // Use reverse geocoding to get address from coordinates
-          const response = await fetch(
-            `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=YOUR_API_KEY&limit=1`,
-          )
-
-          if (response.ok) {
-            const data = await response.json()
-            if (data.results && data.results.length > 0) {
-              const address = data.results[0].formatted
-              setCurrentAddress(address)
-              setFormData({
-                ...formData,
-                custom_location: `${latitude}, ${longitude}`,
-                location_mode: "auto",
-              })
-            } else {
-              // Fallback to coordinates if no address found
-              const coordsString = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-              setCurrentAddress(coordsString)
-              setFormData({
-                ...formData,
-                custom_location: coordsString,
-                location_mode: "auto",
-              })
-            }
-          } else {
-            // Fallback to coordinates if geocoding fails
-            const coordsString = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-            setCurrentAddress(coordsString)
-            setFormData({
-              ...formData,
-              custom_location: coordsString,
-              location_mode: "auto",
-            })
-          }
-        } catch (error) {
-          console.error("Geocoding error:", error)
-          // Fallback to coordinates
-          const coordsString = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-          setCurrentAddress(coordsString)
-          setFormData({
-            ...formData,
-            custom_location: coordsString,
-            location_mode: "auto",
-          })
-        }
-
-        setIsGettingLocation(false)
-      },
-      (error) => {
-        console.error("Geolocation error:", error)
-        let errorMessage = "Unable to get location. "
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage += "Location access denied by user."
-            break
-          case error.POSITION_UNAVAILABLE:
-            errorMessage += "Location information unavailable."
-            break
-          case error.TIMEOUT:
-            errorMessage += "Location request timed out."
-            break
-          default:
-            errorMessage += "An unknown error occurred."
-            break
-        }
-        alert(errorMessage)
-        setIsGettingLocation(false)
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000,
-      },
-    )
+  const fetchTodayContacts = async () => {
+    try {
+      const response = await fetch("/api/outreach/contacts")
+      if (response.ok) {
+        const data = await response.json()
+        const today = new Date().toISOString().split("T")[0]
+        const todayContacts = data
+          .filter((contact: any) => contact.contact_date === today)
+          .map((contact: any) => ({
+            id: contact.id,
+            client_name: contact.client_name || "Unknown Client",
+            location_name: contact.location_name || "Unknown Location",
+            contact_time: contact.contact_time || "Unknown Time",
+            services_provided: contact.services_provided || [],
+            follow_up_needed: contact.follow_up_needed || false,
+          }))
+        setContacts(todayContacts)
+      }
+    } catch (error) {
+      console.error("Error fetching contacts:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const fetchLocations = async () => {
@@ -295,19 +289,31 @@ export default function RunLogPage() {
     }
   }
 
-  // Fetch runs and filter for today's scheduled runs
-  const fetchRuns = async () => {
+  const fetchActiveRuns = async () => {
     try {
+      console.log("[v0] Fetching runs...")
       const response = await fetch("/api/outreach/runs")
       if (response.ok) {
         const data = await response.json()
-        setRuns(data)
+        console.log("[v0] All runs data:", data)
 
         const today = new Date().toISOString().split("T")[0]
-        const scheduledToday = data.filter(
-          (run: OutreachRun) => run.run_date === today && (run.status === "scheduled" || run.status === "in_progress"),
-        )
-        setTodaysRuns(scheduledToday)
+        console.log("[v0] Today's date:", today)
+
+        const todayRuns = data.filter((run: any) => {
+          const runDate = new Date(run.run_date).toISOString().split("T")[0]
+          console.log("[v0] Compare run date:", runDate, "with today:", today)
+          return runDate === today
+        })
+
+        const sortedRuns = todayRuns.sort((a: any, b: any) => {
+          const timeA = a.scheduled_time || "00:00"
+          const timeB = b.scheduled_time || "00:00"
+          return timeA.localeCompare(timeB)
+        })
+
+        console.log("[v0] Today's runs found:", sortedRuns)
+        setRuns(sortedRuns)
       }
     } catch (error) {
       console.error("Error fetching runs:", error)
@@ -485,7 +491,7 @@ export default function RunLogPage() {
             <div>
               <Label className="text-2xl font-bold mb-4 block text-foreground">Location</Label>
               <div className="space-y-6">
-                <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 mb-6">
                   <Button
                     type="button"
                     variant={formData.location_mode === "auto" ? "default" : "outline"}
@@ -493,62 +499,66 @@ export default function RunLogPage() {
                       setFormData({ ...formData, location_mode: "auto", location_id: "" })
                       getCurrentLocation()
                     }}
-                    className="w-full h-16 text-xl font-semibold border-2 justify-start"
+                    className="h-16 text-xl font-semibold border-2 justify-start"
                     disabled={isGettingLocation}
                   >
-                    {isGettingLocation ? (
-                      <Loader2 className="w-6 h-6 mr-3 animate-spin" />
-                    ) : (
-                      <MapPin className="w-6 h-6 mr-3" />
-                    )}
+                    <MapPin className="w-6 h-6 mr-3" />
                     {isGettingLocation ? "Getting Location..." : "Auto-detect Location"}
                   </Button>
-
-                  {currentAddress && formData.location_mode === "auto" && (
-                    <div className="bg-emerald-50 border-2 border-emerald-200 rounded-lg p-4">
-                      <Label className="text-lg font-semibold text-emerald-800 mb-2 block">📍 Current Location:</Label>
-                      <p className="text-lg font-medium text-emerald-900 leading-relaxed">{currentAddress}</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4">
                   <Button
                     type="button"
                     variant={formData.location_mode === "manual" ? "default" : "outline"}
                     onClick={() => setFormData({ ...formData, location_mode: "manual", custom_location: "" })}
-                    className="w-full h-16 text-xl font-semibold border-2 justify-start"
+                    className="h-16 text-xl font-semibold border-2 justify-start"
                   >
-                    <List className="w-6 h-6 mr-3" />
                     Select from List
                   </Button>
-
-                  {formData.location_mode === "manual" && (
-                    <div>
-                      <Select
-                        value={formData.location_id}
-                        onValueChange={(value) => setFormData({ ...formData, location_id: value })}
-                      >
-                        <SelectTrigger className="h-16 text-lg font-medium border-2">
-                          <SelectValue placeholder="Select from scheduled runs" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {todaysRuns.length > 0 ? (
-                            todaysRuns.map((run) => (
-                              <SelectItem key={run.id} value={run.id.toString()} className="text-lg font-medium py-4">
-                                {run.lead_staff} - {run.scheduled_time || "No time set"} ({run.status})
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="no-runs" disabled className="text-lg font-medium py-4">
-                              No runs scheduled for today
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
                 </div>
+
+                {formData.location_mode === "auto" ? (
+                  <div className="relative">
+                    <Input
+                      value={formData.custom_location}
+                      onChange={(e) => setFormData({ ...formData, custom_location: e.target.value })}
+                      placeholder={isGettingLocation ? "Getting location..." : "Street address or coordinates"}
+                      className="h-16 text-xl font-medium pr-16 border-2"
+                      disabled={isGettingLocation}
+                    />
+                    {isGettingLocation ? (
+                      <Loader2 className="absolute right-4 top-1/2 transform -translate-y-1/2 h-6 w-6 animate-spin text-gray-400" />
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={getCurrentLocation}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 h-12 w-12 p-0"
+                      >
+                        <MapPin className="h-6 w-6" />
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.location_id}
+                    onValueChange={(value) => setFormData({ ...formData, location_id: value })}
+                  >
+                    <SelectTrigger className="h-16 text-xl font-medium border-2">
+                      <SelectValue placeholder="Select location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(formData.run_id ? getPlannedLocationsForRun(formData.run_id) : locations).map((location) => (
+                        <SelectItem
+                          key={location.id}
+                          value={location.id.toString()}
+                          className="text-xl font-medium py-4"
+                        >
+                          {location.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
