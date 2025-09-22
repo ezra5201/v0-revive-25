@@ -468,16 +468,16 @@ export default function RunLogPage() {
         return (
           <div className="space-y-8">
             <div>
-              <Label htmlFor="run_id" className="text-xl font-semibold mb-4 block">
+              <Label htmlFor="run_id" className="text-2xl font-bold mb-4 block text-foreground">
                 Today's Run (Optional)
               </Label>
               <Select value={formData.run_id} onValueChange={handleRunChange}>
-                <SelectTrigger className="h-16 text-lg border-2">
+                <SelectTrigger className="h-16 text-xl font-medium border-2">
                   <SelectValue placeholder="Select run (optional)" />
                 </SelectTrigger>
                 <SelectContent>
                   {runs.map((run) => (
-                    <SelectItem key={run.id} value={run.id.toString()} className="text-lg py-4">
+                    <SelectItem key={run.id} value={run.id.toString()} className="text-xl font-medium py-4">
                       {run.planned_locations && run.planned_locations.length > 0
                         ? `${Array.isArray(run.planned_locations) ? run.planned_locations[0] : JSON.parse(run.planned_locations)[0]} - ${run.scheduled_time || "No time"}`
                         : `Run ${run.id} - ${run.scheduled_time || "No time"}`}
@@ -488,14 +488,14 @@ export default function RunLogPage() {
             </div>
 
             <div>
-              <Label className="text-xl font-semibold mb-4 block">Location</Label>
+              <Label className="text-2xl font-bold mb-4 block text-foreground">Location</Label>
               <div className="space-y-6">
                 <div className="grid grid-cols-1 gap-4">
                   <Button
                     type="button"
                     variant={formData.location_mode === "auto" ? "default" : "outline"}
                     onClick={() => setFormData({ ...formData, location_mode: "auto", location_id: "" })}
-                    className="h-16 text-lg border-2 justify-start"
+                    className="h-16 text-xl font-semibold border-2 justify-start"
                   >
                     <MapPin className="w-6 h-6 mr-3" />
                     Auto-detect Location
@@ -504,7 +504,7 @@ export default function RunLogPage() {
                     type="button"
                     variant={formData.location_mode === "manual" ? "default" : "outline"}
                     onClick={() => setFormData({ ...formData, location_mode: "manual", custom_location: "" })}
-                    className="h-16 text-lg border-2 justify-start"
+                    className="h-16 text-xl font-semibold border-2 justify-start"
                   >
                     Select from List
                   </Button>
@@ -516,7 +516,7 @@ export default function RunLogPage() {
                       value={formData.custom_location}
                       onChange={(e) => setFormData({ ...formData, custom_location: e.target.value })}
                       placeholder={isGettingLocation ? "Getting location..." : "Street address or coordinates"}
-                      className="h-16 text-lg pr-16 border-2"
+                      className="h-16 text-xl font-medium pr-16 border-2"
                       disabled={isGettingLocation}
                     />
                     {isGettingLocation ? (
@@ -538,12 +538,16 @@ export default function RunLogPage() {
                     value={formData.location_id}
                     onValueChange={(value) => setFormData({ ...formData, location_id: value })}
                   >
-                    <SelectTrigger className="h-16 text-lg border-2">
+                    <SelectTrigger className="h-16 text-xl font-medium border-2">
                       <SelectValue placeholder="Select location" />
                     </SelectTrigger>
                     <SelectContent>
                       {(formData.run_id ? getPlannedLocationsForRun(formData.run_id) : locations).map((location) => (
-                        <SelectItem key={location.id} value={location.id.toString()} className="text-lg py-4">
+                        <SelectItem
+                          key={location.id}
+                          value={location.id.toString()}
+                          className="text-xl font-medium py-4"
+                        >
                           {location.name}
                         </SelectItem>
                       ))}
@@ -554,19 +558,19 @@ export default function RunLogPage() {
             </div>
 
             <div>
-              <Label htmlFor="staff_member" className="text-xl font-semibold mb-4 block">
+              <Label htmlFor="staff_member" className="text-2xl font-bold mb-4 block text-foreground">
                 Staff Member
               </Label>
               <Select
                 value={formData.staff_member}
                 onValueChange={(value) => setFormData({ ...formData, staff_member: value })}
               >
-                <SelectTrigger className="h-16 text-lg border-2">
+                <SelectTrigger className="h-16 text-xl font-medium border-2">
                   <SelectValue placeholder="Select staff member" />
                 </SelectTrigger>
                 <SelectContent>
                   {staffMembers.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.name} className="text-lg py-4">
+                    <SelectItem key={staff.id} value={staff.name} className="text-xl font-medium py-4">
                       {staff.name}
                     </SelectItem>
                   ))}
@@ -580,11 +584,11 @@ export default function RunLogPage() {
         return (
           <div className="space-y-8">
             <div>
-              <Label className="text-xl font-semibold mb-4 block">Select Person</Label>
+              <Label className="text-2xl font-bold mb-4 block text-foreground">Select Person</Label>
 
               {runContacts.length > 0 && (
                 <div className="space-y-4 mb-8">
-                  <div className="text-lg font-medium text-muted-foreground">People already logged for this run:</div>
+                  <div className="text-xl font-semibold text-foreground">People already logged for this run:</div>
                   <div className="max-h-64 overflow-y-auto border-2 rounded-lg">
                     <div className="space-y-2 p-2">
                       {runContacts.map((contact) => (
@@ -599,11 +603,11 @@ export default function RunLogPage() {
                               new_client_first_name: "", // Clear manual input when selecting from list
                             })
                           }
-                          className="w-full h-16 text-lg justify-start border-2 px-4"
+                          className="w-full h-16 text-xl font-semibold justify-start border-2 px-4"
                         >
                           <div className="text-left">
-                            <div className="font-semibold">{contact.client_name}</div>
-                            <div className="text-sm opacity-75">{contact.location_name}</div>
+                            <div className="font-bold">{contact.client_name}</div>
+                            <div className="text-lg opacity-75">{contact.location_name}</div>
                           </div>
                         </Button>
                       ))}
@@ -613,7 +617,7 @@ export default function RunLogPage() {
               )}
 
               <div className="space-y-4">
-                <div className="text-lg font-medium text-muted-foreground">
+                <div className="text-xl font-semibold text-foreground">
                   {runContacts.length > 0 ? "Or enter new person's name:" : "Enter person's name:"}
                 </div>
                 <Input
@@ -626,7 +630,7 @@ export default function RunLogPage() {
                     })
                   }
                   placeholder="Type the person's name or nickname."
-                  className="h-16 text-lg border-2"
+                  className="h-16 text-xl font-medium border-2"
                 />
               </div>
             </div>
@@ -637,7 +641,7 @@ export default function RunLogPage() {
         return (
           <div className="space-y-8">
             <div>
-              <Label className="text-xl font-semibold mb-6 block">Services Provided</Label>
+              <Label className="text-2xl font-bold mb-6 block text-foreground">Services Provided</Label>
               <div className="grid grid-cols-1 gap-4">
                 {COMMON_SERVICES.map((service) => (
                   <Button
@@ -645,7 +649,7 @@ export default function RunLogPage() {
                     type="button"
                     variant={formData.services_provided.includes(service) ? "default" : "outline"}
                     onClick={() => toggleService(service)}
-                    className="h-16 text-lg justify-start border-2"
+                    className="h-16 text-xl font-semibold justify-start border-2"
                   >
                     {service}
                   </Button>
@@ -660,43 +664,45 @@ export default function RunLogPage() {
           <div className="space-y-8">
             {contactSaved && (
               <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
-                <div className="text-green-800 font-semibold text-lg mb-2">✓ Contact Saved Successfully!</div>
-                <div className="text-green-700">The contact has been logged and added to today's list.</div>
+                <div className="text-green-800 font-bold text-xl mb-2">✓ Contact Saved Successfully!</div>
+                <div className="text-green-700 text-lg font-medium">
+                  The contact has been logged and added to today's list.
+                </div>
               </div>
             )}
 
             {saveError && (
               <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6">
-                <div className="text-red-800 font-semibold text-lg mb-2">⚠ Save Failed</div>
-                <div className="text-red-700">{saveError}</div>
+                <div className="text-red-800 font-bold text-xl mb-2">⚠ Save Failed</div>
+                <div className="text-red-700 text-lg font-medium">{saveError}</div>
               </div>
             )}
 
             <div>
-              <Label htmlFor="housing_status" className="text-xl font-semibold mb-4 block">
+              <Label htmlFor="housing_status" className="text-2xl font-bold mb-4 block text-foreground">
                 Housing Status
               </Label>
               <Select
                 value={formData.housing_status}
                 onValueChange={(value) => setFormData({ ...formData, housing_status: value })}
               >
-                <SelectTrigger className="h-16 text-lg border-2">
+                <SelectTrigger className="h-16 text-xl font-medium border-2">
                   <SelectValue placeholder="Select housing status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="unsheltered" className="text-lg py-4">
+                  <SelectItem value="unsheltered" className="text-xl font-medium py-4">
                     Unsheltered
                   </SelectItem>
-                  <SelectItem value="sheltered" className="text-lg py-4">
+                  <SelectItem value="sheltered" className="text-xl font-medium py-4">
                     Sheltered
                   </SelectItem>
-                  <SelectItem value="transitional" className="text-lg py-4">
+                  <SelectItem value="transitional" className="text-xl font-medium py-4">
                     Transitional Housing
                   </SelectItem>
-                  <SelectItem value="temporary" className="text-lg py-4">
+                  <SelectItem value="temporary" className="text-xl font-medium py-4">
                     Temporary Stay
                   </SelectItem>
-                  <SelectItem value="unknown" className="text-lg py-4">
+                  <SelectItem value="unknown" className="text-xl font-medium py-4">
                     Unknown
                   </SelectItem>
                 </SelectContent>
@@ -704,7 +710,7 @@ export default function RunLogPage() {
             </div>
 
             <div>
-              <Label htmlFor="medical_concerns" className="text-xl font-semibold mb-4 block">
+              <Label htmlFor="medical_concerns" className="text-2xl font-bold mb-4 block text-foreground">
                 Medical Concerns (Optional)
               </Label>
               <Textarea
@@ -713,7 +719,7 @@ export default function RunLogPage() {
                 onChange={(e) => setFormData({ ...formData, medical_concerns: e.target.value })}
                 placeholder="Any medical concerns or observations"
                 rows={4}
-                className="text-lg border-2"
+                className="text-xl font-medium border-2"
               />
             </div>
 
@@ -722,14 +728,14 @@ export default function RunLogPage() {
                 type="button"
                 variant={formData.follow_up_needed ? "default" : "outline"}
                 onClick={() => setFormData({ ...formData, follow_up_needed: !formData.follow_up_needed })}
-                className="h-16 text-lg w-full border-2"
+                className="h-16 text-xl font-semibold w-full border-2"
               >
                 {formData.follow_up_needed ? "✓ Follow-up Needed" : "Follow-up Needed?"}
               </Button>
 
               {formData.follow_up_needed && (
                 <div>
-                  <Label htmlFor="follow_up_notes" className="text-lg font-medium mb-3 block">
+                  <Label htmlFor="follow_up_notes" className="text-xl font-bold mb-3 block text-foreground">
                     Follow-up Notes
                   </Label>
                   <Textarea
@@ -738,7 +744,7 @@ export default function RunLogPage() {
                     onChange={(e) => setFormData({ ...formData, follow_up_notes: e.target.value })}
                     placeholder="What follow-up is needed?"
                     rows={4}
-                    className="text-lg border-2"
+                    className="text-xl font-medium border-2"
                   />
                 </div>
               )}
@@ -771,7 +777,7 @@ export default function RunLogPage() {
             className="h-8 w-auto"
             priority
           />
-          <div className="text-sm font-medium text-muted-foreground">{userName}</div>
+          <div className="text-lg font-semibold text-foreground">{userName}</div>
         </div>
       </div>
 
@@ -779,11 +785,15 @@ export default function RunLogPage() {
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">Run Log</h1>
-              <p className="text-lg text-muted-foreground">{today}</p>
+              <h1 className="text-4xl font-bold text-foreground mb-2">Run Log</h1>
+              <p className="text-xl font-medium text-foreground">{today}</p>
             </div>
             <div className="flex items-center space-x-3">
-              <Button variant="outline" size="lg" className="border-2 hover:bg-muted/50 bg-transparent">
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-2 hover:bg-muted/50 bg-transparent text-lg font-semibold"
+              >
                 <Filter className="w-5 h-5 mr-2" />
                 Filters
               </Button>
@@ -792,7 +802,7 @@ export default function RunLogPage() {
                 <DialogTrigger asChild>
                   <Button
                     size="lg"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 py-3 text-lg"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-3 text-xl"
                   >
                     <Plus className="w-5 h-5 mr-2" />
                     Contact
@@ -800,7 +810,7 @@ export default function RunLogPage() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-2xl max-h-[95vh] overflow-hidden flex flex-col">
                   <DialogHeader className="flex-shrink-0">
-                    <DialogTitle className="text-2xl font-bold">Log Street Contact</DialogTitle>
+                    <DialogTitle className="text-3xl font-bold text-foreground">Log Street Contact</DialogTitle>
                     <div className="flex items-center justify-between mt-4">
                       <div className="flex space-x-2">
                         {Array.from({ length: totalSteps }, (_, i) => (
@@ -810,7 +820,7 @@ export default function RunLogPage() {
                           />
                         ))}
                       </div>
-                      <span className="text-lg font-medium text-muted-foreground">
+                      <span className="text-xl font-bold text-foreground">
                         Step {currentStep} of {totalSteps}
                       </span>
                     </div>
@@ -825,7 +835,7 @@ export default function RunLogPage() {
                           type="button"
                           variant="outline"
                           onClick={prevStep}
-                          className="h-16 text-lg px-8 border-2 bg-transparent"
+                          className="h-16 text-xl font-semibold px-8 border-2 bg-transparent"
                           disabled={contactSaved}
                         >
                           <ChevronLeft className="w-5 h-5 mr-2" />
@@ -837,7 +847,7 @@ export default function RunLogPage() {
                         type="button"
                         variant="outline"
                         onClick={handleCloseModal}
-                        className="h-16 text-lg px-6 border-2 bg-transparent"
+                        className="h-16 text-xl font-semibold px-6 border-2 bg-transparent"
                       >
                         {contactSaved ? "Close" : "Cancel"}
                       </Button>
@@ -847,7 +857,7 @@ export default function RunLogPage() {
                           type="button"
                           onClick={nextStep}
                           disabled={!canProceedToNextStep()}
-                          className="flex-1 h-16 text-lg font-semibold"
+                          className="flex-1 h-16 text-xl font-bold"
                         >
                           Next
                           <ChevronRight className="w-5 h-5 ml-2" />
@@ -857,7 +867,7 @@ export default function RunLogPage() {
                           type="button"
                           onClick={handleSaveContact}
                           disabled={!canProceedToNextStep() || contactSaved}
-                          className="flex-1 h-16 text-lg font-semibold"
+                          className="flex-1 h-16 text-xl font-bold"
                         >
                           {contactSaved ? "✓ Contact Saved" : "Save Contact"}
                         </Button>
