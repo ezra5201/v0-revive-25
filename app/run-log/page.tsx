@@ -11,7 +11,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Filter, Plus, MapPin, Loader2, ChevronLeft, ChevronRight, LogOut, ChevronDown } from "lucide-react"
+import {
+  Filter,
+  Plus,
+  MapPin,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  ChevronDown,
+  Users,
+  Package,
+  Clock,
+  Activity,
+} from "lucide-react"
 
 interface RunContact {
   id: number
@@ -102,6 +115,15 @@ export default function RunLogPage() {
   const [contactSaved, setContactSaved] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
+  const [runSummary, setRunSummary] = useState({
+    contactCount: 0,
+    servicesProvided: {} as Record<string, number>,
+    inventoryItems: {} as Record<string, number>,
+    runDuration: null as string | null,
+    firstContactTime: null as string | null,
+    lastContactTime: null as string | null,
+  })
+
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -129,10 +151,8 @@ export default function RunLogPage() {
   }, [])
 
   useEffect(() => {
-    if (formData.location_mode === "auto" && !currentLocation) {
-      getCurrentLocation()
-    }
-  }, [formData.location_mode])
+    updateRunSummary()
+  }, [contacts])
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -758,6 +778,74 @@ export default function RunLogPage() {
     }
   }
 
+  const updateRunSummary = () => {
+    if (contacts.length === 0) {
+      setRunSummary({
+        contactCount: 0,
+        servicesProvided: {},
+        inventoryItems: {},
+        runDuration: null,
+        firstContactTime: null,
+        lastContactTime: null,
+      })
+      return
+    }
+
+    // Count contacts
+    const contactCount = contacts.length
+
+    // Aggregate services
+    const servicesProvided: Record<string, number> = {}
+    contacts.forEach((contact) => {
+      if (contact.services_provided && Array.isArray(contact.services_provided)) {
+        contact.services_provided.forEach((service) => {
+          servicesProvided[service] = (servicesProvided[service] || 0) + 1
+        })
+      }
+    })
+
+    // For now, inventory items will be empty since we don't have that data structure yet
+    const inventoryItems: Record<string, number> = {}
+
+    // Calculate run duration
+    const contactTimes = contacts
+      .map((contact) => contact.contact_time)
+      .filter((time) => time && time !== "Unknown Time")
+      .sort()
+
+    let runDuration = null
+    let firstContactTime = null
+    let lastContactTime = null
+
+    if (contactTimes.length > 0) {
+      firstContactTime = contactTimes[0]
+      lastContactTime = contactTimes[contactTimes.length - 1]
+
+      if (contactTimes.length > 1) {
+        const first = new Date(`2000-01-01 ${firstContactTime}`)
+        const last = new Date(`2000-01-01 ${lastContactTime}`)
+        const diffMs = last.getTime() - first.getTime()
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+        const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+
+        if (diffHours > 0) {
+          runDuration = `${diffHours}h ${diffMinutes}m`
+        } else {
+          runDuration = `${diffMinutes}m`
+        }
+      }
+    }
+
+    setRunSummary({
+      contactCount,
+      servicesProvided,
+      inventoryItems,
+      runDuration,
+      firstContactTime,
+      lastContactTime,
+    })
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
@@ -904,6 +992,83 @@ export default function RunLogPage() {
             </div>
           </div>
         </CardHeader>
+      </Card>
+
+      <Card className="shadow-lg border-2 mb-6">
+        <CardHeader className="pb-4">
+          <h2 className="text-2xl font-bold text-foreground">Live Run Summary</h2>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Contacts Created */}
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+              <div className="flex items-center space-x-3 mb-2">
+                <Users className="w-6 h-6 text-blue-600" />
+                <h3 className="text-lg font-bold text-blue-900">Contacts</h3>
+              </div>
+              <div className="text-3xl font-bold text-blue-900">{runSummary.contactCount}</div>
+              <div className="text-sm font-medium text-blue-700">People contacted today</div>
+            </div>
+
+            {/* Services Provided */}
+            <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+              <div className="flex items-center space-x-3 mb-2">
+                <Activity className="w-6 h-6 text-green-600" />
+                <h3 className="text-lg font-bold text-green-900">Services</h3>
+              </div>
+              <div className="text-3xl font-bold text-green-900">
+                {Object.values(runSummary.servicesProvided).reduce((sum, count) => sum + count, 0)}
+              </div>
+              <div className="text-sm font-medium text-green-700">
+                {Object.keys(runSummary.servicesProvided).length} different types
+              </div>
+            </div>
+
+            {/* Inventory Items */}
+            <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4">
+              <div className="flex items-center space-x-3 mb-2">
+                <Package className="w-6 h-6 text-orange-600" />
+                <h3 className="text-lg font-bold text-orange-900">Inventory</h3>
+              </div>
+              <div className="text-3xl font-bold text-orange-900">
+                {Object.values(runSummary.inventoryItems).reduce((sum, count) => sum + count, 0)}
+              </div>
+              <div className="text-sm font-medium text-orange-700">Items distributed</div>
+            </div>
+
+            {/* Run Duration */}
+            <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
+              <div className="flex items-center space-x-3 mb-2">
+                <Clock className="w-6 h-6 text-purple-600" />
+                <h3 className="text-lg font-bold text-purple-900">Duration</h3>
+              </div>
+              <div className="text-3xl font-bold text-purple-900">{runSummary.runDuration || "—"}</div>
+              <div className="text-sm font-medium text-purple-700">
+                {runSummary.firstContactTime && runSummary.lastContactTime
+                  ? `${runSummary.firstContactTime} - ${runSummary.lastContactTime}`
+                  : "No contacts yet"}
+              </div>
+            </div>
+          </div>
+
+          {/* Services Breakdown */}
+          {Object.keys(runSummary.servicesProvided).length > 0 && (
+            <div className="mt-6 pt-6 border-t">
+              <h3 className="text-xl font-bold text-foreground mb-4">Services Breakdown</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {Object.entries(runSummary.servicesProvided).map(([service, count]) => (
+                  <div
+                    key={service}
+                    className="flex justify-between items-center bg-slate-50 border rounded-lg px-4 py-2"
+                  >
+                    <span className="text-lg font-medium text-foreground">{service}</span>
+                    <span className="text-lg font-bold text-primary">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
       </Card>
 
       <Card className="shadow-lg border-2">
