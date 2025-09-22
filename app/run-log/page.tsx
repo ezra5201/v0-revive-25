@@ -1070,10 +1070,6 @@ export default function RunLogPage() {
           )}
         </CardContent>
       </Card>
-
-      <Card className="shadow-lg border-2">
-        <CardContent className="pt-6">{/* Contact list content will go here */}</CardContent>
-      </Card>
     </div>
   )
 }
