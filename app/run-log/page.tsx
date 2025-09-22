@@ -104,7 +104,7 @@ export default function RunLogPage() {
     client_age: "",
     client_gender: "",
     client_race: "",
-    client_veteran_status: "",
+    client_veteran_status: "", // Changed from client_veteran
     client_housing_status: "",
     client_income_source: "",
     client_disabilities: "",
@@ -395,7 +395,7 @@ export default function RunLogPage() {
       client_age: "",
       client_gender: "",
       client_race: "",
-      client_veteran_status: "",
+      client_veteran_status: "", // Changed from client_veteran
       client_housing_status: "",
       client_income_source: "",
       client_disabilities: "",
@@ -603,8 +603,8 @@ export default function RunLogPage() {
         return (
           <div className="space-y-8">
             <div>
-              <Label htmlFor="first_name" className="text-2xl font-bold mb-4 block text-foreground">
-                First Name
+              <Label htmlFor="client_name" className="text-2xl font-bold mb-4 block text-foreground">
+                Name
               </Label>
               <Input
                 value={formData.client_name}
@@ -653,15 +653,33 @@ export default function RunLogPage() {
                   <SelectValue placeholder="Select gender identity" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Woman">Woman</SelectItem>
-                  <SelectItem value="Man">Man</SelectItem>
-                  <SelectItem value="Non-binary">Non-binary</SelectItem>
-                  <SelectItem value="Transgender Woman">Transgender Woman</SelectItem>
-                  <SelectItem value="Transgender Man">Transgender Man</SelectItem>
-                  <SelectItem value="Gender Fluid">Gender Fluid</SelectItem>
-                  <SelectItem value="Two-Spirit">Two-Spirit</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                  <SelectItem value="Prefer not to answer">Prefer not to answer</SelectItem>
+                  <SelectItem value="Woman" className="text-xl font-medium py-4">
+                    Woman
+                  </SelectItem>
+                  <SelectItem value="Man" className="text-xl font-medium py-4">
+                    Man
+                  </SelectItem>
+                  <SelectItem value="Non-binary" className="text-xl font-medium py-4">
+                    Non-binary
+                  </SelectItem>
+                  <SelectItem value="Transgender Woman" className="text-xl font-medium py-4">
+                    Transgender Woman
+                  </SelectItem>
+                  <SelectItem value="Transgender Man" className="text-xl font-medium py-4">
+                    Transgender Man
+                  </SelectItem>
+                  <SelectItem value="Gender Fluid" className="text-xl font-medium py-4">
+                    Gender Fluid
+                  </SelectItem>
+                  <SelectItem value="Two-Spirit" className="text-xl font-medium py-4">
+                    Two-Spirit
+                  </SelectItem>
+                  <SelectItem value="Other" className="text-xl font-medium py-4">
+                    Other
+                  </SelectItem>
+                  <SelectItem value="Prefer not to answer" className="text-xl font-medium py-4">
+                    Prefer not to answer
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -683,31 +701,47 @@ export default function RunLogPage() {
                   <SelectValue placeholder="Select race/ethnicity" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="American Indian or Alaska Native">American Indian or Alaska Native</SelectItem>
-                  <SelectItem value="Asian">Asian</SelectItem>
-                  <SelectItem value="Black or African American">Black or African American</SelectItem>
-                  <SelectItem value="Hispanic or Latino">Hispanic or Latino</SelectItem>
-                  <SelectItem value="Native Hawaiian or Pacific Islander">
+                  <SelectItem value="American Indian or Alaska Native" className="text-xl font-medium py-4">
+                    American Indian or Alaska Native
+                  </SelectItem>
+                  <SelectItem value="Asian" className="text-xl font-medium py-4">
+                    Asian
+                  </SelectItem>
+                  <SelectItem value="Black or African American" className="text-xl font-medium py-4">
+                    Black or African American
+                  </SelectItem>
+                  <SelectItem value="Hispanic or Latino" className="text-xl font-medium py-4">
+                    Hispanic or Latino
+                  </SelectItem>
+                  <SelectItem value="Native Hawaiian or Pacific Islander" className="text-xl font-medium py-4">
                     Native Hawaiian or Pacific Islander
                   </SelectItem>
-                  <SelectItem value="White">White</SelectItem>
-                  <SelectItem value="Multiracial">Multiracial</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                  <SelectItem value="Prefer not to answer">Prefer not to answer</SelectItem>
+                  <SelectItem value="White" className="text-xl font-medium py-4">
+                    White
+                  </SelectItem>
+                  <SelectItem value="Multiracial" className="text-xl font-medium py-4">
+                    Multiracial
+                  </SelectItem>
+                  <SelectItem value="Other" className="text-xl font-medium py-4">
+                    Other
+                  </SelectItem>
+                  <SelectItem value="Prefer not to answer" className="text-xl font-medium py-4">
+                    Prefer not to answer
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label htmlFor="client_veteran_status" className="text-2xl font-bold mb-4 block text-foreground">
+              <Label htmlFor="client_veteran" className="text-2xl font-bold mb-4 block text-foreground">
                 Veteran Status
               </Label>
               <Select
-                value={formData.client_veteran_status}
+                value={formData.client_veteran_status} // Changed from client_veteran
                 onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    client_veteran_status: value,
+                    client_veteran_status: value, // Changed from client_veteran
                   })
                 }
               >
@@ -715,10 +749,18 @@ export default function RunLogPage() {
                   <SelectValue placeholder="Select veteran status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Yes">Yes</SelectItem>
-                  <SelectItem value="No">No</SelectItem>
-                  <SelectItem value="Unknown">Unknown</SelectItem>
-                  <SelectItem value="Prefer not to answer">Prefer not to answer</SelectItem>
+                  <SelectItem value="Yes" className="text-xl font-medium py-4">
+                    Yes
+                  </SelectItem>
+                  <SelectItem value="No" className="text-xl font-medium py-4">
+                    No
+                  </SelectItem>
+                  <SelectItem value="Unknown" className="text-xl font-medium py-4">
+                    Unknown
+                  </SelectItem>
+                  <SelectItem value="Prefer not to answer" className="text-xl font-medium py-4">
+                    Prefer not to answer
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -740,14 +782,30 @@ export default function RunLogPage() {
                   <SelectValue placeholder="Select housing status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Unsheltered">Unsheltered</SelectItem>
-                  <SelectItem value="Emergency Shelter">Emergency Shelter</SelectItem>
-                  <SelectItem value="Transitional Housing">Transitional Housing</SelectItem>
-                  <SelectItem value="Permanent Supportive Housing">Permanent Supportive Housing</SelectItem>
-                  <SelectItem value="Rapid Rehousing">Rapid Rehousing</SelectItem>
-                  <SelectItem value="Housed">Housed</SelectItem>
-                  <SelectItem value="At Risk of Homelessness">At Risk of Homelessness</SelectItem>
-                  <SelectItem value="Unknown">Unknown</SelectItem>
+                  <SelectItem value="Unsheltered" className="text-xl font-medium py-4">
+                    Unsheltered
+                  </SelectItem>
+                  <SelectItem value="Emergency Shelter" className="text-xl font-medium py-4">
+                    Emergency Shelter
+                  </SelectItem>
+                  <SelectItem value="Transitional Housing" className="text-xl font-medium py-4">
+                    Transitional Housing
+                  </SelectItem>
+                  <SelectItem value="Permanent Supportive Housing" className="text-xl font-medium py-4">
+                    Permanent Supportive Housing
+                  </SelectItem>
+                  <SelectItem value="Rapid Rehousing" className="text-xl font-medium py-4">
+                    Rapid Rehousing
+                  </SelectItem>
+                  <SelectItem value="Housed" className="text-xl font-medium py-4">
+                    Housed
+                  </SelectItem>
+                  <SelectItem value="At Risk of Homelessness" className="text-xl font-medium py-4">
+                    At Risk of Homelessness
+                  </SelectItem>
+                  <SelectItem value="Unknown" className="text-xl font-medium py-4">
+                    Unknown
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -769,18 +827,33 @@ export default function RunLogPage() {
                   <SelectValue placeholder="Select income source" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="No Income">No Income</SelectItem>
-                  <SelectItem value="Employment">Employment</SelectItem>
-                  <SelectItem value="SSI">SSI</SelectItem>
-                  <SelectItem value="SSDI">SSDI</SelectItem>
-                  <SelectItem value="Social Security">Social Security</SelectItem>
-                  <SelectItem value="Unemployment">Unemployment</SelectItem>
-                  <SelectItem value="TANF">TANF</SelectItem>
-                  <SelectItem value="SNAP">SNAP</SelectItem>
-                  <SelectItem value="Veterans Benefits">Veterans Benefits</SelectItem>
-                  <SelectItem value="Pension">Pension</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                  <SelectItem value="Unknown">Unknown</SelectItem>
+                  <SelectItem value="Employment" className="text-xl font-medium py-4">
+                    Employment
+                  </SelectItem>
+                  <SelectItem value="SSI/SSDI" className="text-xl font-medium py-4">
+                    SSI/SSDI
+                  </SelectItem>
+                  <SelectItem value="TANF" className="text-xl font-medium py-4">
+                    TANF
+                  </SelectItem>
+                  <SelectItem value="Food Stamps/SNAP" className="text-xl font-medium py-4">
+                    Food Stamps/SNAP
+                  </SelectItem>
+                  <SelectItem value="Unemployment" className="text-xl font-medium py-4">
+                    Unemployment
+                  </SelectItem>
+                  <SelectItem value="Pension" className="text-xl font-medium py-4">
+                    Pension
+                  </SelectItem>
+                  <SelectItem value="Other" className="text-xl font-medium py-4">
+                    Other
+                  </SelectItem>
+                  <SelectItem value="None" className="text-xl font-medium py-4">
+                    None
+                  </SelectItem>
+                  <SelectItem value="Unknown" className="text-xl font-medium py-4">
+                    Unknown
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -802,17 +875,25 @@ export default function RunLogPage() {
                   <SelectValue placeholder="Select disability status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Yes">Yes</SelectItem>
-                  <SelectItem value="No">No</SelectItem>
-                  <SelectItem value="Unknown">Unknown</SelectItem>
-                  <SelectItem value="Prefer not to answer">Prefer not to answer</SelectItem>
+                  <SelectItem value="Yes" className="text-xl font-medium py-4">
+                    Yes
+                  </SelectItem>
+                  <SelectItem value="No" className="text-xl font-medium py-4">
+                    No
+                  </SelectItem>
+                  <SelectItem value="Unknown" className="text-xl font-medium py-4">
+                    Unknown
+                  </SelectItem>
+                  <SelectItem value="Prefer not to answer" className="text-xl font-medium py-4">
+                    Prefer not to answer
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
               <Label htmlFor="client_substance_use" className="text-2xl font-bold mb-4 block text-foreground">
-                Substance Use
+                Substance Use Concerns
               </Label>
               <Select
                 value={formData.client_substance_use}
@@ -827,17 +908,25 @@ export default function RunLogPage() {
                   <SelectValue placeholder="Select substance use status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Yes">Yes</SelectItem>
-                  <SelectItem value="No">No</SelectItem>
-                  <SelectItem value="Unknown">Unknown</SelectItem>
-                  <SelectItem value="Prefer not to answer">Prefer not to answer</SelectItem>
+                  <SelectItem value="Yes" className="text-xl font-medium py-4">
+                    Yes
+                  </SelectItem>
+                  <SelectItem value="No" className="text-xl font-medium py-4">
+                    No
+                  </SelectItem>
+                  <SelectItem value="Unknown" className="text-xl font-medium py-4">
+                    Unknown
+                  </SelectItem>
+                  <SelectItem value="Prefer not to answer" className="text-xl font-medium py-4">
+                    Prefer not to answer
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
               <Label htmlFor="client_mental_health" className="text-2xl font-bold mb-4 block text-foreground">
-                Mental Health Issues
+                Mental Health Concerns
               </Label>
               <Select
                 value={formData.client_mental_health}
@@ -852,10 +941,18 @@ export default function RunLogPage() {
                   <SelectValue placeholder="Select mental health status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Yes">Yes</SelectItem>
-                  <SelectItem value="No">No</SelectItem>
-                  <SelectItem value="Unknown">Unknown</SelectItem>
-                  <SelectItem value="Prefer not to answer">Prefer not to answer</SelectItem>
+                  <SelectItem value="Yes" className="text-xl font-medium py-4">
+                    Yes
+                  </SelectItem>
+                  <SelectItem value="No" className="text-xl font-medium py-4">
+                    No
+                  </SelectItem>
+                  <SelectItem value="Unknown" className="text-xl font-medium py-4">
+                    Unknown
+                  </SelectItem>
+                  <SelectItem value="Prefer not to answer" className="text-xl font-medium py-4">
+                    Prefer not to answer
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -877,10 +974,18 @@ export default function RunLogPage() {
                   <SelectValue placeholder="Select chronic health status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Yes">Yes</SelectItem>
-                  <SelectItem value="No">No</SelectItem>
-                  <SelectItem value="Unknown">Unknown</SelectItem>
-                  <SelectItem value="Prefer not to answer">Prefer not to answer</SelectItem>
+                  <SelectItem value="Yes" className="text-xl font-medium py-4">
+                    Yes
+                  </SelectItem>
+                  <SelectItem value="No" className="text-xl font-medium py-4">
+                    No
+                  </SelectItem>
+                  <SelectItem value="Unknown" className="text-xl font-medium py-4">
+                    Unknown
+                  </SelectItem>
+                  <SelectItem value="Prefer not to answer" className="text-xl font-medium py-4">
+                    Prefer not to answer
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -899,15 +1004,24 @@ export default function RunLogPage() {
                 }
               >
                 <SelectTrigger className="h-16 text-xl font-medium border-2">
-                  <SelectValue placeholder="Select ID document status" />
+                  <SelectValue placeholder="Select ID status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Has Valid ID">Has Valid ID</SelectItem>
-                  <SelectItem value="Has Expired ID">Has Expired ID</SelectItem>
-                  <SelectItem value="No ID">No ID</SelectItem>
-                  <SelectItem value="Birth Certificate Only">Birth Certificate Only</SelectItem>
-                  <SelectItem value="Social Security Card Only">Social Security Card Only</SelectItem>
-                  <SelectItem value="Unknown">Unknown</SelectItem>
+                  <SelectItem value="Has valid ID" className="text-xl font-medium py-4">
+                    Has valid ID
+                  </SelectItem>
+                  <SelectItem value="Has expired ID" className="text-xl font-medium py-4">
+                    Has expired ID
+                  </SelectItem>
+                  <SelectItem value="No ID" className="text-xl font-medium py-4">
+                    No ID
+                  </SelectItem>
+                  <SelectItem value="Lost/Stolen ID" className="text-xl font-medium py-4">
+                    Lost/Stolen ID
+                  </SelectItem>
+                  <SelectItem value="Unknown" className="text-xl font-medium py-4">
+                    Unknown
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
