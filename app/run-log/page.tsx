@@ -119,6 +119,7 @@ export default function RunLogPage() {
     notes: "",
     contact_date: new Date().toISOString().split("T")[0],
     contact_time: new Date().toTimeString().slice(0, 5),
+    follow_up_needed: false,
   })
 
   const [currentStep, setCurrentStep] = useState(1)
@@ -409,6 +410,7 @@ export default function RunLogPage() {
       notes: "",
       contact_date: new Date().toISOString().split("T")[0],
       contact_time: new Date().toTimeString().slice(0, 5),
+      follow_up_needed: false,
     })
     setClientSearch("")
     setCurrentLocation(null)
@@ -617,7 +619,6 @@ export default function RunLogPage() {
               />
             </div>
 
-            {/* Additional client information fields */}
             <div>
               <Label htmlFor="client_age" className="text-2xl font-bold mb-4 block text-foreground">
                 Age
@@ -639,170 +640,276 @@ export default function RunLogPage() {
               <Label htmlFor="client_gender" className="text-2xl font-bold mb-4 block text-foreground">
                 Gender
               </Label>
-              <Input
+              <Select
                 value={formData.client_gender}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    client_gender: e.target.value,
+                    client_gender: value,
                   })
                 }
-                placeholder="Type the person's gender."
-                className="h-16 text-xl font-medium border-2"
-              />
+              >
+                <SelectTrigger className="h-16 text-xl font-medium border-2">
+                  <SelectValue placeholder="Select gender identity" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Woman">Woman</SelectItem>
+                  <SelectItem value="Man">Man</SelectItem>
+                  <SelectItem value="Non-binary">Non-binary</SelectItem>
+                  <SelectItem value="Transgender Woman">Transgender Woman</SelectItem>
+                  <SelectItem value="Transgender Man">Transgender Man</SelectItem>
+                  <SelectItem value="Gender Fluid">Gender Fluid</SelectItem>
+                  <SelectItem value="Two-Spirit">Two-Spirit</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="Prefer not to answer">Prefer not to answer</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <Label htmlFor="client_race" className="text-2xl font-bold mb-4 block text-foreground">
-                Race
+                Race/Ethnicity
               </Label>
-              <Input
+              <Select
                 value={formData.client_race}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    client_race: e.target.value,
+                    client_race: value,
                   })
                 }
-                placeholder="Type the person's race."
-                className="h-16 text-xl font-medium border-2"
-              />
+              >
+                <SelectTrigger className="h-16 text-xl font-medium border-2">
+                  <SelectValue placeholder="Select race/ethnicity" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="American Indian or Alaska Native">American Indian or Alaska Native</SelectItem>
+                  <SelectItem value="Asian">Asian</SelectItem>
+                  <SelectItem value="Black or African American">Black or African American</SelectItem>
+                  <SelectItem value="Hispanic or Latino">Hispanic or Latino</SelectItem>
+                  <SelectItem value="Native Hawaiian or Pacific Islander">
+                    Native Hawaiian or Pacific Islander
+                  </SelectItem>
+                  <SelectItem value="White">White</SelectItem>
+                  <SelectItem value="Multiracial">Multiracial</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="Prefer not to answer">Prefer not to answer</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <Label htmlFor="client_veteran_status" className="text-2xl font-bold mb-4 block text-foreground">
                 Veteran Status
               </Label>
-              <Input
+              <Select
                 value={formData.client_veteran_status}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    client_veteran_status: e.target.value,
+                    client_veteran_status: value,
                   })
                 }
-                placeholder="Type the person's veteran status."
-                className="h-16 text-xl font-medium border-2"
-              />
+              >
+                <SelectTrigger className="h-16 text-xl font-medium border-2">
+                  <SelectValue placeholder="Select veteran status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Yes">Yes</SelectItem>
+                  <SelectItem value="No">No</SelectItem>
+                  <SelectItem value="Unknown">Unknown</SelectItem>
+                  <SelectItem value="Prefer not to answer">Prefer not to answer</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <Label htmlFor="client_housing_status" className="text-2xl font-bold mb-4 block text-foreground">
                 Housing Status
               </Label>
-              <Input
+              <Select
                 value={formData.client_housing_status}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    client_housing_status: e.target.value,
+                    client_housing_status: value,
                   })
                 }
-                placeholder="Type the person's housing status."
-                className="h-16 text-xl font-medium border-2"
-              />
+              >
+                <SelectTrigger className="h-16 text-xl font-medium border-2">
+                  <SelectValue placeholder="Select housing status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Unsheltered">Unsheltered</SelectItem>
+                  <SelectItem value="Emergency Shelter">Emergency Shelter</SelectItem>
+                  <SelectItem value="Transitional Housing">Transitional Housing</SelectItem>
+                  <SelectItem value="Permanent Supportive Housing">Permanent Supportive Housing</SelectItem>
+                  <SelectItem value="Rapid Rehousing">Rapid Rehousing</SelectItem>
+                  <SelectItem value="Housed">Housed</SelectItem>
+                  <SelectItem value="At Risk of Homelessness">At Risk of Homelessness</SelectItem>
+                  <SelectItem value="Unknown">Unknown</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <Label htmlFor="client_income_source" className="text-2xl font-bold mb-4 block text-foreground">
                 Income Source
               </Label>
-              <Input
+              <Select
                 value={formData.client_income_source}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    client_income_source: e.target.value,
+                    client_income_source: value,
                   })
                 }
-                placeholder="Type the person's income source."
-                className="h-16 text-xl font-medium border-2"
-              />
+              >
+                <SelectTrigger className="h-16 text-xl font-medium border-2">
+                  <SelectValue placeholder="Select income source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="No Income">No Income</SelectItem>
+                  <SelectItem value="Employment">Employment</SelectItem>
+                  <SelectItem value="SSI">SSI</SelectItem>
+                  <SelectItem value="SSDI">SSDI</SelectItem>
+                  <SelectItem value="Social Security">Social Security</SelectItem>
+                  <SelectItem value="Unemployment">Unemployment</SelectItem>
+                  <SelectItem value="TANF">TANF</SelectItem>
+                  <SelectItem value="SNAP">SNAP</SelectItem>
+                  <SelectItem value="Veterans Benefits">Veterans Benefits</SelectItem>
+                  <SelectItem value="Pension">Pension</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="Unknown">Unknown</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <Label htmlFor="client_disabilities" className="text-2xl font-bold mb-4 block text-foreground">
                 Disabilities
               </Label>
-              <Input
+              <Select
                 value={formData.client_disabilities}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    client_disabilities: e.target.value,
+                    client_disabilities: value,
                   })
                 }
-                placeholder="Type the person's disabilities."
-                className="h-16 text-xl font-medium border-2"
-              />
+              >
+                <SelectTrigger className="h-16 text-xl font-medium border-2">
+                  <SelectValue placeholder="Select disability status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Yes">Yes</SelectItem>
+                  <SelectItem value="No">No</SelectItem>
+                  <SelectItem value="Unknown">Unknown</SelectItem>
+                  <SelectItem value="Prefer not to answer">Prefer not to answer</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <Label htmlFor="client_substance_use" className="text-2xl font-bold mb-4 block text-foreground">
                 Substance Use
               </Label>
-              <Input
+              <Select
                 value={formData.client_substance_use}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    client_substance_use: e.target.value,
+                    client_substance_use: value,
                   })
                 }
-                placeholder="Type the person's substance use."
-                className="h-16 text-xl font-medium border-2"
-              />
+              >
+                <SelectTrigger className="h-16 text-xl font-medium border-2">
+                  <SelectValue placeholder="Select substance use status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Yes">Yes</SelectItem>
+                  <SelectItem value="No">No</SelectItem>
+                  <SelectItem value="Unknown">Unknown</SelectItem>
+                  <SelectItem value="Prefer not to answer">Prefer not to answer</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <Label htmlFor="client_mental_health" className="text-2xl font-bold mb-4 block text-foreground">
-                Mental Health
+                Mental Health Issues
               </Label>
-              <Input
+              <Select
                 value={formData.client_mental_health}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    client_mental_health: e.target.value,
+                    client_mental_health: value,
                   })
                 }
-                placeholder="Type the person's mental health status."
-                className="h-16 text-xl font-medium border-2"
-              />
+              >
+                <SelectTrigger className="h-16 text-xl font-medium border-2">
+                  <SelectValue placeholder="Select mental health status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Yes">Yes</SelectItem>
+                  <SelectItem value="No">No</SelectItem>
+                  <SelectItem value="Unknown">Unknown</SelectItem>
+                  <SelectItem value="Prefer not to answer">Prefer not to answer</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <Label htmlFor="client_chronic_health" className="text-2xl font-bold mb-4 block text-foreground">
-                Chronic Health
+                Chronic Health Conditions
               </Label>
-              <Input
+              <Select
                 value={formData.client_chronic_health}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    client_chronic_health: e.target.value,
+                    client_chronic_health: value,
                   })
                 }
-                placeholder="Type the person's chronic health status."
-                className="h-16 text-xl font-medium border-2"
-              />
+              >
+                <SelectTrigger className="h-16 text-xl font-medium border-2">
+                  <SelectValue placeholder="Select chronic health status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Yes">Yes</SelectItem>
+                  <SelectItem value="No">No</SelectItem>
+                  <SelectItem value="Unknown">Unknown</SelectItem>
+                  <SelectItem value="Prefer not to answer">Prefer not to answer</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <Label htmlFor="client_id_documents" className="text-2xl font-bold mb-4 block text-foreground">
                 ID Documents
               </Label>
-              <Input
+              <Select
                 value={formData.client_id_documents}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    client_id_documents: e.target.value,
+                    client_id_documents: value,
                   })
                 }
-                placeholder="Type the person's ID documents status."
-                className="h-16 text-xl font-medium border-2"
-              />
+              >
+                <SelectTrigger className="h-16 text-xl font-medium border-2">
+                  <SelectValue placeholder="Select ID document status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Has Valid ID">Has Valid ID</SelectItem>
+                  <SelectItem value="Has Expired ID">Has Expired ID</SelectItem>
+                  <SelectItem value="No ID">No ID</SelectItem>
+                  <SelectItem value="Birth Certificate Only">Birth Certificate Only</SelectItem>
+                  <SelectItem value="Social Security Card Only">Social Security Card Only</SelectItem>
+                  <SelectItem value="Unknown">Unknown</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
