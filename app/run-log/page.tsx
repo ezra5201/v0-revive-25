@@ -24,6 +24,7 @@ import {
   Package,
   Clock,
   Activity,
+  List,
 } from "lucide-react"
 
 interface RunContact {
@@ -94,20 +95,30 @@ export default function RunLogPage() {
   const [runContacts, setRunContacts] = useState<RunContact[]>([])
 
   const [formData, setFormData] = useState({
-    run_id: "",
-    client_id: "",
+    staff_id: "",
+    location_mode: "auto", // Default to auto-detect
     location_id: "",
-    staff_member: "",
-    location_mode: "manual",
     custom_location: "",
+    run_id: "",
+    client_name: "",
+    client_age: "",
+    client_gender: "",
+    client_race: "",
+    client_veteran_status: "",
+    client_housing_status: "",
+    client_income_source: "",
+    client_disabilities: "",
+    client_substance_use: "",
+    client_mental_health: "",
+    client_chronic_health: "",
+    client_id_documents: "",
+    client_phone: "",
+    client_email: "",
     services_provided: [] as string[],
-    medical_concerns: "",
-    housing_status: "",
-    follow_up_needed: false,
-    follow_up_notes: "",
-    new_client_first_name: "",
-    new_client_last_name: "",
-    is_new_client: false,
+    inventory_provided: [] as string[],
+    notes: "",
+    contact_date: new Date().toISOString().split("T")[0],
+    contact_time: new Date().toTimeString().slice(0, 5),
   })
 
   const [currentStep, setCurrentStep] = useState(1)
@@ -147,7 +158,7 @@ export default function RunLogPage() {
     fetchClients()
     fetchActiveRuns()
     fetchStaffMembers()
-    setFormData((prev) => ({ ...prev, staff_member: "Andrea Leflore" }))
+    setFormData((prev) => ({ ...prev, staff_id: "Andrea Leflore" }))
   }, [])
 
   useEffect(() => {
@@ -331,12 +342,7 @@ export default function RunLogPage() {
         ...formData,
         location_id: formData.location_mode === "auto" ? null : formData.location_id,
         custom_location: formData.location_mode === "auto" ? formData.custom_location : null,
-        client_name: formData.is_new_client
-          ? `${formData.new_client_first_name} ${formData.new_client_last_name}`.trim()
-          : formData.new_client_first_name || "Unknown Client",
-        is_new_client: formData.new_client_first_name && !formData.client_id,
-        new_client_first_name: formData.new_client_first_name,
-        new_client_last_name: formData.new_client_last_name,
+        client_name: formData.client_name.trim() || "Unknown Client",
       }
 
       console.log("[v0] Submit data:", submitData)
@@ -379,20 +385,30 @@ export default function RunLogPage() {
 
   const resetForm = () => {
     setFormData({
-      run_id: "",
-      client_id: "",
+      staff_id: "",
+      location_mode: "auto", // Default to auto-detect
       location_id: "",
-      staff_member: "Andrea Leflore",
-      location_mode: "manual",
       custom_location: "",
+      run_id: "",
+      client_name: "",
+      client_age: "",
+      client_gender: "",
+      client_race: "",
+      client_veteran_status: "",
+      client_housing_status: "",
+      client_income_source: "",
+      client_disabilities: "",
+      client_substance_use: "",
+      client_mental_health: "",
+      client_chronic_health: "",
+      client_id_documents: "",
+      client_phone: "",
+      client_email: "",
       services_provided: [],
-      medical_concerns: "",
-      housing_status: "",
-      follow_up_needed: false,
-      follow_up_notes: "",
-      new_client_first_name: "",
-      new_client_last_name: "",
-      is_new_client: false,
+      inventory_provided: [],
+      notes: "",
+      contact_date: new Date().toISOString().split("T")[0],
+      contact_time: new Date().toTimeString().slice(0, 5),
     })
     setClientSearch("")
     setCurrentLocation(null)
@@ -425,12 +441,10 @@ export default function RunLogPage() {
     switch (currentStep) {
       case 1:
         canProceed =
-          formData.staff_member && (formData.location_mode === "auto" ? formData.custom_location : formData.location_id)
+          formData.staff_id && (formData.location_mode === "auto" ? formData.custom_location : formData.location_id)
         break
       case 2:
-        canProceed = formData.is_new_client
-          ? formData.new_client_first_name && formData.new_client_last_name
-          : formData.client_id || formData.new_client_first_name
+        canProceed = formData.client_name
         break
       case 3:
         canProceed = formData.services_provided.length > 0
@@ -491,31 +505,22 @@ export default function RunLogPage() {
             <div>
               <Label className="text-2xl font-bold mb-4 block text-foreground">Location</Label>
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                {/* Primary Auto-detect Location Button */}
+                <div className="space-y-4">
                   <Button
                     type="button"
-                    variant={formData.location_mode === "auto" ? "default" : "outline"}
                     onClick={() => {
                       setFormData({ ...formData, location_mode: "auto", location_id: "" })
                       getCurrentLocation()
                     }}
-                    className="h-16 text-xl font-semibold border-2 justify-start"
+                    className="w-full h-16 text-xl font-semibold border-2 justify-start bg-primary hover:bg-primary/90 text-primary-foreground"
                     disabled={isGettingLocation}
                   >
                     <MapPin className="w-6 h-6 mr-3" />
                     {isGettingLocation ? "Getting Location..." : "Auto-detect Location"}
                   </Button>
-                  <Button
-                    type="button"
-                    variant={formData.location_mode === "manual" ? "default" : "outline"}
-                    onClick={() => setFormData({ ...formData, location_mode: "manual", custom_location: "" })}
-                    className="h-16 text-xl font-semibold border-2 justify-start"
-                  >
-                    Select from List
-                  </Button>
-                </div>
 
-                {formData.location_mode === "auto" ? (
+                  {/* Address Input Field */}
                   <div className="relative">
                     <Input
                       value={formData.custom_location}
@@ -524,21 +529,28 @@ export default function RunLogPage() {
                       className="h-16 text-xl font-medium pr-16 border-2"
                       disabled={isGettingLocation}
                     />
-                    {isGettingLocation ? (
+                    {isGettingLocation && (
                       <Loader2 className="absolute right-4 top-1/2 transform -translate-y-1/2 h-6 w-6 animate-spin text-gray-400" />
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={getCurrentLocation}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 h-12 w-12 p-0"
-                      >
-                        <MapPin className="h-6 w-6" />
-                      </Button>
                     )}
                   </div>
-                ) : (
+
+                  {/* Alternative Option */}
+                  <div className="pt-4 border-t border-gray-200">
+                    <p className="text-lg font-medium text-gray-600 mb-3">Or select from scheduled locations:</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setFormData({ ...formData, location_mode: "manual", custom_location: "" })}
+                      className="w-full h-14 text-lg font-medium border-2 justify-start"
+                    >
+                      <List className="w-5 h-5 mr-3" />
+                      Select from List
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Show dropdown only when manual mode is selected */}
+                {formData.location_mode === "manual" && (
                   <Select
                     value={formData.location_id}
                     onValueChange={(value) => setFormData({ ...formData, location_id: value })}
@@ -567,8 +579,8 @@ export default function RunLogPage() {
                 Staff Member
               </Label>
               <Select
-                value={formData.staff_member}
-                onValueChange={(value) => setFormData({ ...formData, staff_member: value })}
+                value={formData.staff_id}
+                onValueChange={(value) => setFormData({ ...formData, staff_id: value })}
               >
                 <SelectTrigger className="h-16 text-xl font-medium border-2">
                   <SelectValue placeholder="Select staff member" />
@@ -593,12 +605,11 @@ export default function RunLogPage() {
                 First Name
               </Label>
               <Input
-                value={formData.new_client_first_name}
+                value={formData.client_name}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    new_client_first_name: e.target.value,
-                    client_id: "", // Clear selection when typing manually
+                    client_name: e.target.value,
                   })
                 }
                 placeholder="Type the person's name or nickname."
@@ -606,19 +617,224 @@ export default function RunLogPage() {
               />
             </div>
 
+            {/* Additional client information fields */}
             <div>
-              <Label htmlFor="last_name" className="text-2xl font-bold mb-4 block text-foreground">
-                Last Name
+              <Label htmlFor="client_age" className="text-2xl font-bold mb-4 block text-foreground">
+                Age
               </Label>
               <Input
-                value={formData.new_client_last_name}
+                value={formData.client_age}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    new_client_last_name: e.target.value,
+                    client_age: e.target.value,
                   })
                 }
-                placeholder="Type the person's last name."
+                placeholder="Type the person's age."
+                className="h-16 text-xl font-medium border-2"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="client_gender" className="text-2xl font-bold mb-4 block text-foreground">
+                Gender
+              </Label>
+              <Input
+                value={formData.client_gender}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    client_gender: e.target.value,
+                  })
+                }
+                placeholder="Type the person's gender."
+                className="h-16 text-xl font-medium border-2"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="client_race" className="text-2xl font-bold mb-4 block text-foreground">
+                Race
+              </Label>
+              <Input
+                value={formData.client_race}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    client_race: e.target.value,
+                  })
+                }
+                placeholder="Type the person's race."
+                className="h-16 text-xl font-medium border-2"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="client_veteran_status" className="text-2xl font-bold mb-4 block text-foreground">
+                Veteran Status
+              </Label>
+              <Input
+                value={formData.client_veteran_status}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    client_veteran_status: e.target.value,
+                  })
+                }
+                placeholder="Type the person's veteran status."
+                className="h-16 text-xl font-medium border-2"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="client_housing_status" className="text-2xl font-bold mb-4 block text-foreground">
+                Housing Status
+              </Label>
+              <Input
+                value={formData.client_housing_status}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    client_housing_status: e.target.value,
+                  })
+                }
+                placeholder="Type the person's housing status."
+                className="h-16 text-xl font-medium border-2"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="client_income_source" className="text-2xl font-bold mb-4 block text-foreground">
+                Income Source
+              </Label>
+              <Input
+                value={formData.client_income_source}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    client_income_source: e.target.value,
+                  })
+                }
+                placeholder="Type the person's income source."
+                className="h-16 text-xl font-medium border-2"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="client_disabilities" className="text-2xl font-bold mb-4 block text-foreground">
+                Disabilities
+              </Label>
+              <Input
+                value={formData.client_disabilities}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    client_disabilities: e.target.value,
+                  })
+                }
+                placeholder="Type the person's disabilities."
+                className="h-16 text-xl font-medium border-2"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="client_substance_use" className="text-2xl font-bold mb-4 block text-foreground">
+                Substance Use
+              </Label>
+              <Input
+                value={formData.client_substance_use}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    client_substance_use: e.target.value,
+                  })
+                }
+                placeholder="Type the person's substance use."
+                className="h-16 text-xl font-medium border-2"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="client_mental_health" className="text-2xl font-bold mb-4 block text-foreground">
+                Mental Health
+              </Label>
+              <Input
+                value={formData.client_mental_health}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    client_mental_health: e.target.value,
+                  })
+                }
+                placeholder="Type the person's mental health status."
+                className="h-16 text-xl font-medium border-2"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="client_chronic_health" className="text-2xl font-bold mb-4 block text-foreground">
+                Chronic Health
+              </Label>
+              <Input
+                value={formData.client_chronic_health}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    client_chronic_health: e.target.value,
+                  })
+                }
+                placeholder="Type the person's chronic health status."
+                className="h-16 text-xl font-medium border-2"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="client_id_documents" className="text-2xl font-bold mb-4 block text-foreground">
+                ID Documents
+              </Label>
+              <Input
+                value={formData.client_id_documents}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    client_id_documents: e.target.value,
+                  })
+                }
+                placeholder="Type the person's ID documents status."
+                className="h-16 text-xl font-medium border-2"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="client_phone" className="text-2xl font-bold mb-4 block text-foreground">
+                Phone Number
+              </Label>
+              <Input
+                value={formData.client_phone}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    client_phone: e.target.value,
+                  })
+                }
+                placeholder="Type the person's phone number."
+                className="h-16 text-xl font-medium border-2"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="client_email" className="text-2xl font-bold mb-4 block text-foreground">
+                Email Address
+              </Label>
+              <Input
+                value={formData.client_email}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    client_email: e.target.value,
+                  })
+                }
+                placeholder="Type the person's email address."
                 className="h-16 text-xl font-medium border-2"
               />
             </div>
@@ -671,8 +887,8 @@ export default function RunLogPage() {
                 Housing Status
               </Label>
               <Select
-                value={formData.housing_status}
-                onValueChange={(value) => setFormData({ ...formData, housing_status: value })}
+                value={formData.client_housing_status}
+                onValueChange={(value) => setFormData({ ...formData, client_housing_status: value })}
               >
                 <SelectTrigger className="h-16 text-xl font-medium border-2">
                   <SelectValue placeholder="Select housing status" />
@@ -703,8 +919,8 @@ export default function RunLogPage() {
               </Label>
               <Textarea
                 id="medical_concerns"
-                value={formData.medical_concerns}
-                onChange={(e) => setFormData({ ...formData, medical_concerns: e.target.value })}
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder="Any medical concerns or observations"
                 rows={4}
                 className="text-xl font-medium border-2"
@@ -728,8 +944,8 @@ export default function RunLogPage() {
                   </Label>
                   <Textarea
                     id="follow_up_notes"
-                    value={formData.follow_up_notes}
-                    onChange={(e) => setFormData({ ...formData, follow_up_notes: e.target.value })}
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     placeholder="What follow-up is needed?"
                     rows={4}
                     className="text-xl font-medium border-2"
