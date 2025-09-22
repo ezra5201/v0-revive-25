@@ -131,7 +131,7 @@ export default function RunLogPage() {
     day: "numeric",
   })
 
-  const userName = "John Doe"
+  const userName = "Andrea Leflore"
 
   const prevStep = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 1))
@@ -489,26 +489,6 @@ export default function RunLogPage() {
         return (
           <div className="space-y-8">
             <div>
-              <Label htmlFor="run_id" className="text-2xl font-bold mb-4 block text-foreground">
-                Today's Run (Optional)
-              </Label>
-              <Select value={formData.run_id} onValueChange={handleRunChange}>
-                <SelectTrigger className="h-16 text-xl font-medium border-2">
-                  <SelectValue placeholder="Select run (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {runs.map((run) => (
-                    <SelectItem key={run.id} value={run.id.toString()} className="text-xl font-medium py-4">
-                      {run.planned_locations && run.planned_locations.length > 0
-                        ? `${Array.isArray(run.planned_locations) ? run.planned_locations[0] : JSON.parse(run.planned_locations)[0]} - ${run.scheduled_time || "No time"}`
-                        : `Run ${run.id} - ${run.scheduled_time || "No time"}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
               <Label className="text-2xl font-bold mb-4 block text-foreground">Location</Label>
               <div className="space-y-6">
                 <div className="grid grid-cols-1 gap-4">
@@ -605,55 +585,38 @@ export default function RunLogPage() {
         return (
           <div className="space-y-8">
             <div>
-              <Label className="text-2xl font-bold mb-4 block text-foreground">Select Person</Label>
+              <Label htmlFor="first_name" className="text-2xl font-bold mb-4 block text-foreground">
+                First Name
+              </Label>
+              <Input
+                value={formData.new_client_first_name}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    new_client_first_name: e.target.value,
+                    client_id: "", // Clear selection when typing manually
+                  })
+                }
+                placeholder="Type the person's name or nickname."
+                className="h-16 text-xl font-medium border-2"
+              />
+            </div>
 
-              {runContacts.length > 0 && (
-                <div className="space-y-4 mb-8">
-                  <div className="text-xl font-semibold text-foreground">People already logged for this run:</div>
-                  <div className="max-h-64 overflow-y-auto border-2 rounded-lg">
-                    <div className="space-y-2 p-2">
-                      {runContacts.map((contact) => (
-                        <Button
-                          key={contact.id}
-                          type="button"
-                          variant={formData.client_id === contact.id.toString() ? "default" : "outline"}
-                          onClick={() =>
-                            setFormData({
-                              ...formData,
-                              client_id: contact.id.toString(),
-                              new_client_first_name: "", // Clear manual input when selecting from list
-                            })
-                          }
-                          className="w-full h-16 text-xl font-semibold justify-start border-2 px-4"
-                        >
-                          <div className="text-left">
-                            <div className="font-bold">{contact.client_name}</div>
-                            <div className="text-lg opacity-75">{contact.location_name}</div>
-                          </div>
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <div className="text-xl font-semibold text-foreground">
-                  {runContacts.length > 0 ? "Or enter new person's name:" : "Enter person's name:"}
-                </div>
-                <Input
-                  value={formData.new_client_first_name}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      new_client_first_name: e.target.value,
-                      client_id: "", // Clear selection when typing manually
-                    })
-                  }
-                  placeholder="Type the person's name or nickname."
-                  className="h-16 text-xl font-medium border-2"
-                />
-              </div>
+            <div>
+              <Label htmlFor="last_name" className="text-2xl font-bold mb-4 block text-foreground">
+                Last Name
+              </Label>
+              <Input
+                value={formData.new_client_last_name}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    new_client_last_name: e.target.value,
+                  })
+                }
+                placeholder="Type the person's last name."
+                className="h-16 text-xl font-medium border-2"
+              />
             </div>
           </div>
         )
