@@ -767,32 +767,33 @@ export default function RunLogPage() {
 
   return (
     <div className="min-h-screen bg-background p-4">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <Image
-            src="/revive-impact-logo.png"
-            alt="ReVive IMPACT Logo"
-            width={120}
-            height={34}
-            className="h-8 w-auto"
-            priority
-          />
-          <div className="text-lg font-semibold text-foreground">{userName}</div>
-        </div>
-      </div>
+      <Card className="shadow-lg border-2 mb-6">
+        <CardHeader className="pb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-4">
+              <Image
+                src="/revive-impact-logo.png"
+                alt="ReVive IMPACT Logo"
+                width={120}
+                height={34}
+                className="h-8 w-auto"
+                priority
+              />
+              <div className="text-lg font-semibold text-foreground">{userName}</div>
+            </div>
+          </div>
 
-      <Card className="shadow-lg border-2">
-        <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div>
               <h1 className="text-4xl font-bold text-foreground mb-2">Run Log</h1>
               <p className="text-xl font-medium text-foreground">{today}</p>
             </div>
-            <div className="flex items-center space-x-3">
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <Button
                 variant="outline"
                 size="lg"
-                className="border-2 hover:bg-muted/50 bg-transparent text-lg font-semibold"
+                className="border-2 hover:bg-muted/50 bg-transparent text-lg font-semibold h-14"
               >
                 <Filter className="w-5 h-5 mr-2" />
                 Filters
@@ -802,7 +803,7 @@ export default function RunLogPage() {
                 <DialogTrigger asChild>
                   <Button
                     size="lg"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-3 text-xl"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 text-xl h-14"
                   >
                     <Plus className="w-5 h-5 mr-2" />
                     Contact
@@ -879,8 +880,10 @@ export default function RunLogPage() {
             </div>
           </div>
         </CardHeader>
+      </Card>
 
-        <CardContent></CardContent>
+      <Card className="shadow-lg border-2">
+        <CardContent className="pt-6">{/* Contact list content will go here */}</CardContent>
       </Card>
     </div>
   )
