@@ -86,7 +86,7 @@ export default function DesignPreviewPage() {
                       <span className="font-bold text-gray-900 text-sm">ReVive IMPACT</span>
                     </div>
                     <div className="flex gap-2">
-                      {["CONTACTS", "OUTREACH", "DASHBOARD", "REPORTS"].map((item, i) => (
+                      {["CONTACT-LOG", "OUTREACH", "DASHBOARD", "REPORTS"].map((item, i) => (
                         <div
                           key={item}
                           className={`px-3 py-1.5 text-xs rounded font-medium ${
@@ -134,7 +134,7 @@ export default function DesignPreviewPage() {
               <div className="text-emerald-400 font-bold mb-2">Navigation Simplified</div>
               <div className="text-2xl font-bold text-white mb-2">6 → 4 Items</div>
               <div className="text-sm text-slate-400">
-                Contact Log, CM, and OT consolidated into single CONTACTS page
+                Contact Log, CM, and OT consolidated into single CONTACT-LOG page
               </div>
             </div>
             <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
