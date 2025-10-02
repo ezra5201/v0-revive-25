@@ -47,6 +47,11 @@ export default function ContactLogPage() {
     // Implement client click logic here
   }, [])
 
+  const handleNewProspectFromSearch = useCallback((searchQuery: string) => {
+    setPrefilledProspectName(searchQuery)
+    setIsNewProspectDialogOpen(true)
+  }, [])
+
   const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
 
   const {
@@ -122,7 +127,11 @@ export default function ContactLogPage() {
       <Header onClientSelect={handleClientSearch} />
 
       {/* Search Bar */}
-      <GlobalSearch onClientSelect={handleClientSearch} clients={filterData.clients} />
+      <GlobalSearch
+        onClientSelect={handleClientSearch}
+        onNewProspect={handleNewProspectFromSearch}
+        clients={filterData.clients}
+      />
 
       <ActionBar
         viewFilter={viewFilter}

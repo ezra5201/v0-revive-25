@@ -1,17 +1,19 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { Search, CommandIcon } from "lucide-react"
+import { Search, CommandIcon, UserPlus } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
+import { Button } from "@/components/ui/button"
+import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 interface GlobalSearchProps {
   onClientSelect?: (clientName: string) => void
+  onNewProspect?: (searchQuery: string) => void
   clients?: { name: string }[]
 }
 
-export function GlobalSearch({ onClientSelect, clients = [] }: GlobalSearchProps) {
+export function GlobalSearch({ onClientSelect, onNewProspect, clients = [] }: GlobalSearchProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [filteredClients, setFilteredClients] = useState<{ name: string }[]>([])
@@ -38,7 +40,7 @@ export function GlobalSearch({ onClientSelect, clients = [] }: GlobalSearchProps
       } else {
         const filtered = clients.filter((client) => client.name.toLowerCase().includes(searchQuery.toLowerCase()))
         setFilteredClients(filtered.slice(0, 10)) // Limit to 10 results
-        setIsOpen(filtered.length > 0)
+        setIsOpen(true) // Show popover even when no results to display "New Prospect" button
       }
     }, 150) // Debounce delay
 
@@ -55,12 +57,19 @@ export function GlobalSearch({ onClientSelect, clients = [] }: GlobalSearchProps
     [onClientSelect],
   )
 
+  const handleNewProspectClick = useCallback(() => {
+    onNewProspect?.(searchQuery)
+    setIsOpen(false)
+    setSearchQuery("")
+    inputRef.current?.blur()
+  }, [onNewProspect, searchQuery])
+
   return (
     <div className="bg-white border-b border-gray-200">
       <div className="px-4 sm:px-6 py-3">
         <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
-            <div className="w-full max-w-2xl mx-auto relative">
+            <div className="w-full max-w-2xl relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
               <Input
                 ref={inputRef}
@@ -68,7 +77,7 @@ export function GlobalSearch({ onClientSelect, clients = [] }: GlobalSearchProps
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => {
-                  if (searchQuery.trim() !== "" && filteredClients.length > 0) {
+                  if (searchQuery.trim() !== "") {
                     setIsOpen(true)
                   }
                 }}
@@ -87,20 +96,32 @@ export function GlobalSearch({ onClientSelect, clients = [] }: GlobalSearchProps
           >
             <Command>
               <CommandList>
-                <CommandEmpty>No clients found.</CommandEmpty>
-                <CommandGroup heading="Clients">
-                  {filteredClients.map((client) => (
-                    <CommandItem
-                      key={client.name}
-                      value={client.name}
-                      onSelect={() => handleClientClick(client.name)}
-                      className="cursor-pointer"
+                {filteredClients.length === 0 ? (
+                  <div className="p-4">
+                    <Button
+                      onClick={handleNewProspectClick}
+                      variant="outline"
+                      className="w-full justify-start bg-transparent"
                     >
-                      <Search className="mr-2 h-4 w-4 text-gray-400" />
-                      <span>{client.name}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      New Prospect
+                    </Button>
+                  </div>
+                ) : (
+                  <CommandGroup heading="Clients">
+                    {filteredClients.map((client) => (
+                      <CommandItem
+                        key={client.name}
+                        value={client.name}
+                        onSelect={() => handleClientClick(client.name)}
+                        className="cursor-pointer"
+                      >
+                        <Search className="mr-2 h-4 w-4 text-gray-400" />
+                        <span>{client.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
               </CommandList>
             </Command>
           </PopoverContent>
