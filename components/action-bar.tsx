@@ -257,14 +257,14 @@ export function ActionBar({
     <div className="bg-white border-b border-gray-200 px-4 sm:px-16 py-3">
       <div className="flex flex-col gap-4">
         {/* Main action bar */}
-        <div className="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between min-h-10">
+        <div className="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:items-center lg:justify-start min-h-10 lg:gap-4">
           {/* Left side - Selection info */}
           <div className="flex items-center space-x-3">
             {selectedCount > 0 && <span className="text-sm text-gray-700">{selectedCount} selected</span>}
           </div>
 
-          {/* Right side - Actions and filters */}
-          <div className="flex items-center justify-between lg:justify-end space-x-2 lg:space-x-3">
+          {/* Actions and filters */}
+          <div className="flex items-center justify-between lg:justify-start space-x-2 lg:space-x-3">
             {/* Selection-based actions */}
             {selectedCount > 0 && (
               <div className="flex items-center space-x-2">
