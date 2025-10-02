@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const finalContactId = contact_id || 0
+    const finalContactId = contact_id && contact_id > 0 ? contact_id : null
 
     const result = await sql`
       INSERT INTO ot_checkins (contact_id, client_name, client_uuid, provider_name, notes, status)

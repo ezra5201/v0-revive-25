@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const finalContactId = contact_id || 0
+    const finalContactId = contact_id && contact_id > 0 ? contact_id : null
 
     // Create the check-in record with status 'Draft'
     const result = await sql`
