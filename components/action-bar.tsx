@@ -1,16 +1,19 @@
 "use client"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Download, Utensils, ChevronDown, X, Calendar, CalendarDays, SlidersHorizontal } from "lucide-react"
+import { Download, Utensils, ChevronDown, X, Calendar, CalendarDays, SlidersHorizontal, Filter } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+
+type ViewFilter = "all" | "today" | "cm" | "ot"
 
 interface Client {
   name: string
 }
 
 interface ActionBarProps {
-  activeTab: "today" | "all" | "client"
+  viewFilter: ViewFilter
+  onViewFilterChange: (view: ViewFilter) => void
   selectedCount: number
   selectedContactIds?: number[]
   onExport?: () => void
@@ -26,7 +29,8 @@ interface ActionBarProps {
 }
 
 export function ActionBar({
-  activeTab,
+  viewFilter,
+  onViewFilterChange,
   selectedCount,
   selectedContactIds = [],
   onExport,
@@ -40,10 +44,12 @@ export function ActionBar({
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedProviders, setSelectedProviders] = useState<string[]>([])
+  const [showViewDropdown, setShowViewDropdown] = useState(false)
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false)
   const [showProviderDropdown, setShowProviderDropdown] = useState(false)
   const [showDateFilter, setShowDateFilter] = useState(false)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const viewDropdownRef = useRef<HTMLDivElement>(null)
   const categoryDropdownRef = useRef<HTMLDivElement>(null)
   const providerDropdownRef = useRef<HTMLDivElement>(null)
   const dateFilterRef = useRef<HTMLDivElement>(null)
@@ -123,6 +129,9 @@ export function ActionBar({
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      if (viewDropdownRef.current && !viewDropdownRef.current.contains(event.target as Node)) {
+        setShowViewDropdown(false)
+      }
       if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
         setShowCategoryDropdown(false)
       }
@@ -140,9 +149,36 @@ export function ActionBar({
 
   const activeFiltersCount = selectedCategories.length + selectedProviders.length
 
+  const viewFilterLabels: Record<ViewFilter, string> = {
+    all: "All Contacts",
+    today: "Today's Check-ins",
+    cm: "CM Caseload",
+    ot: "OT Caseload",
+  }
+
   // Mobile Filter Sheet Content
   const MobileFiltersContent = () => (
     <div className="space-y-6">
+      <div className="space-y-3">
+        <h3 className="font-medium text-gray-900">View</h3>
+        <div className="space-y-2">
+          {(["all", "today", "cm", "ot"] as ViewFilter[]).map((view) => (
+            <button
+              key={view}
+              onClick={() => {
+                onViewFilterChange(view)
+                setShowMobileFilters(false)
+              }}
+              className={`w-full text-left px-4 py-3 text-sm rounded-lg border ${
+                viewFilter === view ? "bg-orange-50 border-orange-500 text-orange-700 font-medium" : "hover:bg-gray-50"
+              }`}
+            >
+              {viewFilterLabels[view]}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Provider Filter */}
       <div className="space-y-3">
         <h3 className="font-medium text-gray-900">Provider</h3>
@@ -258,155 +294,182 @@ export function ActionBar({
               </div>
             )}
 
-            {/* Desktop Filters - Only for All Contacts workflow */}
-            {activeTab === "all" && (
-              <div className="hidden lg:flex items-center space-x-3">
-                {/* Provider Filter */}
-                <div className="relative" ref={providerDropdownRef}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowProviderDropdown(!showProviderDropdown)}
-                    className="h-10 text-sm"
-                  >
-                    Provider
-                    {selectedProviders.length > 0 && (
-                      <span className="ml-1 bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
-                        {selectedProviders.length}
-                      </span>
-                    )}
-                    <ChevronDown className="ml-2 h-3 w-3" />
-                  </Button>
+            <div className="hidden lg:flex items-center space-x-3">
+              {/* View Filter Dropdown */}
+              <div className="relative" ref={viewDropdownRef}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowViewDropdown(!showViewDropdown)}
+                  className="h-10 text-sm bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  {viewFilterLabels[viewFilter]}
+                  <ChevronDown className="ml-2 h-3 w-3" />
+                </Button>
 
-                  {showProviderDropdown && (
-                    <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[200px] max-h-60 overflow-y-auto z-50">
-                      <div className="p-2">
-                        {providers.map((provider) => (
-                          <div key={provider} className="flex items-center space-x-2 py-2">
-                            <Checkbox
-                              id={`provider-${provider}`}
-                              checked={selectedProviders.includes(provider)}
-                              onCheckedChange={(checked) => handleProviderChange(provider, checked as boolean)}
-                            />
-                            <label htmlFor={`provider-${provider}`} className="text-sm cursor-pointer flex-1 font-bold">
-                              {provider}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
+                {showViewDropdown && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[200px] z-50">
+                    <div className="p-2">
+                      {(["all", "today", "cm", "ot"] as ViewFilter[]).map((view) => (
+                        <button
+                          key={view}
+                          onClick={() => {
+                            onViewFilterChange(view)
+                            setShowViewDropdown(false)
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-50 ${
+                            viewFilter === view ? "bg-orange-50 text-orange-700 font-medium" : ""
+                          }`}
+                        >
+                          {viewFilterLabels[view]}
+                        </button>
+                      ))}
                     </div>
-                  )}
-                </div>
-
-                {/* Date Filter */}
-                <div className="relative" ref={dateFilterRef}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowDateFilter(!showDateFilter)}
-                    className="h-10 text-sm"
-                  >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Date Range
-                    <ChevronDown className="ml-2 h-3 w-3" />
-                  </Button>
-
-                  {showDateFilter && (
-                    <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[200px] z-50">
-                      <div className="p-3 space-y-2">
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Last 7 days
-                        </button>
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Last 30 days
-                        </button>
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Last 3 months
-                        </button>
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Last year
-                        </button>
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Next 7 days
-                        </button>
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Next 30 days
-                        </button>
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Next 3 months
-                        </button>
-                        <hr className="my-2" />
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Custom range...
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Category Filter */}
-                <div className="relative" ref={categoryDropdownRef}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                    className="h-10 text-sm"
-                  >
-                    Category
-                    {selectedCategories.length > 0 && (
-                      <span className="ml-1 bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
-                        {selectedCategories.length}
-                      </span>
-                    )}
-                    <ChevronDown className="ml-2 h-3 w-3" />
-                  </Button>
-
-                  {showCategoryDropdown && (
-                    <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[150px] z-50">
-                      <div className="p-2">
-                        {categories.map((category) => (
-                          <div key={category} className="flex items-center space-x-2 py-2">
-                            <Checkbox
-                              id={`category-${category}`}
-                              checked={selectedCategories.includes(category)}
-                              onCheckedChange={(checked) => handleCategoryChange(category, checked as boolean)}
-                            />
-                            <label htmlFor={`category-${category}`} className="text-sm cursor-pointer flex-1">
-                              {category}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Mobile Filters Button - Only for All Contacts workflow */}
-            {activeTab === "all" && (
-              <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="lg:hidden h-10 bg-transparent">
-                    <SlidersHorizontal className="h-4 w-4 mr-2" />
-                    Filters
-                    {activeFiltersCount > 0 && (
-                      <span className="ml-1 bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
-                        {activeFiltersCount}
-                      </span>
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="bottom" className="h-[80vh]">
-                  <SheetHeader>
-                    <SheetTitle>Filters</SheetTitle>
-                  </SheetHeader>
-                  <div className="mt-6 overflow-y-auto">
-                    <MobileFiltersContent />
                   </div>
-                </SheetContent>
-              </Sheet>
-            )}
+                )}
+              </div>
+
+              {/* Provider Filter */}
+              <div className="relative" ref={providerDropdownRef}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowProviderDropdown(!showProviderDropdown)}
+                  className="h-10 text-sm"
+                >
+                  Provider
+                  {selectedProviders.length > 0 && (
+                    <span className="ml-1 bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
+                      {selectedProviders.length}
+                    </span>
+                  )}
+                  <ChevronDown className="ml-2 h-3 w-3" />
+                </Button>
+
+                {showProviderDropdown && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[200px] max-h-60 overflow-y-auto z-50">
+                    <div className="p-2">
+                      {providers.map((provider) => (
+                        <div key={provider} className="flex items-center space-x-2 py-2">
+                          <Checkbox
+                            id={`provider-${provider}`}
+                            checked={selectedProviders.includes(provider)}
+                            onCheckedChange={(checked) => handleProviderChange(provider, checked as boolean)}
+                          />
+                          <label htmlFor={`provider-${provider}`} className="text-sm cursor-pointer flex-1 font-bold">
+                            {provider}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Date Filter */}
+              <div className="relative" ref={dateFilterRef}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDateFilter(!showDateFilter)}
+                  className="h-10 text-sm"
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Date Range
+                  <ChevronDown className="ml-2 h-3 w-3" />
+                </Button>
+
+                {showDateFilter && (
+                  <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[200px] z-50">
+                    <div className="p-3 space-y-2">
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                        Last 7 days
+                      </button>
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                        Last 30 days
+                      </button>
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                        Last 3 months
+                      </button>
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">Last year</button>
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                        Next 7 days
+                      </button>
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                        Next 30 days
+                      </button>
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                        Next 3 months
+                      </button>
+                      <hr className="my-2" />
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                        Custom range...
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Category Filter */}
+              <div className="relative" ref={categoryDropdownRef}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                  className="h-10 text-sm"
+                >
+                  Category
+                  {selectedCategories.length > 0 && (
+                    <span className="ml-1 bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
+                      {selectedCategories.length}
+                    </span>
+                  )}
+                  <ChevronDown className="ml-2 h-3 w-3" />
+                </Button>
+
+                {showCategoryDropdown && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[150px] z-50">
+                    <div className="p-2">
+                      {categories.map((category) => (
+                        <div key={category} className="flex items-center space-x-2 py-2">
+                          <Checkbox
+                            id={`category-${category}`}
+                            checked={selectedCategories.includes(category)}
+                            onCheckedChange={(checked) => handleCategoryChange(category, checked as boolean)}
+                          />
+                          <label htmlFor={`category-${category}`} className="text-sm cursor-pointer flex-1">
+                            {category}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="lg:hidden h-10 bg-transparent">
+                  <SlidersHorizontal className="h-4 w-4 mr-2" />
+                  Filters
+                  {activeFiltersCount > 0 && (
+                    <span className="ml-1 bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-[80vh]">
+                <SheetHeader>
+                  <SheetTitle>Filters</SheetTitle>
+                </SheetHeader>
+                <div className="mt-6 overflow-y-auto">
+                  <MobileFiltersContent />
+                </div>
+              </SheetContent>
+            </Sheet>
 
             {hasData && (
               <Button variant="outline" size="sm" onClick={onExport} className="h-10 bg-transparent">
@@ -417,8 +480,7 @@ export function ActionBar({
           </div>
         </div>
 
-        {/* Active Filters Row - Only for All Contacts workflow */}
-        {activeTab === "all" && activeFiltersCount > 0 && (
+        {activeFiltersCount > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-gray-600">Active filters:</span>
 

@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useState, useCallback } from "react"
 import { ContactTable } from "@/components/contact-table"
 import { QuickCheckinDialog } from "@/components/quick-checkin-dialog"
 import { NewProspectDialog } from "@/components/new-prospect-dialog"
@@ -12,18 +11,13 @@ import { Header } from "@/components/header"
 import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
 import { GlobalSearch } from "@/components/global-search"
-import { useCMContacts } from "@/hooks/use-cm-contacts"
-import { useOTContacts } from "@/hooks/use-ot-contacts"
 import { useContacts } from "@/hooks/use-contacts"
 import { useDatabase } from "@/hooks/use-database"
 
-type MainTab = "today" | "cm" | "ot"
+type ViewFilter = "all" | "today" | "cm" | "ot"
 
 export default function ContactLogPage() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-
-  const [activeTab, setActiveTab] = useState<MainTab>("today")
+  const [viewFilter, setViewFilter] = useState<ViewFilter>("all")
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [drawerClientName, setDrawerClientName] = useState<string | null>(null)
 
@@ -53,96 +47,33 @@ export default function ContactLogPage() {
     // Implement client click logic here
   }, [])
 
-  useEffect(() => {
-    const tab = searchParams.get("tab")
-
-    if (tab === "cm") {
-      setActiveTab("cm")
-      setFilters({ categories: [], providers: ["Andrea Leflore"] })
-    } else if (tab === "ot") {
-      setActiveTab("ot")
-      setFilters({ categories: [], providers: [] })
-    } else if (tab === "today") {
-      setActiveTab("today")
-    } else {
-      router.replace("/contact-log?tab=today")
-      setActiveTab("today")
-    }
-  }, [searchParams, router])
-
   const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
 
   const {
-    contacts: cmContacts,
-    filterData: cmFilterData,
-    isLoading: cmLoading,
-    error: cmError,
-    refetch: refetchCM,
-  } = useCMContacts(activeTab === "cm" ? "all" : "today", filters)
-
-  const {
-    contacts: otContacts,
-    filterData: otFilterData,
-    loading: otLoading,
-    error: otError,
-    refetch: refetchOT,
-  } = useOTContacts(activeTab === "ot" ? "all" : "today", filters.categories, filters.providers)
-
-  const {
-    contacts: todayContacts,
-    filterData: todayFilterData,
-    isLoading: todayLoading,
-    error: todayError,
-    refetch: refetchToday,
-  } = useContacts("today", filters)
-
-  const contacts = activeTab === "cm" ? cmContacts : activeTab === "ot" ? otContacts : todayContacts
-  const filterData = activeTab === "cm" ? cmFilterData : activeTab === "ot" ? otFilterData : todayFilterData
-  const contactsLoading = activeTab === "cm" ? cmLoading : activeTab === "ot" ? otLoading : todayLoading
-  const contactsError = activeTab === "cm" ? cmError : activeTab === "ot" ? otError : todayError
-  const refetchContacts = activeTab === "cm" ? refetchCM : activeTab === "ot" ? refetchOT : refetchToday
-
-  const updateURL = useCallback(
-    (tab: MainTab) => {
-      const params = new URLSearchParams()
-
-      if (tab === "cm") {
-        params.set("tab", "cm")
-      } else if (tab === "ot") {
-        params.set("tab", "ot")
-      } else if (tab === "today") {
-        params.set("tab", "today")
-      }
-
-      const newURL = `/contact-log?${params.toString()}`
-      router.replace(newURL)
-    },
-    [router],
-  )
+    contacts,
+    filterData,
+    isLoading: contactsLoading,
+    error: contactsError,
+    refetch: refetchContacts,
+  } = useContacts(viewFilter, filters)
 
   const handleClientRowClick = useCallback((clientName: string) => {
     setDrawerClientName(clientName)
     setIsDrawerOpen(true)
   }, [])
 
-  const handleTabChange = useCallback(
-    (tab: MainTab) => {
-      setActiveTab(tab)
-      setSelectedCount(0)
-      setSelectedContactIds([])
+  const handleViewFilterChange = useCallback((newView: ViewFilter) => {
+    setViewFilter(newView)
+    setSelectedCount(0)
+    setSelectedContactIds([])
 
-      if (tab === "cm") {
-        setFilters({ categories: [], providers: ["Andrea Leflore"] })
-      } else if (tab === "ot") {
-        setFilters({ categories: [], providers: [] })
-      } else {
-        setFilters({ categories: [], providers: [] })
-      }
-
-      updateURL(tab)
-    },
-    [updateURL],
-  )
+    // Reset filters when changing views
+    if (newView === "cm") {
+      setFilters({ categories: [], providers: ["Andrea Leflore"] })
+    } else {
+      setFilters({ categories: [], providers: [] })
+    }
+  }, [])
 
   const handleSelectionChange = useCallback((count: number, selectedIds: number[]) => {
     setSelectedCount(count)
@@ -193,46 +124,9 @@ export default function ContactLogPage() {
       {/* Search Bar */}
       <GlobalSearch onClientSelect={handleClientSearch} clients={filterData.clients} />
 
-      {/* Context Bar with Tabs */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="px-4 sm:px-6">
-          <nav className="flex space-x-8" aria-label="Tabs">
-            <button
-              onClick={() => handleTabChange("today")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "today"
-                  ? "border-orange-500 text-orange-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Today's Check-ins
-            </button>
-            <button
-              onClick={() => handleTabChange("cm")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "cm"
-                  ? "border-orange-500 text-orange-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              CM Caseload
-            </button>
-            <button
-              onClick={() => handleTabChange("ot")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "ot"
-                  ? "border-orange-500 text-orange-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              OT Caseload
-            </button>
-          </nav>
-        </div>
-      </div>
-
       <ActionBar
-        activeTab={activeTab === "cm" || activeTab === "ot" ? "all" : activeTab}
+        viewFilter={viewFilter}
+        onViewFilterChange={handleViewFilterChange}
         selectedCount={selectedCount}
         selectedContactIds={selectedContactIds}
         onExport={() => console.log("Export")}
@@ -249,7 +143,6 @@ export default function ContactLogPage() {
 
       <main className="bg-white">
         <ContactTable
-          activeTab={activeTab === "cm" || activeTab === "ot" ? "all" : activeTab}
           contacts={contacts}
           isLoading={contactsLoading}
           error={contactsError}
@@ -257,6 +150,7 @@ export default function ContactLogPage() {
           onSelectionChange={handleSelectionChange}
           onUpdateServicesClick={handleUpdateServicesClick}
           onClientRowClick={handleClientRowClick}
+          showServices={viewFilter === "today"}
         />
       </main>
 
@@ -291,8 +185,8 @@ export default function ContactLogPage() {
         onClose={handleCloseUpdateServicesDialog}
         contactData={selectedContactForUpdate}
         onServicesUpdate={handleServicesUpdated}
-        isFromCMTab={activeTab === "cm"}
-        isFromOTTab={activeTab === "ot"}
+        isFromCMTab={viewFilter === "cm"}
+        isFromOTTab={viewFilter === "ot"}
       />
     </div>
   )

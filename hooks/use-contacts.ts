@@ -32,7 +32,9 @@ interface Filters {
   providers: string[]
 }
 
-export function useContacts(activeTab: "today" | "all", filters: Filters) {
+type ViewFilter = "all" | "today" | "cm" | "ot"
+
+export function useContacts(viewFilter: ViewFilter, filters: Filters) {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [filterData, setFilterData] = useState<FilterData>({
     providers: [],
@@ -46,33 +48,38 @@ export function useContacts(activeTab: "today" | "all", filters: Filters) {
     setIsLoading(true)
     setError(null)
 
-    console.log("[v0] Fetching contacts for tab:", activeTab, "with filters:", filters)
-
     try {
       const params = new URLSearchParams()
-      params.set("tab", activeTab)
 
-      if (activeTab === "all") {
-        if (filters.categories.length) {
-          params.set("categories", filters.categories.join(","))
-        }
-        if (filters.providers.length) {
-          params.set("providers", filters.providers.join(","))
+      if (viewFilter === "today") {
+        params.set("tab", "today")
+      } else {
+        params.set("tab", "all")
+
+        // Apply service filters for CM/OT views
+        if (viewFilter === "cm") {
+          params.set("serviceFilter", "cm")
+        } else if (viewFilter === "ot") {
+          params.set("serviceFilter", "ot")
         }
       }
 
-      const url = `/api/contacts?${params.toString()}`
-      console.log("[v0] Contacts API URL:", url)
+      // Apply category and provider filters
+      if (filters.categories.length) {
+        params.set("categories", filters.categories.join(","))
+      }
+      if (filters.providers.length) {
+        params.set("providers", filters.providers.join(","))
+      }
 
+      const url = `/api/contacts?${params.toString()}`
       const response = await fetch(url)
-      console.log("[v0] Contacts API response status:", response.status)
 
       if (!response.ok) {
         throw new Error(`Contacts API returned ${response.status}: ${response.statusText}`)
       }
 
       const data = await response.json()
-      console.log("[v0] Contacts API data:", data)
 
       if (response.ok) {
         setContacts(data.contacts || [])
@@ -85,11 +92,20 @@ export function useContacts(activeTab: "today" | "all", filters: Filters) {
     } finally {
       setIsLoading(false)
     }
-  }, [activeTab, filters])
+  }, [viewFilter, filters])
 
   const fetchFilterData = useCallback(async () => {
     try {
-      const response = await fetch("/api/filters")
+      const params = new URLSearchParams()
+      if (viewFilter === "cm") {
+        params.set("serviceFilter", "cm")
+      } else if (viewFilter === "ot") {
+        params.set("serviceFilter", "ot")
+      }
+
+      const url = `/api/filters${params.toString() ? `?${params.toString()}` : ""}`
+      const response = await fetch(url)
+
       if (response.ok) {
         const data = await response.json()
         setFilterData(data)
@@ -97,7 +113,7 @@ export function useContacts(activeTab: "today" | "all", filters: Filters) {
     } catch (error) {
       console.error("Failed to fetch filter data:", error)
     }
-  }, [])
+  }, [viewFilter])
 
   useEffect(() => {
     fetchContacts()
