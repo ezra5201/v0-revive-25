@@ -60,7 +60,7 @@ export async function GET(request: NextRequest, { params }: { params: { clientNa
         g.priority as goal_priority,
         g.created_at as goal_created_at
       FROM cm_checkins c
-      LEFT JOIN goals g ON c.id = g.checkin_id
+      LEFT JOIN cm_goals g ON c.id = g.checkin_id
       WHERE c.client_name = ${clientName.trim()}
       ORDER BY c.created_at DESC, g.priority ASC, g.created_at ASC
     `
