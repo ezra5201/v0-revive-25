@@ -11,6 +11,8 @@ import { Header } from "@/components/header"
 import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
 import { GlobalSearch } from "@/components/global-search"
+import { Button } from "@/components/ui/button"
+import { UserPlus } from "lucide-react"
 import { useContacts } from "@/hooks/use-contacts"
 import { useDatabase } from "@/hooks/use-database"
 
@@ -33,6 +35,8 @@ export default function ContactLogPage() {
     providers: [],
   })
   const [prefilledProspectName, setPrefilledProspectName] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [hasSearchResults, setHasSearchResults] = useState(false)
 
   const handleClientSearch = useCallback((clientName: string) => {
     setDrawerClientName(clientName)
@@ -47,9 +51,14 @@ export default function ContactLogPage() {
     // Implement client click logic here
   }, [])
 
-  const handleNewProspectFromSearch = useCallback((searchQuery: string) => {
+  const handleNewProspectFromSearch = useCallback(() => {
     setPrefilledProspectName(searchQuery)
     setIsNewProspectDialogOpen(true)
+  }, [searchQuery])
+
+  const handleSearchChange = useCallback((query: string, hasResults: boolean) => {
+    setSearchQuery(query)
+    setHasSearchResults(hasResults)
   }, [])
 
   const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
@@ -126,12 +135,25 @@ export default function ContactLogPage() {
     <div className="min-h-screen bg-gray-50">
       <Header onClientSelect={handleClientSearch} />
 
-      {/* Search Bar */}
-      <GlobalSearch
-        onClientSelect={handleClientSearch}
-        onNewProspect={handleNewProspectFromSearch}
-        clients={filterData.clients}
-      />
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-4 sm:px-6 py-3 flex items-center gap-3">
+          <GlobalSearch
+            onClientSelect={handleClientSearch}
+            onSearchChange={handleSearchChange}
+            clients={filterData.clients}
+          />
+          {searchQuery.trim() !== "" && !hasSearchResults && (
+            <Button
+              onClick={handleNewProspectFromSearch}
+              variant="outline"
+              className="flex items-center gap-2 shrink-0 bg-transparent"
+            >
+              <UserPlus className="h-4 w-4" />
+              New Prospect
+            </Button>
+          )}
+        </div>
+      </div>
 
       <ActionBar
         viewFilter={viewFilter}
