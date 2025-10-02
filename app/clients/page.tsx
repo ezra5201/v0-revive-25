@@ -205,7 +205,7 @@ export default function ClientsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <Header onClientSelect={handleClientSearch} />
 
       <div className="bg-white border-b border-gray-200">
         <div className="px-4 sm:px-6">

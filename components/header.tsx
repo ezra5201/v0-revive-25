@@ -5,11 +5,16 @@ import { Menu, User, Settings, ArrowLeftRight } from "lucide-react"
 import { useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { AlertHeaderIndicator } from "./alert-header-indicator"
+import { RecentlyViewedIndicator } from "./recently-viewed-indicator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DatabaseStatsModal } from "./database-stats-modal"
 import Image from "next/image"
 
-export function Header() {
+interface HeaderProps {
+  onClientSelect?: (clientName: string) => void
+}
+
+export function Header({ onClientSelect }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false)
   const router = useRouter()
@@ -95,8 +100,10 @@ export function Header() {
             </Button>
           </div>
 
-          {/* Right side - Search and User */}
+          {/* Right side - Recently Viewed, User, Settings */}
           <div className="flex items-center space-x-2 sm:space-x-4">
+            {onClientSelect && <RecentlyViewedIndicator onClientSelect={onClientSelect} />}
+
             {/* User Dropdown Menu - Hidden on very small screens */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

@@ -6,6 +6,7 @@ import { QuickCheckinDialog } from "@/components/quick-checkin-dialog"
 import { NewProspectDialog } from "@/components/new-prospect-dialog"
 import { ChangeDateDialog } from "@/components/change-date-dialog"
 import { UpdateServicesDialog } from "@/components/update-services-dialog"
+import { ClientDrawer } from "@/components/client-drawer"
 import { Header } from "@/components/header"
 import { DatabaseSetup } from "@/components/database-setup"
 import { useContacts } from "@/hooks/use-contacts"
@@ -33,6 +34,8 @@ export default function ReportsPage() {
     providers: [],
   })
   const [prefilledProspectName, setPrefilledProspectName] = useState("")
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [drawerClientName, setDrawerClientName] = useState<string | null>(null)
 
   const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
   const {
@@ -57,12 +60,10 @@ export default function ReportsPage() {
     }
   }, [searchParams, router])
 
-  const handleClientRowClick = useCallback(
-    (clientName: string) => {
-      router.push(`/clients?tab=client&name=${encodeURIComponent(clientName)}&section=basic-info`)
-    },
-    [router],
-  )
+  const handleClientRowClick = useCallback((clientName: string) => {
+    setDrawerClientName(clientName)
+    setIsDrawerOpen(true)
+  }, [])
 
   const handleClientClick = useCallback((clientName: string, isToday?: boolean) => {
     setSelectedClient(clientName)
@@ -70,8 +71,8 @@ export default function ReportsPage() {
   }, [])
 
   const handleClientSearch = useCallback((clientName: string) => {
-    setSelectedClient(clientName)
-    setIsDialogOpen(true)
+    setDrawerClientName(clientName)
+    setIsDrawerOpen(true)
   }, [])
 
   const handleNewProspectClick = useCallback((searchedName?: string) => {
@@ -125,7 +126,7 @@ export default function ReportsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <Header onClientSelect={handleClientSearch} />
 
       <div className="bg-white border-b border-gray-200">
         <div className="px-4 sm:px-6">
@@ -218,6 +219,8 @@ export default function ReportsPage() {
         contactData={selectedContactForUpdate}
         onServicesUpdate={handleServicesUpdated}
       />
+
+      <ClientDrawer isOpen={isDrawerOpen} clientName={drawerClientName} onClose={() => setIsDrawerOpen(false)} />
     </div>
   )
 }

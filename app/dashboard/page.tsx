@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Header } from "@/components/header"
 import { DatabaseSetup } from "@/components/database-setup"
 import { ServicesImpactDashboard } from "@/components/services-impact-dashboard"
+import { ClientDrawer } from "@/components/client-drawer"
 import { useDatabase } from "@/hooks/use-database"
 import { AlertTriangle } from "lucide-react"
 
@@ -19,6 +20,13 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedPeriod, setSelectedPeriod] = useState<string>("Last 3 Months")
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [drawerClientName, setDrawerClientName] = useState<string | null>(null)
+
+  const handleClientSelect = useCallback((clientName: string) => {
+    setDrawerClientName(clientName)
+    setIsDrawerOpen(true)
+  }, [])
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -66,7 +74,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
+        <Header onClientSelect={handleClientSelect} />
         <main className="bg-white">
           <div className="px-4 sm:px-6 py-8">
             <div className="max-w-6xl mx-auto">
@@ -84,7 +92,7 @@ export default function DashboardPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
+        <Header onClientSelect={handleClientSelect} />
         <main className="bg-white">
           <div className="px-4 sm:px-6 py-8">
             <div className="max-w-6xl mx-auto">
@@ -118,7 +126,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <Header onClientSelect={handleClientSelect} />
 
       <main className="bg-white">
         <div className="px-4 sm:px-6 py-8">
@@ -132,6 +140,8 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+
+      <ClientDrawer isOpen={isDrawerOpen} clientName={drawerClientName} onClose={() => setIsDrawerOpen(false)} />
     </div>
   )
 }
