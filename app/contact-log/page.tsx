@@ -19,7 +19,7 @@ import { useDatabase } from "@/hooks/use-database"
 type ViewFilter = "all" | "today" | "cm" | "ot"
 
 export default function ContactLogPage() {
-  const [viewFilter, setViewFilter] = useState<ViewFilter>("all")
+  const [viewFilter, setViewFilter] = useState<ViewFilter>("today")
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [drawerClientName, setDrawerClientName] = useState<string | null>(null)
 
