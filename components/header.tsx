@@ -17,8 +17,6 @@ export function Header() {
 
   const navigationItems = [
     { name: "CONTACT LOG", path: "/contact-log" },
-    { name: "CM", path: "/cm" },
-    { name: "OT", path: "/ot" },
     { name: "OUTREACH", path: "/outreach" },
     { name: "DASHBOARD", path: "/dashboard" },
     { name: "REPORTS", path: "/reports" },
@@ -42,11 +40,8 @@ export function Header() {
   }
 
   const handleSignOut = () => {
-    // Clear any session storage or local storage if needed
     localStorage.clear()
     sessionStorage.clear()
-
-    // Redirect to login page
     router.push("/login")
   }
 

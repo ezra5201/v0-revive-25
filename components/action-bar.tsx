@@ -1,10 +1,7 @@
 "use client"
-
-import type React from "react"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Download, Utensils, ChevronDown, X, UserPlus, Calendar, CalendarDays, SlidersHorizontal } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { Download, Utensils, ChevronDown, X, Calendar, CalendarDays, SlidersHorizontal } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
@@ -27,40 +24,17 @@ interface ActionBarProps {
   onDateChangeClick?: () => void
 }
 
-// Helper function to properly capitalize names
-function capitalizeFullName(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((word) => {
-      if (word.length === 0) return word
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    })
-    .join(" ")
-}
-
 export function ActionBar({
   activeTab,
   selectedCount,
   selectedContactIds = [],
   onExport,
-  clients = [],
-  onClientSelect,
-  onNewProspect,
   providers = [],
   categories = [],
   onFiltersChange,
   onServiceCompleted,
   onDateChangeClick,
 }: ActionBarProps) {
-  const [searchValue, setSearchValue] = useState("")
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const [filteredClients, setFilteredClients] = useState<Client[]>([])
-  const [selectedIndex, setSelectedIndex] = useState(-1)
-  const [showNewProspectButton, setShowNewProspectButton] = useState(false)
-  const searchRef = useRef<HTMLInputElement>(null)
-  const suggestionsRef = useRef<HTMLDivElement>(null)
-
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedProviders, setSelectedProviders] = useState<string[]>([])
@@ -75,95 +49,12 @@ export function ActionBar({
   // Food service completion state
   const [isCompletingFood, setIsCompletingFood] = useState(false)
 
-  // Update filtered clients when search value changes
-  useEffect(() => {
-    if (searchValue.trim()) {
-      const filtered = clients.filter((client) => client.name.toLowerCase().includes(searchValue.toLowerCase()))
-      setFilteredClients(filtered)
-      setShowSuggestions(filtered.length > 0)
-      setSelectedIndex(-1)
-
-      // For Today's tab, show New Prospect button only if no matches found
-      if (activeTab === "today") {
-        setShowNewProspectButton(filtered.length === 0)
-      }
-    } else {
-      setFilteredClients([])
-      setShowSuggestions(false)
-      setSelectedIndex(-1)
-      setShowNewProspectButton(false)
-    }
-  }, [searchValue, clients, activeTab])
-
   // Notify parent of filter changes
   useEffect(() => {
     if (onFiltersChange) {
       onFiltersChange({ categories: selectedCategories, providers: selectedProviders })
     }
-  }, [selectedCategories, selectedProviders]) // Removed onFiltersChange from dependencies
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchValue(e.target.value)
-  }, [])
-
-  const handleClientSelect = useCallback(
-    (clientName: string) => {
-      setSearchValue("")
-      setShowSuggestions(false)
-      setSelectedIndex(-1)
-      setShowNewProspectButton(false)
-      if (onClientSelect) {
-        onClientSelect(clientName)
-      }
-    },
-    [onClientSelect],
-  )
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (!showSuggestions) return
-
-      switch (e.key) {
-        case "ArrowDown":
-          e.preventDefault()
-          setSelectedIndex((prev) => (prev < filteredClients.length - 1 ? prev + 1 : prev))
-          break
-        case "ArrowUp":
-          e.preventDefault()
-          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1))
-          break
-        case "Enter":
-          e.preventDefault()
-          if (selectedIndex >= 0 && filteredClients[selectedIndex]) {
-            handleClientSelect(filteredClients[selectedIndex].name)
-          }
-          break
-        case "Escape":
-          setShowSuggestions(false)
-          setSelectedIndex(-1)
-          if (searchRef.current) {
-            searchRef.current.blur()
-          }
-          break
-      }
-    },
-    [showSuggestions, filteredClients, selectedIndex, handleClientSelect],
-  )
-
-  const handleInputFocus = useCallback(() => {
-    if (searchValue.trim() && filteredClients.length > 0) {
-      setShowSuggestions(true)
-    }
-  }, [searchValue, filteredClients])
-
-  const handleInputBlur = useCallback((e: React.FocusEvent) => {
-    setTimeout(() => {
-      if (!suggestionsRef.current?.contains(e.relatedTarget as Node)) {
-        setShowSuggestions(false)
-        setSelectedIndex(-1)
-      }
-    }, 150)
-  }, [])
+  }, [selectedCategories, selectedProviders])
 
   const handleCategoryChange = useCallback((category: string, checked: boolean) => {
     if (checked) {
@@ -208,7 +99,7 @@ export function ActionBar({
         body: JSON.stringify({
           contactIds: selectedContactIds,
           serviceName: "Food",
-          providerName: "Andrea Leflore", // TODO: Get from current user context
+          providerName: "Andrea Leflore",
         }),
       })
 
@@ -226,15 +117,6 @@ export function ActionBar({
       setIsCompletingFood(false)
     }
   }, [selectedContactIds, onServiceCompleted])
-
-  const handleNewProspectClick = useCallback(() => {
-    const currentSearchValue = searchValue.trim()
-    const capitalizedName = currentSearchValue ? capitalizeFullName(currentSearchValue) : ""
-    setSearchValue("")
-    setShowSuggestions(false)
-    setShowNewProspectButton(false)
-    onNewProspect?.(capitalizedName)
-  }, [onNewProspect, searchValue])
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -338,82 +220,13 @@ export function ActionBar({
       <div className="flex flex-col gap-4">
         {/* Main action bar */}
         <div className="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between">
-          {/* Left side - Client Search */}
-          <div className="flex items-center space-x-3 flex-1 lg:flex-none lg:w-auto">
-            {/* Client Search with Type-ahead */}
-            <div className="relative flex-1 lg:w-64">
-              <Input
-                ref={searchRef}
-                type="text"
-                placeholder={activeTab === "today" ? "Search to check in..." : "Client Search"}
-                value={searchValue}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                onFocus={handleInputFocus}
-                onBlur={handleInputBlur}
-                className="w-full h-10 text-sm border-gray-300"
-                autoComplete="off"
-              />
-
-              {/* Suggestions Dropdown */}
-              {showSuggestions && (
-                <div
-                  ref={suggestionsRef}
-                  className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto z-50"
-                >
-                  {filteredClients.map((client, index) => (
-                    <button
-                      key={client.name}
-                      className={`w-full px-3 py-3 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none ${
-                        index === selectedIndex ? "bg-gray-100" : ""
-                      }`}
-                      onClick={() => handleClientSelect(client.name)}
-                      onMouseEnter={() => setSelectedIndex(index)}
-                    >
-                      {client.name}
-                    </button>
-                  ))}
-
-                  {/* New Prospect option for Today's workflow - only when no matches */}
-                  {activeTab === "today" && searchValue.trim() && filteredClients.length === 0 && (
-                    <button
-                      className="w-full px-3 py-3 text-left text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none border-t border-gray-100"
-                      onClick={handleNewProspectClick}
-                    >
-                      <div className="flex items-center space-x-2 text-blue-600">
-                        <UserPlus className="h-4 w-4" />
-                        <span>Create new prospect: "{capitalizeFullName(searchValue)}"</span>
-                      </div>
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* New Prospect Button - Only show when search has no matches for Today's workflow */}
-            {activeTab === "today" && showNewProspectButton && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNewProspectClick}
-                className="hidden sm:flex bg-transparent"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                New Prospect
-              </Button>
-            )}
-
-            {/* Context info - what this tab is for */}
-            {selectedCount > 0 && (
-              <span className="text-sm text-gray-700 hidden sm:block">{selectedCount} selected</span>
-            )}
+          {/* Left side - Selection info */}
+          <div className="flex items-center space-x-3">
+            {selectedCount > 0 && <span className="text-sm text-gray-700">{selectedCount} selected</span>}
           </div>
 
           {/* Right side - Actions and filters */}
           <div className="flex items-center justify-between lg:justify-end space-x-2 lg:space-x-3">
-            {/* Mobile selection count */}
-            {selectedCount > 0 && <span className="text-sm text-gray-700 sm:hidden">{selectedCount} selected</span>}
-
             {/* Selection-based actions */}
             {selectedCount > 0 && (
               <div className="flex items-center space-x-2">

@@ -7,21 +7,19 @@ import { QuickCheckinDialog } from "@/components/quick-checkin-dialog"
 import { NewProspectDialog } from "@/components/new-prospect-dialog"
 import { ChangeDateDialog } from "@/components/change-date-dialog"
 import { UpdateServicesDialog } from "@/components/update-services-dialog"
-import { ClientVisualizationView } from "@/components/client-visualization-view"
+import { ClientMasterRecord } from "@/components/client-master-record"
 import { Header } from "@/components/header"
 import { ActionBar } from "@/components/action-bar"
 import { DatabaseSetup } from "@/components/database-setup"
+import { GlobalSearch } from "@/components/global-search"
+import { useCMContacts } from "@/hooks/use-cm-contacts"
+import { useOTContacts } from "@/hooks/use-ot-contacts"
 import { useContacts } from "@/hooks/use-contacts"
 import { useDatabase } from "@/hooks/use-database"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { X, ChevronRight, ExternalLink, List, Grid3X3 } from "lucide-react"
+import { X } from "lucide-react"
 
-type MainTab = "today" | "client"
-type ClientSection = "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-checkins"
-type ViewMode = "list" | "visual"
+type MainTab = "today" | "cm" | "ot" | "client"
+type ClientSection = "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals" | "ot-checkins"
 
 export default function ContactLogPage() {
   const searchParams = useSearchParams()
@@ -30,7 +28,6 @@ export default function ContactLogPage() {
   const [activeTab, setActiveTab] = useState<MainTab>("today")
   const [selectedClient, setSelectedClient] = useState<string | null>(null)
   const [activeClientSection, setActiveClientSection] = useState<ClientSection>("basic-info")
-  const [currentView, setCurrentView] = useState<ViewMode>("list")
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isNewProspectDialogOpen, setIsNewProspectDialogOpen] = useState(false)
@@ -45,17 +42,33 @@ export default function ContactLogPage() {
   })
   const [prefilledProspectName, setPrefilledProspectName] = useState("")
 
+  const handleClientSearch = useCallback((clientName: string) => {
+    handleClientRowClick(clientName)
+  }, [])
+
+  const handleNewProspectClick = useCallback(() => {
+    setIsNewProspectDialogOpen(true)
+  }, [])
+
+  const handleClientClick = useCallback((clientId: number) => {
+    // Implement client click logic here
+  }, [])
+
   useEffect(() => {
     const tab = searchParams.get("tab")
     const name = searchParams.get("name")
     const section = searchParams.get("section")
-    const view = searchParams.get("view")
 
     if (tab === "client" && name) {
       setActiveTab("client")
       setSelectedClient(name)
       setActiveClientSection((section as ClientSection) || "basic-info")
-      setCurrentView((view as ViewMode) || "list")
+    } else if (tab === "cm") {
+      setActiveTab("cm")
+      setFilters({ categories: [], providers: ["Andrea Leflore"] })
+    } else if (tab === "ot") {
+      setActiveTab("ot")
+      setFilters({ categories: [], providers: [] })
     } else if (tab === "today") {
       setActiveTab("today")
     } else {
@@ -65,35 +78,49 @@ export default function ContactLogPage() {
   }, [searchParams, router])
 
   const { isInitialized, isLoading: dbLoading, error: dbError } = useDatabase()
-  const {
-    contacts,
-    filterData,
-    isLoading: contactsLoading,
-    error: contactsError,
-    refetch: refetchContacts,
-  } = useContacts(activeTab === "client" ? "all" : activeTab, filters)
 
-  useEffect(() => {
-    console.log("[v0] ContactLogPage debug:", {
-      isInitialized,
-      dbLoading,
-      dbError,
-      contactsLoading,
-      contactsError,
-      activeTab,
-      selectedClient,
-    })
-  }, [isInitialized, dbLoading, dbError, contactsLoading, contactsError, activeTab, selectedClient])
+  const {
+    contacts: cmContacts,
+    filterData: cmFilterData,
+    isLoading: cmLoading,
+    error: cmError,
+    refetch: refetchCM,
+  } = useCMContacts(activeTab === "cm" ? "all" : "today", filters)
+
+  const {
+    contacts: otContacts,
+    filterData: otFilterData,
+    loading: otLoading,
+    error: otError,
+    refetch: refetchOT,
+  } = useOTContacts(activeTab === "ot" ? "all" : "today", filters.categories, filters.providers)
+
+  const {
+    contacts: todayContacts,
+    filterData: todayFilterData,
+    isLoading: todayLoading,
+    error: todayError,
+    refetch: refetchToday,
+  } = useContacts("today", filters)
+
+  const contacts = activeTab === "cm" ? cmContacts : activeTab === "ot" ? otContacts : todayContacts
+  const filterData = activeTab === "cm" ? cmFilterData : activeTab === "ot" ? otFilterData : todayFilterData
+  const contactsLoading = activeTab === "cm" ? cmLoading : activeTab === "ot" ? otLoading : todayLoading
+  const contactsError = activeTab === "cm" ? cmError : activeTab === "ot" ? otError : todayError
+  const refetchContacts = activeTab === "cm" ? refetchCM : activeTab === "ot" ? refetchOT : refetchToday
 
   const updateURL = useCallback(
-    (tab: MainTab, clientName?: string, section?: ClientSection, view?: ViewMode) => {
+    (tab: MainTab, clientName?: string, section?: ClientSection) => {
       const params = new URLSearchParams()
 
       if (tab === "client" && clientName) {
         params.set("tab", "client")
         params.set("name", clientName)
         params.set("section", section || "basic-info")
-        params.set("view", view || "list")
+      } else if (tab === "cm") {
+        params.set("tab", "cm")
+      } else if (tab === "ot") {
+        params.set("tab", "ot")
       } else if (tab === "today") {
         params.set("tab", "today")
       }
@@ -106,16 +133,18 @@ export default function ContactLogPage() {
 
   const handleClientRowClick = useCallback(
     (clientName: string) => {
-      router.push(`/clients?tab=client&name=${encodeURIComponent(clientName)}&section=basic-info`)
+      setActiveTab("client")
+      setSelectedClient(clientName)
+      setActiveClientSection("basic-info")
+      updateURL("client", clientName, "basic-info")
     },
-    [router],
+    [updateURL],
   )
 
   const handleCloseClientTab = useCallback(() => {
     setActiveTab("today")
     setSelectedClient(null)
     setActiveClientSection("basic-info")
-    setCurrentView("list")
     updateURL("today")
   }, [updateURL])
 
@@ -123,59 +152,34 @@ export default function ContactLogPage() {
     (section: ClientSection) => {
       setActiveClientSection(section)
       if (selectedClient) {
-        updateURL("client", selectedClient, section, currentView)
+        updateURL("client", selectedClient, section)
       }
     },
-    [selectedClient, currentView, updateURL],
+    [selectedClient, updateURL],
   )
-
-  const handleViewChange = useCallback(
-    (view: ViewMode) => {
-      setCurrentView(view)
-      if (selectedClient) {
-        updateURL("client", selectedClient, activeClientSection, view)
-      }
-    },
-    [selectedClient, activeClientSection, updateURL],
-  )
-
-  const handleClientClick = useCallback((clientName: string, isToday?: boolean) => {
-    if (isToday) {
-      setSelectedClient(clientName)
-      setIsDialogOpen(true)
-    }
-  }, [])
-
-  const handleClientSearch = useCallback((clientName: string) => {
-    setSelectedClient(clientName)
-    setIsDialogOpen(true)
-  }, [])
-
-  const handleNewProspectClick = useCallback((searchedName?: string) => {
-    setPrefilledProspectName(searchedName || "")
-    setIsNewProspectDialogOpen(true)
-  }, [])
 
   const handleTabChange = useCallback(
     (tab: MainTab) => {
       setActiveTab(tab)
       setSelectedCount(0)
       setSelectedContactIds([])
-      setFilters({ categories: [], providers: [] })
+
+      if (tab === "cm") {
+        setFilters({ categories: [], providers: ["Andrea Leflore"] })
+      } else if (tab === "ot") {
+        setFilters({ categories: [], providers: [] })
+      } else {
+        setFilters({ categories: [], providers: [] })
+      }
 
       if (tab !== "client") {
         setSelectedClient(null)
         setActiveClientSection("basic-info")
-        setCurrentView("list")
       }
 
-      if (tab === "client" && selectedClient) {
-        updateURL(tab, selectedClient, activeClientSection, currentView)
-      } else {
-        updateURL(tab)
-      }
+      updateURL(tab)
     },
-    [updateURL, selectedClient, activeClientSection, currentView],
+    [updateURL],
   )
 
   const handleSelectionChange = useCallback((count: number, selectedIds: number[]) => {
@@ -205,30 +209,11 @@ export default function ContactLogPage() {
     setSelectedContactForUpdate(null)
   }, [refetchContacts])
 
-  if (dbError) {
-    console.log("[v0] Database error:", dbError)
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">Database Error: {dbError}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   if (!isInitialized && !dbLoading) {
-    console.log("[v0] Showing DatabaseSetup component")
     return <DatabaseSetup />
   }
 
   if (dbLoading) {
-    console.log("[v0] Showing loading spinner")
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -239,11 +224,15 @@ export default function ContactLogPage() {
     )
   }
 
-  console.log("[v0] Rendering main application")
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Global Header */}
       <Header />
 
+      {/* Search Bar */}
+      <GlobalSearch onClientSelect={handleClientSearch} clients={filterData.clients} />
+
+      {/* Context Bar with Tabs */}
       <div className="bg-white border-b border-gray-200">
         <div className="px-4 sm:px-6">
           <nav className="flex space-x-8" aria-label="Tabs">
@@ -256,6 +245,26 @@ export default function ContactLogPage() {
               }`}
             >
               Today's Check-ins
+            </button>
+            <button
+              onClick={() => handleTabChange("cm")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "cm"
+                  ? "border-orange-500 text-orange-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              CM Caseload
+            </button>
+            <button
+              onClick={() => handleTabChange("ot")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "ot"
+                  ? "border-orange-500 text-orange-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              OT Caseload
             </button>
 
             {selectedClient && activeTab === "client" && (
@@ -287,7 +296,7 @@ export default function ContactLogPage() {
       {activeTab !== "client" && (
         <>
           <ActionBar
-            activeTab={activeTab}
+            activeTab={activeTab === "cm" || activeTab === "ot" ? "all" : activeTab}
             selectedCount={selectedCount}
             selectedContactIds={selectedContactIds}
             onExport={() => console.log("Export")}
@@ -303,7 +312,7 @@ export default function ContactLogPage() {
 
           <main className="bg-white">
             <ContactTable
-              activeTab={activeTab}
+              activeTab={activeTab === "cm" || activeTab === "ot" ? "all" : activeTab}
               contacts={contacts}
               isLoading={contactsLoading}
               error={contactsError}
@@ -317,202 +326,14 @@ export default function ContactLogPage() {
       )}
 
       {activeTab === "client" && selectedClient && (
-        <>
-          <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <h1 className="text-2xl font-semibold text-gray-900">{selectedClient}</h1>
-                <Badge variant="secondary" className="bg-green-100 text-green-800">
-                  Client
-                </Badge>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant={currentView === "list" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleViewChange("list")}
-                  className="flex items-center space-x-1"
-                >
-                  <List className="h-4 w-4" />
-                  <span>List View</span>
-                </Button>
-                <Button
-                  variant={currentView === "visual" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleViewChange("visual")}
-                  className="flex items-center space-x-1"
-                >
-                  <Grid3X3 className="h-4 w-4" />
-                  <span>Visual View</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            {currentView === "list" ? (
-              <div className="space-y-6">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                      <div>
-                        <div className="flex items-center space-x-2 mb-4">
-                          <div className="h-5 w-5 rounded-full bg-gray-400 flex items-center justify-center">
-                            <div className="h-2 w-2 bg-white rounded-full" />
-                          </div>
-                          <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
-                        </div>
-                        <div className="space-y-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">Full Name</label>
-                            <p className="text-base text-gray-900">{selectedClient}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">Category</label>
-                            <div className="mt-1">
-                              <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                Client
-                              </Badge>
-                            </div>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">Status</label>
-                            <div className="mt-1">
-                              <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                Active
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center space-x-2 mb-4">
-                          <div className="h-5 w-5 rounded-full bg-gray-400 flex items-center justify-center">
-                            <div className="h-2 w-2 bg-white rounded-full" />
-                          </div>
-                          <h3 className="text-lg font-semibold text-gray-900">Timeline</h3>
-                        </div>
-                        <div className="space-y-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">First Added</label>
-                            <p className="text-base text-gray-900">March 9, 2022</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">Last Updated</label>
-                            <p className="text-base text-gray-900">March 16, 2022</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">Total Contacts</label>
-                            <Button variant="link" className="p-0 h-auto text-blue-600 hover:text-blue-800">
-                              2
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="space-y-4">
-                  <Collapsible>
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg font-medium text-gray-900">Contact History (2)</span>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-gray-400" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2">
-                      <Card>
-                        <CardContent className="p-4">
-                          <p className="text-gray-600">Contact history details would be displayed here...</p>
-                        </CardContent>
-                      </Card>
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  <Collapsible>
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg font-medium text-gray-900">CM Check-ins (2)</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="link" size="sm" className="text-blue-600 hover:text-blue-800">
-                          <ExternalLink className="h-4 w-4 mr-1" />
-                          Open in CM
-                        </Button>
-                        <ChevronRight className="h-5 w-5 text-gray-400" />
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2">
-                      <Card>
-                        <CardContent className="p-4">
-                          <p className="text-gray-600">CM check-in details would be displayed here...</p>
-                        </CardContent>
-                      </Card>
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  <Collapsible>
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg font-medium text-gray-500">CM Goals (0)</span>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-gray-400" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2">
-                      <Card>
-                        <CardContent className="p-4">
-                          <p className="text-gray-600">No CM goals found.</p>
-                        </CardContent>
-                      </Card>
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  <Collapsible>
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg font-medium text-gray-900">OT Check-ins (2)</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="link" size="sm" className="text-blue-600 hover:text-blue-800">
-                          <ExternalLink className="h-4 w-4 mr-1" />
-                          Open in OT
-                        </Button>
-                        <ChevronRight className="h-5 w-5 text-gray-400" />
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2">
-                      <Card>
-                        <CardContent className="p-4">
-                          <p className="text-gray-600">OT check-in details would be displayed here...</p>
-                        </CardContent>
-                      </Card>
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  <Collapsible>
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg font-medium text-gray-500">OT Goals (0)</span>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-gray-400" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2">
-                      <Card>
-                        <CardContent className="p-4">
-                          <p className="text-gray-600">No OT goals found.</p>
-                        </CardContent>
-                      </Card>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </div>
-              </div>
-            ) : (
-              <ClientVisualizationView clientName={selectedClient} activeSection={activeClientSection} />
-            )}
-          </main>
-        </>
+        <main>
+          <ClientMasterRecord
+            clientName={selectedClient}
+            activeSection={activeClientSection}
+            onSectionChange={handleClientSectionChange}
+            context={activeTab === "cm" ? "cm" : activeTab === "ot" ? "ot" : "general"}
+          />
+        </main>
       )}
 
       <QuickCheckinDialog
@@ -544,8 +365,8 @@ export default function ContactLogPage() {
         onClose={handleCloseUpdateServicesDialog}
         contactData={selectedContactForUpdate}
         onServicesUpdate={handleServicesUpdated}
-        isFromCMTab={true}
-        isFromOTTab={true}
+        isFromCMTab={activeTab === "cm"}
+        isFromOTTab={activeTab === "ot"}
       />
     </div>
   )
