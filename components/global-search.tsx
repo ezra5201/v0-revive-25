@@ -8,13 +8,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 interface GlobalSearchProps {
   onClientSelect?: (clientName: string) => void
-  clients?: string[]
+  clients?: { name: string }[]
 }
 
 export function GlobalSearch({ onClientSelect, clients = [] }: GlobalSearchProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredClients, setFilteredClients] = useState<string[]>([])
+  const [filteredClients, setFilteredClients] = useState<{ name: string }[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export function GlobalSearch({ onClientSelect, clients = [] }: GlobalSearchProps
         setFilteredClients([])
         setIsOpen(false)
       } else {
-        const filtered = clients.filter((client) => client.toLowerCase().includes(searchQuery.toLowerCase()))
+        const filtered = clients.filter((client) => client.name.toLowerCase().includes(searchQuery.toLowerCase()))
         setFilteredClients(filtered.slice(0, 10)) // Limit to 10 results
         setIsOpen(filtered.length > 0)
       }
@@ -91,13 +91,13 @@ export function GlobalSearch({ onClientSelect, clients = [] }: GlobalSearchProps
                 <CommandGroup heading="Clients">
                   {filteredClients.map((client) => (
                     <CommandItem
-                      key={client}
-                      value={client}
-                      onSelect={() => handleClientClick(client)}
+                      key={client.name}
+                      value={client.name}
+                      onSelect={() => handleClientClick(client.name)}
                       className="cursor-pointer"
                     >
                       <Search className="mr-2 h-4 w-4 text-gray-400" />
-                      <span>{client}</span>
+                      <span>{client.name}</span>
                     </CommandItem>
                   ))}
                 </CommandGroup>
