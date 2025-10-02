@@ -22,6 +22,7 @@ interface ActionBarProps {
   onFiltersChange?: (filters: { categories: string[]; providers: string[] }) => void
   onServiceCompleted?: () => void
   onDateChangeClick?: () => void
+  hasData?: boolean
 }
 
 export function ActionBar({
@@ -34,6 +35,7 @@ export function ActionBar({
   onFiltersChange,
   onServiceCompleted,
   onDateChangeClick,
+  hasData = true,
 }: ActionBarProps) {
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
@@ -216,10 +218,10 @@ export function ActionBar({
   )
 
   return (
-    <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
+    <div className="bg-white border-b border-gray-200 px-4 sm:px-16 py-3">
       <div className="flex flex-col gap-4">
         {/* Main action bar */}
-        <div className="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between min-h-10">
           {/* Left side - Selection info */}
           <div className="flex items-center space-x-3">
             {selectedCount > 0 && <span className="text-sm text-gray-700">{selectedCount} selected</span>}
@@ -235,7 +237,7 @@ export function ActionBar({
                   size="sm"
                   onClick={handleFoodCompletion}
                   disabled={isCompletingFood}
-                  className="h-9 bg-transparent"
+                  className="h-10 bg-transparent"
                 >
                   {isCompletingFood ? (
                     <>
@@ -249,7 +251,7 @@ export function ActionBar({
                     </>
                   )}
                 </Button>
-                <Button variant="outline" size="sm" onClick={onDateChangeClick} className="h-9 bg-transparent">
+                <Button variant="outline" size="sm" onClick={onDateChangeClick} className="h-10 bg-transparent">
                   <CalendarDays className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">Change Date</span>
                 </Button>
@@ -265,7 +267,7 @@ export function ActionBar({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowProviderDropdown(!showProviderDropdown)}
-                    className="h-9 text-sm"
+                    className="h-10 text-sm"
                   >
                     Provider
                     {selectedProviders.length > 0 && (
@@ -302,7 +304,7 @@ export function ActionBar({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowDateFilter(!showDateFilter)}
-                    className="h-9 text-sm"
+                    className="h-10 text-sm"
                   >
                     <Calendar className="h-4 w-4 mr-2" />
                     Date Range
@@ -348,7 +350,7 @@ export function ActionBar({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                    className="h-9 text-sm"
+                    className="h-10 text-sm"
                   >
                     Category
                     {selectedCategories.length > 0 && (
@@ -385,7 +387,7 @@ export function ActionBar({
             {activeTab === "all" && (
               <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="lg:hidden h-9 bg-transparent">
+                  <Button variant="outline" size="sm" className="lg:hidden h-10 bg-transparent">
                     <SlidersHorizontal className="h-4 w-4 mr-2" />
                     Filters
                     {activeFiltersCount > 0 && (
@@ -406,10 +408,12 @@ export function ActionBar({
               </Sheet>
             )}
 
-            <Button variant="outline" size="sm" onClick={onExport} className="h-9 bg-transparent">
-              <Download className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Export</span>
-            </Button>
+            {hasData && (
+              <Button variant="outline" size="sm" onClick={onExport} className="h-10 bg-transparent">
+                <Download className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Export</span>
+              </Button>
+            )}
           </div>
         </div>
 

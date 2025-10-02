@@ -308,6 +308,7 @@ export default function ContactLogPage() {
             onFiltersChange={setFilters}
             onServiceCompleted={handleDataUpdate}
             onDateChangeClick={() => setIsChangeDateDialogOpen(true)}
+            hasData={contacts.length > 0}
           />
 
           <main className="bg-white">
