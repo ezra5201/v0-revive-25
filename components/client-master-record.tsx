@@ -10,7 +10,10 @@ import { ClientJourneyTimeline } from "./client-journey-timeline"
 import { ClientOTCheckins } from "./client-ot-checkins"
 import { GoalWidget } from "./goal-widget"
 import { OTGoalWidget } from "./ot-goal-widget"
-import { ExternalLink, User, ChevronDown, ChevronRight, List, BarChart3 } from "lucide-react"
+import { QuickCheckinDialog } from "./quick-checkin-dialog"
+import { CMCheckinModal } from "./cm-checkin-modal"
+import { OTCheckinModal } from "./ot-checkin-modal"
+import { ExternalLink, User, ChevronDown, ChevronRight, List, BarChart3, Plus, Edit } from "lucide-react"
 
 interface ClientMasterRecordProps {
   clientName: string
@@ -73,6 +76,14 @@ export function ClientMasterRecord({
   })
   const [sectionsLoading, setSectionsLoading] = useState(true)
   const router = useRouter()
+
+  const [isQuickCheckinOpen, setIsQuickCheckinOpen] = useState(false)
+  const [isCMCheckinOpen, setIsCMCheckinOpen] = useState(false)
+  const [isOTCheckinOpen, setIsOTCheckinOpen] = useState(false)
+  const [hasCMCheckinToday, setHasCMCheckinToday] = useState(false)
+  const [hasOTCheckinToday, setHasOTCheckinToday] = useState(false)
+  const [checkingCMCheckin, setCheckingCMCheckin] = useState(false)
+  const [checkingOTCheckin, setCheckingOTCheckin] = useState(false)
 
   useEffect(() => {
     const fetchClientData = async () => {
@@ -159,6 +170,57 @@ export function ClientMasterRecord({
     fetchSectionCounts()
   }, [clientName, contactHistory.length])
 
+  const checkForTodaysCMCheckin = async () => {
+    setCheckingCMCheckin(true)
+    try {
+      const response = await fetch(`/api/checkins/by-client/${encodeURIComponent(clientName)}`)
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data) {
+          const today = new Date().toDateString()
+          const todaysCheckin = result.data.find((checkin: any) => {
+            const checkinDate = new Date(checkin.created_at).toDateString()
+            return checkinDate === today
+          })
+          setHasCMCheckinToday(!!todaysCheckin)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check for today's CM check-in:", error)
+    } finally {
+      setCheckingCMCheckin(false)
+    }
+  }
+
+  const checkForTodaysOTCheckin = async () => {
+    setCheckingOTCheckin(true)
+    try {
+      const response = await fetch(`/api/ot-checkins/by-client/${encodeURIComponent(clientName)}`)
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data) {
+          const today = new Date().toDateString()
+          const todaysCheckin = result.data.find((checkin: any) => {
+            const checkinDate = new Date(checkin.created_at).toDateString()
+            return checkinDate === today
+          })
+          setHasOTCheckinToday(!!todaysCheckin)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check for today's OT check-in:", error)
+    } finally {
+      setCheckingOTCheckin(false)
+    }
+  }
+
+  useEffect(() => {
+    if (clientName) {
+      checkForTodaysCMCheckin()
+      checkForTodaysOTCheckin()
+    }
+  }, [clientName])
+
   const getCategoryColor = (category: string) => {
     switch (category.toLowerCase()) {
       case "prospect":
@@ -222,6 +284,59 @@ export function ClientMasterRecord({
     const isDisabled = !isLoading && count === 0
 
     return <h2 className={`text-lg font-semibold ${isDisabled ? "text-gray-400" : "text-gray-900"}`}>{displayTitle}</h2>
+  }
+
+  const handleQuickCheckinSuccess = () => {
+    setIsQuickCheckinOpen(false)
+    // Refresh contact history
+    const fetchClientData = async () => {
+      try {
+        const historyResponse = await fetch(`/api/contacts?client=${encodeURIComponent(clientName)}`)
+        if (historyResponse.ok) {
+          const history = await historyResponse.json()
+          setContactHistory(history.contacts)
+        }
+      } catch (err) {
+        console.error("Error refreshing contact history:", err)
+      }
+    }
+    fetchClientData()
+  }
+
+  const handleCMCheckinSuccess = () => {
+    setIsCMCheckinOpen(false)
+    checkForTodaysCMCheckin()
+    // Refresh contact history
+    const fetchClientData = async () => {
+      try {
+        const historyResponse = await fetch(`/api/contacts?client=${encodeURIComponent(clientName)}`)
+        if (historyResponse.ok) {
+          const history = await historyResponse.json()
+          setContactHistory(history.contacts)
+        }
+      } catch (err) {
+        console.error("Error refreshing contact history:", err)
+      }
+    }
+    fetchClientData()
+  }
+
+  const handleOTCheckinSuccess = () => {
+    setIsOTCheckinOpen(false)
+    checkForTodaysOTCheckin()
+    // Refresh contact history
+    const fetchClientData = async () => {
+      try {
+        const historyResponse = await fetch(`/api/contacts?client=${encodeURIComponent(clientName)}`)
+        if (historyResponse.ok) {
+          const history = await historyResponse.json()
+          setContactHistory(history.contacts)
+        }
+      } catch (err) {
+        console.error("Error refreshing contact history:", err)
+      }
+    }
+    fetchClientData()
   }
 
   if (isLoading) {
@@ -296,6 +411,50 @@ export function ClientMasterRecord({
               </Button>
             )}
           </div>
+        </div>
+
+        <div className="flex gap-3 mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsQuickCheckinOpen(true)}
+            className="flex-1 bg-transparent"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Quick Check-In
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsCMCheckinOpen(true)}
+            disabled={checkingCMCheckin}
+            className="flex-1 bg-transparent"
+          >
+            {checkingCMCheckin ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-2" />
+            ) : hasCMCheckinToday ? (
+              <Edit className="h-4 w-4 mr-2" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
+            {checkingCMCheckin ? "Checking..." : hasCMCheckinToday ? "Edit CM Check-In" : "CM Check-In"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsOTCheckinOpen(true)}
+            disabled={checkingOTCheckin}
+            className="flex-1 bg-transparent"
+          >
+            {checkingOTCheckin ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-2" />
+            ) : hasOTCheckinToday ? (
+              <Edit className="h-4 w-4 mr-2" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
+            {checkingOTCheckin ? "Checking..." : hasOTCheckinToday ? "Edit OT Check-In" : "OT Check-In"}
+          </Button>
         </div>
       </div>
 
@@ -542,6 +701,29 @@ export function ClientMasterRecord({
           </div>
         </>
       )}
+
+      <QuickCheckinDialog
+        isOpen={isQuickCheckinOpen}
+        onClose={() => setIsQuickCheckinOpen(false)}
+        clientName={clientName}
+        onCheckInSubmit={handleQuickCheckinSuccess}
+      />
+
+      <CMCheckinModal
+        isOpen={isCMCheckinOpen}
+        onClose={() => setIsCMCheckinOpen(false)}
+        onSubmit={handleCMCheckinSuccess}
+        clientName={clientName}
+        contactId={0}
+      />
+
+      <OTCheckinModal
+        isOpen={isOTCheckinOpen}
+        onClose={() => setIsOTCheckinOpen(false)}
+        onSubmit={handleOTCheckinSuccess}
+        clientName={clientName}
+        contactId={0}
+      />
     </div>
   )
 }
