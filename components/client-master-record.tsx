@@ -415,23 +415,19 @@ export function ClientMasterRecord({
 
         <div className="flex gap-3 mt-4">
           <Button
-            variant="outline"
-            size="sm"
             onClick={() => setIsQuickCheckinOpen(true)}
-            className="flex-1 bg-transparent"
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200 font-medium"
           >
             <Plus className="h-4 w-4 mr-2" />
             Quick Check-In
           </Button>
           <Button
-            variant="outline"
-            size="sm"
             onClick={() => setIsCMCheckinOpen(true)}
             disabled={checkingCMCheckin}
-            className="flex-1 bg-transparent"
+            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg transition-all duration-200 font-medium disabled:bg-gray-300 disabled:shadow-none"
           >
             {checkingCMCheckin ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-2" />
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
             ) : hasCMCheckinToday ? (
               <Edit className="h-4 w-4 mr-2" />
             ) : (
@@ -440,14 +436,12 @@ export function ClientMasterRecord({
             {checkingCMCheckin ? "Checking..." : hasCMCheckinToday ? "Edit CM Check-In" : "CM Check-In"}
           </Button>
           <Button
-            variant="outline"
-            size="sm"
             onClick={() => setIsOTCheckinOpen(true)}
             disabled={checkingOTCheckin}
-            className="flex-1 bg-transparent"
+            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-200 font-medium disabled:bg-gray-300 disabled:shadow-none"
           >
             {checkingOTCheckin ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-2" />
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
             ) : hasOTCheckinToday ? (
               <Edit className="h-4 w-4 mr-2" />
             ) : (
