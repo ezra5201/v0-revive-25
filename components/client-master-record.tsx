@@ -445,7 +445,20 @@ export function ClientMasterRecord({
             )}
             {checkingCMCheckin ? "Checking..." : hasCMCheckinToday ? "Edit CM Check-In" : "CM Check-In"}
           </Button>
-          {/* Removed OT Check-In button to match simplified design */}
+          <Button
+            onClick={() => setIsOTCheckinOpen(true)}
+            disabled={checkingOTCheckin}
+            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-200 font-medium disabled:bg-gray-300 disabled:shadow-none"
+          >
+            {checkingOTCheckin ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
+            ) : hasOTCheckinToday ? (
+              <Edit className="h-4 w-4 mr-2" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
+            {checkingOTCheckin ? "Checking..." : hasOTCheckinToday ? "Edit OT Check-In" : "OT Check-In"}
+          </Button>
         </div>
       </div>
 
