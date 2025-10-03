@@ -5,12 +5,19 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("[v0] DATABASE_URL exists:", !!process.env.DATABASE_URL)
+    console.log("[v0] DATABASE_URL starts with:", process.env.DATABASE_URL?.substring(0, 30))
+
     const { clientId, formData, sectionCompletion, overallCompletion } = await request.json()
+
+    console.log("[v0] Attempting to check for existing form for client:", clientId)
 
     // Check if intake form already exists for this client
     const existingForm = await sql`
       SELECT id FROM intake_forms WHERE client_id = ${clientId}
     `
+
+    console.log("[v0] Existing form check completed, found:", existingForm.length, "records")
 
     if (existingForm.length > 0) {
       // Update existing form
@@ -82,7 +89,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error saving intake form:", error)
+    console.error("[v0] Error saving intake form:", error)
+    console.error("[v0] Error details:", JSON.stringify(error, null, 2))
     return NextResponse.json({ error: "Failed to save intake form" }, { status: 500 })
   }
 }
@@ -96,13 +104,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Client ID is required" }, { status: 400 })
     }
 
+    console.log("[v0] Fetching intake form for client:", clientId)
+
     const form = await sql`
       SELECT * FROM intake_forms WHERE client_id = ${clientId}
     `
 
+    console.log("[v0] Form fetch completed, found:", form.length, "records")
+
     return NextResponse.json({ form: form[0] || null })
   } catch (error) {
-    console.error("Error fetching intake form:", error)
+    console.error("[v0] Error fetching intake form:", error)
+    console.error("[v0] Error details:", JSON.stringify(error, null, 2))
     return NextResponse.json({ error: "Failed to fetch intake form" }, { status: 500 })
   }
 }
