@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ClientMasterRecord } from "./client-master-record"
@@ -14,6 +14,9 @@ interface ClientDrawerProps {
 
 export function ClientDrawer({ isOpen, clientName, onClose }: ClientDrawerProps) {
   const { addClient } = useRecentlyViewed()
+  const [activeSection, setActiveSection] = useState<
+    "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals" | "ot-checkins" | "full-profile"
+  >("basic-info")
 
   useEffect(() => {
     if (isOpen && clientName) {
@@ -23,6 +26,7 @@ export function ClientDrawer({ isOpen, clientName, onClose }: ClientDrawerProps)
 
   useEffect(() => {
     if (isOpen) {
+      setActiveSection("basic-info")
       // Prevent body scroll when drawer is open
       document.body.style.overflow = "hidden"
     } else {
@@ -32,7 +36,7 @@ export function ClientDrawer({ isOpen, clientName, onClose }: ClientDrawerProps)
     return () => {
       document.body.style.overflow = "unset"
     }
-  }, [isOpen])
+  }, [isOpen, clientName])
 
   if (!isOpen || !clientName) return null
 
@@ -64,8 +68,8 @@ export function ClientDrawer({ isOpen, clientName, onClose }: ClientDrawerProps)
         <div className="p-4 md:p-6">
           <ClientMasterRecord
             clientName={clientName}
-            activeSection="basic-info"
-            onSectionChange={() => {}}
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
             context="clients"
             currentView="list"
             showContentOnly={false}
