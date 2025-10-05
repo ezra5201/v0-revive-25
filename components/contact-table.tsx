@@ -5,8 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ServicesDisplay } from "./services-display"
 import { ServiceTooltip } from "./service-tooltip"
 import { Button } from "@/components/ui/button"
-import { MessageSquare, AlertTriangle, UserX, Calendar, Tag, Settings } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { MessageSquare, AlertTriangle, UserX, Calendar, Tag } from "lucide-react"
 
 interface Contact {
   id: number
@@ -36,6 +35,7 @@ interface ContactTableProps {
   onUpdateServicesClick?: (contact: Contact) => void
   onClientRowClick?: (clientName: string) => void
   showServices?: boolean
+  servicesVariant?: "default" | "badges" | "dots" | "cards" | "progress"
 }
 
 export function ContactTable({
@@ -47,13 +47,13 @@ export function ContactTable({
   onUpdateServicesClick,
   onClientRowClick,
   showServices = false,
+  servicesVariant = "badges",
 }: ContactTableProps) {
   const safeContacts = Array.isArray(contacts) ? contacts : []
   const [selectedRows, setSelectedRows] = useState<number[]>([])
   const [sortColumn, setSortColumn] = useState<string>("date")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const [clearingAlert, setClearingAlert] = useState<string | null>(null)
-  const [servicesVariant, setServicesVariant] = useState<"default" | "badges" | "dots" | "cards" | "progress">("badges")
 
   const handleSort = useCallback(
     (column: string) => {
@@ -248,36 +248,6 @@ export function ContactTable({
 
   return (
     <div className="bg-white">
-      {showServices && safeContacts.length > 0 && (
-        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Settings className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Services Display:</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 bg-transparent">
-                    {variantOptions.find((option) => option.value === servicesVariant)?.label}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {variantOptions.map((option) => (
-                    <DropdownMenuItem
-                      key={option.value}
-                      onClick={() => setServicesVariant(option.value)}
-                      className={servicesVariant === option.value ? "bg-blue-50 text-blue-700" : ""}
-                    >
-                      {option.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div className="text-xs text-gray-500">Test different visualizations</div>
-          </div>
-        </div>
-      )}
-
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead className="border-b border-gray-200">

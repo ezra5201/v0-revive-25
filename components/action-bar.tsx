@@ -1,9 +1,20 @@
 "use client"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Download, Utensils, ChevronDown, X, Calendar, CalendarDays, SlidersHorizontal, Filter } from "lucide-react"
+import {
+  Download,
+  Utensils,
+  ChevronDown,
+  X,
+  Calendar,
+  CalendarDays,
+  SlidersHorizontal,
+  Filter,
+  Settings,
+} from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 type ViewFilter = "all" | "today" | "cm" | "ot"
 
@@ -26,6 +37,8 @@ interface ActionBarProps {
   onServiceCompleted?: () => void
   onDateChangeClick?: () => void
   hasData?: boolean
+  servicesVariant?: "default" | "badges" | "dots" | "cards" | "progress"
+  onServicesVariantChange?: (variant: "default" | "badges" | "dots" | "cards" | "progress") => void
 }
 
 export function ActionBar({
@@ -40,6 +53,8 @@ export function ActionBar({
   onServiceCompleted,
   onDateChangeClick,
   hasData = true,
+  servicesVariant = "badges",
+  onServicesVariantChange,
 }: ActionBarProps) {
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
@@ -56,6 +71,14 @@ export function ActionBar({
 
   // Food service completion state
   const [isCompletingFood, setIsCompletingFood] = useState(false)
+
+  const variantOptions = [
+    { value: "default" as const, label: "Default (Icons)" },
+    { value: "badges" as const, label: "Colored Badges" },
+    { value: "dots" as const, label: "Large Dots" },
+    { value: "cards" as const, label: "Card Style" },
+    { value: "progress" as const, label: "Progress Bar" },
+  ]
 
   // Notify parent of filter changes
   useEffect(() => {
@@ -447,6 +470,27 @@ export function ActionBar({
                   </div>
                 )}
               </div>
+
+              {viewFilter === "today" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-10 text-sm bg-transparent">
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {variantOptions.map((option) => (
+                      <DropdownMenuItem
+                        key={option.value}
+                        onClick={() => onServicesVariantChange?.(option.value)}
+                        className={servicesVariant === option.value ? "bg-blue-50 text-blue-700" : ""}
+                      >
+                        {option.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
 
             <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>

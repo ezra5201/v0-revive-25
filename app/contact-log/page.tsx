@@ -37,6 +37,7 @@ export default function ContactLogPage() {
   const [prefilledProspectName, setPrefilledProspectName] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [hasSearchResults, setHasSearchResults] = useState(false)
+  const [servicesVariant, setServicesVariant] = useState<"default" | "badges" | "dots" | "cards" | "progress">("badges")
 
   const handleClientSearch = useCallback((clientName: string) => {
     setDrawerClientName(clientName)
@@ -81,7 +82,6 @@ export default function ContactLogPage() {
     setSelectedCount(0)
     setSelectedContactIds([])
 
-    // Reset filters when changing views
     if (newView === "cm") {
       setFilters({ categories: [], providers: ["Andrea Leflore"] })
     } else {
@@ -170,6 +170,8 @@ export default function ContactLogPage() {
         onServiceCompleted={handleDataUpdate}
         onDateChangeClick={() => setIsChangeDateDialogOpen(true)}
         hasData={contacts.length > 0}
+        servicesVariant={servicesVariant}
+        onServicesVariantChange={setServicesVariant}
       />
 
       <main className="bg-white">
@@ -182,6 +184,7 @@ export default function ContactLogPage() {
           onUpdateServicesClick={handleUpdateServicesClick}
           onClientRowClick={handleClientRowClick}
           showServices={viewFilter === "today"}
+          servicesVariant={servicesVariant}
         />
       </main>
 
