@@ -10,7 +10,7 @@ import {
   CalendarDays,
   SlidersHorizontal,
   Filter,
-  Settings,
+  Columns3,
 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -287,7 +287,7 @@ export function ActionBar({
           </div>
 
           {/* Actions and filters */}
-          <div className="flex items-center justify-between lg:justify-start space-x-2 lg:space-x-3">
+          <div className="flex items-center justify-between lg:justify-start space-x-2 lg:space-x-3 flex-1">
             {/* Selection-based actions */}
             {selectedCount > 0 && (
               <div className="flex items-center space-x-2">
@@ -317,7 +317,7 @@ export function ActionBar({
               </div>
             )}
 
-            <div className="hidden lg:flex items-center space-x-3">
+            <div className="hidden lg:flex items-center space-x-3 flex-1">
               {/* View Filter Dropdown */}
               <div className="relative" ref={viewDropdownRef}>
                 <Button
@@ -471,26 +471,29 @@ export function ActionBar({
                 )}
               </div>
 
-              {viewFilter === "today" && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-10 text-sm bg-transparent">
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {variantOptions.map((option) => (
-                      <DropdownMenuItem
-                        key={option.value}
-                        onClick={() => onServicesVariantChange?.(option.value)}
-                        className={servicesVariant === option.value ? "bg-blue-50 text-blue-700" : ""}
-                      >
-                        {option.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+              {/* Services Display dropdown */}
+              <div className="ml-auto">
+                {viewFilter === "today" && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-10 text-sm bg-transparent">
+                        <Columns3 className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {variantOptions.map((option) => (
+                        <DropdownMenuItem
+                          key={option.value}
+                          onClick={() => onServicesVariantChange?.(option.value)}
+                          className={servicesVariant === option.value ? "bg-blue-50 text-blue-700" : ""}
+                        >
+                          {option.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
             </div>
 
             <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>
