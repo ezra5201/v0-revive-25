@@ -1,29 +1,15 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
   const router = useRouter()
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-    // TODO: Implement login logic
-    console.log("Login attempted with:", { username, password })
-  }
-
   const handleGoogleLogin = () => {
-    // Navigate to choice page for prototype
+    // For now, navigate to choice page for prototype
     router.push("/choice")
   }
 
@@ -43,58 +29,10 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl font-bold text-foreground">Welcome Back</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Please sign in to your account to continue
+            Sign in with your Google account to continue
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium">
-                Username
-              </Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="Enter your username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full"
-                required
-              />
-            </div>
-            <div className="flex justify-end">
-              <button type="button" className="text-sm text-accent hover:text-accent/80 transition-colors">
-                Forgot password?
-              </button>
-            </div>
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-              Sign In
-            </Button>
-          </form>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <Separator className="w-full" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-            </div>
-          </div>
-
           <Button type="button" variant="outline" className="w-full bg-transparent" onClick={handleGoogleLogin}>
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
               <path
@@ -114,7 +52,7 @@ export default function LoginPage() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            Continue with Google
+            Sign in with Google
           </Button>
         </CardContent>
       </Card>

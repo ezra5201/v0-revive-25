@@ -1,15 +1,20 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Menu, User, Settings, ArrowLeftRight } from "lucide-react"
+import { Menu, User, Settings, ArrowLeftRight, BookOpen } from "lucide-react"
 import { useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { AlertHeaderIndicator } from "./alert-header-indicator"
+import { RecentlyViewedIndicator } from "./recently-viewed-indicator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DatabaseStatsModal } from "./database-stats-modal"
 import Image from "next/image"
 
-export function Header() {
+interface HeaderProps {
+  onClientSelect?: (clientName: string) => void
+}
+
+export function Header({ onClientSelect }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false)
   const router = useRouter()
@@ -17,8 +22,6 @@ export function Header() {
 
   const navigationItems = [
     { name: "CONTACT LOG", path: "/contact-log" },
-    { name: "CM", path: "/cm" },
-    { name: "OT", path: "/ot" },
     { name: "OUTREACH", path: "/outreach" },
     { name: "DASHBOARD", path: "/dashboard" },
     { name: "REPORTS", path: "/reports" },
@@ -42,11 +45,8 @@ export function Header() {
   }
 
   const handleSignOut = () => {
-    // Clear any session storage or local storage if needed
     localStorage.clear()
     sessionStorage.clear()
-
-    // Redirect to login page
     router.push("/login")
   }
 
@@ -100,8 +100,10 @@ export function Header() {
             </Button>
           </div>
 
-          {/* Right side - Search and User */}
+          {/* Right side - Recently Viewed, User, Settings */}
           <div className="flex items-center space-x-2 sm:space-x-4">
+            {onClientSelect && <RecentlyViewedIndicator onClientSelect={onClientSelect} />}
+
             {/* User Dropdown Menu - Hidden on very small screens */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -132,6 +134,10 @@ export function Header() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => router.push("/docs")} className="min-h-[44px] flex items-center">
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Developer Documentation
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleViewSwitch} className="min-h-[44px] flex items-center">
                   <ArrowLeftRight className="h-4 w-4 mr-2" />
                   {viewSwitchText}
@@ -191,6 +197,10 @@ export function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => router.push("/docs")} className="min-h-[44px] flex items-center">
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Developer Documentation
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleViewSwitch} className="min-h-[44px] flex items-center">
                     <ArrowLeftRight className="h-4 w-4 mr-2" />
                     {viewSwitchText}

@@ -1,19 +1,31 @@
 "use client"
-
-import type React from "react"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Download, Utensils, ChevronDown, X, UserPlus, Calendar, CalendarDays, SlidersHorizontal } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import {
+  Download,
+  Utensils,
+  ChevronDown,
+  X,
+  Calendar,
+  CalendarDays,
+  SlidersHorizontal,
+  Filter,
+  Columns3,
+  Edit,
+} from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+
+type ViewFilter = "all" | "today" | "cm" | "ot"
 
 interface Client {
   name: string
 }
 
 interface ActionBarProps {
-  activeTab: "today" | "all" | "client"
+  viewFilter: ViewFilter
+  onViewFilterChange: (view: ViewFilter) => void
   selectedCount: number
   selectedContactIds?: number[]
   onExport?: () => void
@@ -25,49 +37,37 @@ interface ActionBarProps {
   onFiltersChange?: (filters: { categories: string[]; providers: string[] }) => void
   onServiceCompleted?: () => void
   onDateChangeClick?: () => void
-}
-
-// Helper function to properly capitalize names
-function capitalizeFullName(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((word) => {
-      if (word.length === 0) return word
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    })
-    .join(" ")
+  onBulkUpdateServicesClick?: () => void
+  hasData?: boolean
+  servicesVariant?: "default" | "badges" | "dots" | "cards" | "progress"
+  onServicesVariantChange?: (variant: "default" | "badges" | "dots" | "cards" | "progress") => void
 }
 
 export function ActionBar({
-  activeTab,
+  viewFilter,
+  onViewFilterChange,
   selectedCount,
   selectedContactIds = [],
   onExport,
-  clients = [],
-  onClientSelect,
-  onNewProspect,
   providers = [],
   categories = [],
   onFiltersChange,
   onServiceCompleted,
   onDateChangeClick,
+  onBulkUpdateServicesClick,
+  hasData = true,
+  servicesVariant = "badges",
+  onServicesVariantChange,
 }: ActionBarProps) {
-  const [searchValue, setSearchValue] = useState("")
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const [filteredClients, setFilteredClients] = useState<Client[]>([])
-  const [selectedIndex, setSelectedIndex] = useState(-1)
-  const [showNewProspectButton, setShowNewProspectButton] = useState(false)
-  const searchRef = useRef<HTMLInputElement>(null)
-  const suggestionsRef = useRef<HTMLDivElement>(null)
-
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedProviders, setSelectedProviders] = useState<string[]>([])
+  const [showViewDropdown, setShowViewDropdown] = useState(false)
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false)
   const [showProviderDropdown, setShowProviderDropdown] = useState(false)
   const [showDateFilter, setShowDateFilter] = useState(false)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const viewDropdownRef = useRef<HTMLDivElement>(null)
   const categoryDropdownRef = useRef<HTMLDivElement>(null)
   const providerDropdownRef = useRef<HTMLDivElement>(null)
   const dateFilterRef = useRef<HTMLDivElement>(null)
@@ -75,95 +75,20 @@ export function ActionBar({
   // Food service completion state
   const [isCompletingFood, setIsCompletingFood] = useState(false)
 
-  // Update filtered clients when search value changes
-  useEffect(() => {
-    if (searchValue.trim()) {
-      const filtered = clients.filter((client) => client.name.toLowerCase().includes(searchValue.toLowerCase()))
-      setFilteredClients(filtered)
-      setShowSuggestions(filtered.length > 0)
-      setSelectedIndex(-1)
-
-      // For Today's tab, show New Prospect button only if no matches found
-      if (activeTab === "today") {
-        setShowNewProspectButton(filtered.length === 0)
-      }
-    } else {
-      setFilteredClients([])
-      setShowSuggestions(false)
-      setSelectedIndex(-1)
-      setShowNewProspectButton(false)
-    }
-  }, [searchValue, clients, activeTab])
+  const variantOptions = [
+    { value: "default" as const, label: "Default (Icons)" },
+    { value: "badges" as const, label: "Colored Badges" },
+    { value: "dots" as const, label: "Large Dots" },
+    { value: "cards" as const, label: "Card Style" },
+    { value: "progress" as const, label: "Progress Bar" },
+  ]
 
   // Notify parent of filter changes
   useEffect(() => {
     if (onFiltersChange) {
       onFiltersChange({ categories: selectedCategories, providers: selectedProviders })
     }
-  }, [selectedCategories, selectedProviders]) // Removed onFiltersChange from dependencies
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchValue(e.target.value)
-  }, [])
-
-  const handleClientSelect = useCallback(
-    (clientName: string) => {
-      setSearchValue("")
-      setShowSuggestions(false)
-      setSelectedIndex(-1)
-      setShowNewProspectButton(false)
-      if (onClientSelect) {
-        onClientSelect(clientName)
-      }
-    },
-    [onClientSelect],
-  )
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (!showSuggestions) return
-
-      switch (e.key) {
-        case "ArrowDown":
-          e.preventDefault()
-          setSelectedIndex((prev) => (prev < filteredClients.length - 1 ? prev + 1 : prev))
-          break
-        case "ArrowUp":
-          e.preventDefault()
-          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1))
-          break
-        case "Enter":
-          e.preventDefault()
-          if (selectedIndex >= 0 && filteredClients[selectedIndex]) {
-            handleClientSelect(filteredClients[selectedIndex].name)
-          }
-          break
-        case "Escape":
-          setShowSuggestions(false)
-          setSelectedIndex(-1)
-          if (searchRef.current) {
-            searchRef.current.blur()
-          }
-          break
-      }
-    },
-    [showSuggestions, filteredClients, selectedIndex, handleClientSelect],
-  )
-
-  const handleInputFocus = useCallback(() => {
-    if (searchValue.trim() && filteredClients.length > 0) {
-      setShowSuggestions(true)
-    }
-  }, [searchValue, filteredClients])
-
-  const handleInputBlur = useCallback((e: React.FocusEvent) => {
-    setTimeout(() => {
-      if (!suggestionsRef.current?.contains(e.relatedTarget as Node)) {
-        setShowSuggestions(false)
-        setSelectedIndex(-1)
-      }
-    }, 150)
-  }, [])
+  }, [selectedCategories, selectedProviders])
 
   const handleCategoryChange = useCallback((category: string, checked: boolean) => {
     if (checked) {
@@ -208,7 +133,7 @@ export function ActionBar({
         body: JSON.stringify({
           contactIds: selectedContactIds,
           serviceName: "Food",
-          providerName: "Andrea Leflore", // TODO: Get from current user context
+          providerName: "Andrea Leflore",
         }),
       })
 
@@ -227,18 +152,12 @@ export function ActionBar({
     }
   }, [selectedContactIds, onServiceCompleted])
 
-  const handleNewProspectClick = useCallback(() => {
-    const currentSearchValue = searchValue.trim()
-    const capitalizedName = currentSearchValue ? capitalizeFullName(currentSearchValue) : ""
-    setSearchValue("")
-    setShowSuggestions(false)
-    setShowNewProspectButton(false)
-    onNewProspect?.(capitalizedName)
-  }, [onNewProspect, searchValue])
-
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      if (viewDropdownRef.current && !viewDropdownRef.current.contains(event.target as Node)) {
+        setShowViewDropdown(false)
+      }
       if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
         setShowCategoryDropdown(false)
       }
@@ -256,9 +175,36 @@ export function ActionBar({
 
   const activeFiltersCount = selectedCategories.length + selectedProviders.length
 
+  const viewFilterLabels: Record<ViewFilter, string> = {
+    all: "All Contacts",
+    today: "Today's Check-ins",
+    cm: "CM Caseload",
+    ot: "OT Caseload",
+  }
+
   // Mobile Filter Sheet Content
   const MobileFiltersContent = () => (
     <div className="space-y-6">
+      <div className="space-y-3">
+        <h3 className="font-medium text-gray-900">View</h3>
+        <div className="space-y-2">
+          {(["all", "today", "cm", "ot"] as ViewFilter[]).map((view) => (
+            <button
+              key={view}
+              onClick={() => {
+                onViewFilterChange(view)
+                setShowMobileFilters(false)
+              }}
+              className={`w-full text-left px-4 py-3 text-sm rounded-lg border ${
+                viewFilter === view ? "bg-orange-50 border-orange-500 text-orange-700 font-medium" : "hover:bg-gray-50"
+              }`}
+            >
+              {viewFilterLabels[view]}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Provider Filter */}
       <div className="space-y-3">
         <h3 className="font-medium text-gray-900">Provider</h3>
@@ -334,86 +280,17 @@ export function ActionBar({
   )
 
   return (
-    <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
+    <div className="bg-white border-b border-gray-200 px-4 sm:px-16 py-3">
       <div className="flex flex-col gap-4">
         {/* Main action bar */}
-        <div className="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between">
-          {/* Left side - Client Search */}
-          <div className="flex items-center space-x-3 flex-1 lg:flex-none lg:w-auto">
-            {/* Client Search with Type-ahead */}
-            <div className="relative flex-1 lg:w-64">
-              <Input
-                ref={searchRef}
-                type="text"
-                placeholder={activeTab === "today" ? "Search to check in..." : "Client Search"}
-                value={searchValue}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                onFocus={handleInputFocus}
-                onBlur={handleInputBlur}
-                className="w-full h-10 text-sm border-gray-300"
-                autoComplete="off"
-              />
-
-              {/* Suggestions Dropdown */}
-              {showSuggestions && (
-                <div
-                  ref={suggestionsRef}
-                  className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto z-50"
-                >
-                  {filteredClients.map((client, index) => (
-                    <button
-                      key={client.name}
-                      className={`w-full px-3 py-3 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none ${
-                        index === selectedIndex ? "bg-gray-100" : ""
-                      }`}
-                      onClick={() => handleClientSelect(client.name)}
-                      onMouseEnter={() => setSelectedIndex(index)}
-                    >
-                      {client.name}
-                    </button>
-                  ))}
-
-                  {/* New Prospect option for Today's workflow - only when no matches */}
-                  {activeTab === "today" && searchValue.trim() && filteredClients.length === 0 && (
-                    <button
-                      className="w-full px-3 py-3 text-left text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none border-t border-gray-100"
-                      onClick={handleNewProspectClick}
-                    >
-                      <div className="flex items-center space-x-2 text-blue-600">
-                        <UserPlus className="h-4 w-4" />
-                        <span>Create new prospect: "{capitalizeFullName(searchValue)}"</span>
-                      </div>
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* New Prospect Button - Only show when search has no matches for Today's workflow */}
-            {activeTab === "today" && showNewProspectButton && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNewProspectClick}
-                className="hidden sm:flex bg-transparent"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                New Prospect
-              </Button>
-            )}
-
-            {/* Context info - what this tab is for */}
-            {selectedCount > 0 && (
-              <span className="text-sm text-gray-700 hidden sm:block">{selectedCount} selected</span>
-            )}
+        <div className="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:items-center lg:justify-start min-h-10 lg:gap-4">
+          {/* Left side - Selection info */}
+          <div className="flex items-center space-x-3">
+            {selectedCount > 0 && <span className="text-sm text-gray-700">{selectedCount} selected</span>}
           </div>
 
-          {/* Right side - Actions and filters */}
-          <div className="flex items-center justify-between lg:justify-end space-x-2 lg:space-x-3">
-            {/* Mobile selection count */}
-            {selectedCount > 0 && <span className="text-sm text-gray-700 sm:hidden">{selectedCount} selected</span>}
-
+          {/* Actions and filters */}
+          <div className="flex items-center justify-between lg:justify-start space-x-2 lg:space-x-3 flex-1">
             {/* Selection-based actions */}
             {selectedCount > 0 && (
               <div className="flex items-center space-x-2">
@@ -422,7 +299,7 @@ export function ActionBar({
                   size="sm"
                   onClick={handleFoodCompletion}
                   disabled={isCompletingFood}
-                  className="h-9 bg-transparent"
+                  className="h-10 bg-transparent"
                 >
                   {isCompletingFood ? (
                     <>
@@ -436,172 +313,228 @@ export function ActionBar({
                     </>
                   )}
                 </Button>
-                <Button variant="outline" size="sm" onClick={onDateChangeClick} className="h-9 bg-transparent">
+                <Button variant="outline" size="sm" onClick={onBulkUpdateServicesClick} className="h-10 bg-transparent">
+                  <Edit className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Update Services</span>
+                </Button>
+                <Button variant="outline" size="sm" onClick={onDateChangeClick} className="h-10 bg-transparent">
                   <CalendarDays className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">Change Date</span>
                 </Button>
               </div>
             )}
 
-            {/* Desktop Filters - Only for All Contacts workflow */}
-            {activeTab === "all" && (
-              <div className="hidden lg:flex items-center space-x-3">
-                {/* Provider Filter */}
-                <div className="relative" ref={providerDropdownRef}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowProviderDropdown(!showProviderDropdown)}
-                    className="h-9 text-sm"
-                  >
-                    Provider
-                    {selectedProviders.length > 0 && (
-                      <span className="ml-1 bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
-                        {selectedProviders.length}
-                      </span>
-                    )}
-                    <ChevronDown className="ml-2 h-3 w-3" />
-                  </Button>
+            <div className="hidden lg:flex items-center space-x-3 flex-1">
+              {/* View Filter Dropdown */}
+              <div className="relative" ref={viewDropdownRef}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowViewDropdown(!showViewDropdown)}
+                  className="h-10 text-sm bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  {viewFilterLabels[viewFilter]}
+                  <ChevronDown className="ml-2 h-3 w-3" />
+                </Button>
 
-                  {showProviderDropdown && (
-                    <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[200px] max-h-60 overflow-y-auto z-50">
-                      <div className="p-2">
-                        {providers.map((provider) => (
-                          <div key={provider} className="flex items-center space-x-2 py-2">
-                            <Checkbox
-                              id={`provider-${provider}`}
-                              checked={selectedProviders.includes(provider)}
-                              onCheckedChange={(checked) => handleProviderChange(provider, checked as boolean)}
-                            />
-                            <label htmlFor={`provider-${provider}`} className="text-sm cursor-pointer flex-1 font-bold">
-                              {provider}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
+                {showViewDropdown && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[200px] z-50">
+                    <div className="p-2">
+                      {(["all", "today", "cm", "ot"] as ViewFilter[]).map((view) => (
+                        <button
+                          key={view}
+                          onClick={() => {
+                            onViewFilterChange(view)
+                            setShowViewDropdown(false)
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-50 ${
+                            viewFilter === view ? "bg-orange-50 text-orange-700 font-medium" : ""
+                          }`}
+                        >
+                          {viewFilterLabels[view]}
+                        </button>
+                      ))}
                     </div>
-                  )}
-                </div>
-
-                {/* Date Filter */}
-                <div className="relative" ref={dateFilterRef}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowDateFilter(!showDateFilter)}
-                    className="h-9 text-sm"
-                  >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Date Range
-                    <ChevronDown className="ml-2 h-3 w-3" />
-                  </Button>
-
-                  {showDateFilter && (
-                    <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[200px] z-50">
-                      <div className="p-3 space-y-2">
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Last 7 days
-                        </button>
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Last 30 days
-                        </button>
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Last 3 months
-                        </button>
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Last year
-                        </button>
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Next 7 days
-                        </button>
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Next 30 days
-                        </button>
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Next 3 months
-                        </button>
-                        <hr className="my-2" />
-                        <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
-                          Custom range...
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Category Filter */}
-                <div className="relative" ref={categoryDropdownRef}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                    className="h-9 text-sm"
-                  >
-                    Category
-                    {selectedCategories.length > 0 && (
-                      <span className="ml-1 bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
-                        {selectedCategories.length}
-                      </span>
-                    )}
-                    <ChevronDown className="ml-2 h-3 w-3" />
-                  </Button>
-
-                  {showCategoryDropdown && (
-                    <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[150px] z-50">
-                      <div className="p-2">
-                        {categories.map((category) => (
-                          <div key={category} className="flex items-center space-x-2 py-2">
-                            <Checkbox
-                              id={`category-${category}`}
-                              checked={selectedCategories.includes(category)}
-                              onCheckedChange={(checked) => handleCategoryChange(category, checked as boolean)}
-                            />
-                            <label htmlFor={`category-${category}`} className="text-sm cursor-pointer flex-1">
-                              {category}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Mobile Filters Button - Only for All Contacts workflow */}
-            {activeTab === "all" && (
-              <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="lg:hidden h-9 bg-transparent">
-                    <SlidersHorizontal className="h-4 w-4 mr-2" />
-                    Filters
-                    {activeFiltersCount > 0 && (
-                      <span className="ml-1 bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
-                        {activeFiltersCount}
-                      </span>
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="bottom" className="h-[80vh]">
-                  <SheetHeader>
-                    <SheetTitle>Filters</SheetTitle>
-                  </SheetHeader>
-                  <div className="mt-6 overflow-y-auto">
-                    <MobileFiltersContent />
                   </div>
-                </SheetContent>
-              </Sheet>
-            )}
+                )}
+              </div>
 
-            <Button variant="outline" size="sm" onClick={onExport} className="h-9 bg-transparent">
-              <Download className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Export</span>
-            </Button>
+              {/* Provider Filter */}
+              <div className="relative" ref={providerDropdownRef}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowProviderDropdown(!showProviderDropdown)}
+                  className="h-10 text-sm"
+                >
+                  Provider
+                  {selectedProviders.length > 0 && (
+                    <span className="ml-1 bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
+                      {selectedProviders.length}
+                    </span>
+                  )}
+                  <ChevronDown className="ml-2 h-3 w-3" />
+                </Button>
+
+                {showProviderDropdown && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[200px] max-h-60 overflow-y-auto z-50">
+                    <div className="p-2">
+                      {providers.map((provider) => (
+                        <div key={provider} className="flex items-center space-x-2 py-2">
+                          <Checkbox
+                            id={`provider-${provider}`}
+                            checked={selectedProviders.includes(provider)}
+                            onCheckedChange={(checked) => handleProviderChange(provider, checked as boolean)}
+                          />
+                          <label htmlFor={`provider-${provider}`} className="text-sm cursor-pointer flex-1 font-bold">
+                            {provider}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Date Filter */}
+              <div className="relative" ref={dateFilterRef}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDateFilter(!showDateFilter)}
+                  className="h-10 text-sm"
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Date Range
+                  <ChevronDown className="ml-2 h-3 w-3" />
+                </Button>
+
+                {showDateFilter && (
+                  <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[200px] z-50">
+                    <div className="p-3 space-y-2">
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                        Last 7 days
+                      </button>
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                        Last 30 days
+                      </button>
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                        Last 3 months
+                      </button>
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">Last year</button>
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                        Next 7 days
+                      </button>
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                        Next 30 days
+                      </button>
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                        Next 3 months
+                      </button>
+                      <hr className="my-2" />
+                      <button className="w-full text-left px-2 py-2 text-sm hover:bg-gray-50 rounded">
+                        Custom range...
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Category Filter */}
+              <div className="relative" ref={categoryDropdownRef}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                  className="h-10 text-sm"
+                >
+                  Category
+                  {selectedCategories.length > 0 && (
+                    <span className="ml-1 bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
+                      {selectedCategories.length}
+                    </span>
+                  )}
+                  <ChevronDown className="ml-2 h-3 w-3" />
+                </Button>
+
+                {showCategoryDropdown && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[150px] z-50">
+                    <div className="p-2">
+                      {categories.map((category) => (
+                        <div key={category} className="flex items-center space-x-2 py-2">
+                          <Checkbox
+                            id={`category-${category}`}
+                            checked={selectedCategories.includes(category)}
+                            onCheckedChange={(checked) => handleCategoryChange(category, checked as boolean)}
+                          />
+                          <label htmlFor={`category-${category}`} className="text-sm cursor-pointer flex-1">
+                            {category}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Services Display dropdown */}
+              <div className="ml-auto">
+                {viewFilter === "today" && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-10 text-sm bg-transparent">
+                        <Columns3 className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {variantOptions.map((option) => (
+                        <DropdownMenuItem
+                          key={option.value}
+                          onClick={() => onServicesVariantChange?.(option.value)}
+                          className={servicesVariant === option.value ? "bg-blue-50 text-blue-700" : ""}
+                        >
+                          {option.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            </div>
+
+            <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="lg:hidden h-10 bg-transparent">
+                  <SlidersHorizontal className="h-4 w-4 mr-2" />
+                  Filters
+                  {activeFiltersCount > 0 && (
+                    <span className="ml-1 bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-[80vh]">
+                <SheetHeader>
+                  <SheetTitle>Filters</SheetTitle>
+                </SheetHeader>
+                <div className="mt-6 overflow-y-auto">
+                  <MobileFiltersContent />
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            {hasData && (
+              <Button variant="outline" size="sm" onClick={onExport} className="h-10 bg-transparent">
+                <Download className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Export</span>
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* Active Filters Row - Only for All Contacts workflow */}
-        {activeTab === "all" && activeFiltersCount > 0 && (
+        {activeFiltersCount > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-gray-600">Active filters:</span>
 

@@ -249,8 +249,9 @@ export async function GET(request: NextRequest) {
         }
       } else {
         // All contacts tab - show most recent contact per unique client with today's alerts pinned to top
+        // UNION with outreach_clients to provide unified view
         const latestPerClientQuery = `
-  WITH ranked_contacts AS (
+  WITH regular_contacts AS (
     SELECT
       c.id,
       c.contact_date,
@@ -262,7 +263,6 @@ export async function GET(request: NextRequest) {
       c.services_requested,
       c.services_provided,
       c.created_at,
-      -- Calculate actual days from current Chicago today to the contact date
       (DATE '${todayString}' - c.contact_date)::INTEGER AS days_ago,
       ROW_NUMBER() OVER (
         PARTITION BY c.client_name
@@ -270,6 +270,30 @@ export async function GET(request: NextRequest) {
       ) AS rn
     FROM contacts c
     ${whereClause}
+  ),
+  outreach_clients_with_contacts AS (
+    SELECT
+      oc.id,
+      COALESCE(latest_contact.contact_date, oc.created_at::date) as contact_date,
+      COALESCE(latest_contact.staff_member, 'Outreach Team') as provider_name,
+      CONCAT(oc.first_name, ' ', oc.last_name) as client_name,
+      'Outreach' as category,
+      false as food_accessed,
+      NULL::INTEGER as alert_id,
+      COALESCE(latest_contact.services_provided, ARRAY[]::TEXT[])::jsonb as services_requested,
+      '[]'::jsonb as services_provided,
+      oc.created_at,
+      (DATE '${todayString}' - COALESCE(latest_contact.contact_date, oc.created_at::date))::INTEGER AS days_ago
+    FROM outreach_clients oc
+    LEFT JOIN LATERAL (
+      SELECT contact_date, staff_member, services_provided
+      FROM outreach_contacts
+      WHERE client_id = oc.id
+      ORDER BY contact_date DESC, created_at DESC
+      LIMIT 1
+    ) latest_contact ON true
+    WHERE oc.is_active = true
+      ${categories.length > 0 && categories.includes("Outreach") ? "" : categories.length > 0 ? "AND false" : ""}
   )
   SELECT
     r.id,
@@ -286,11 +310,31 @@ export async function GET(request: NextRequest) {
     a.alert_details,
     a.severity as alert_severity,
     a.status as alert_status
-  FROM ranked_contacts r
+  FROM regular_contacts r
   LEFT JOIN alerts a ON r.alert_id = a.id AND a.status = 'active'
   WHERE r.rn = 1
+  
+  UNION ALL
+  
+  SELECT
+    o.id + 1000000 as id,
+    o.contact_date,
+    o.days_ago,
+    o.provider_name,
+    o.client_name,
+    o.category,
+    o.food_accessed,
+    o.created_at,
+    o.services_requested,
+    o.services_provided,
+    NULL::INTEGER as alert_id,
+    NULL::TEXT as alert_details,
+    NULL::VARCHAR as alert_severity,
+    NULL::VARCHAR as alert_status
+  FROM outreach_clients_with_contacts o
+  
   ORDER BY 
-    CASE WHEN (r.contact_date = '${todayString}' AND a.id IS NOT NULL) THEN 0 ELSE 1 END,
+    CASE WHEN (contact_date = '${todayString}' AND alert_id IS NOT NULL) THEN 0 ELSE 1 END,
     ${dbColumn} ${direction}
 `
 
@@ -302,9 +346,10 @@ export async function GET(request: NextRequest) {
           const msg = e?.message ?? ""
           if (
             (msg.includes("column") && (msg.includes("alert_id") || msg.includes("alerts"))) ||
-            (msg.includes("relation") && msg.includes("alerts"))
+            (msg.includes("relation") && msg.includes("alerts")) ||
+            (msg.includes("relation") && msg.includes("outreach"))
           ) {
-            console.warn("contacts API: alerts columns missing – falling back to legacy schema")
+            console.warn("contacts API: outreach or alerts tables missing – falling back to legacy schema")
             const fallbackQuery = `
               WITH ranked_contacts AS (
                 SELECT

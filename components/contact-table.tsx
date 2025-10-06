@@ -5,8 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ServicesDisplay } from "./services-display"
 import { ServiceTooltip } from "./service-tooltip"
 import { Button } from "@/components/ui/button"
-import { MessageSquare, AlertTriangle, UserX, Calendar, Tag, Settings } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { MessageSquare, AlertTriangle, UserX, Calendar, Tag } from "lucide-react"
 
 interface Contact {
   id: number
@@ -28,33 +27,33 @@ interface Contact {
 }
 
 interface ContactTableProps {
-  activeTab: "today" | "all"
   contacts: Contact[]
   isLoading: boolean
   error: string | null
   onClientClick: (clientName: string, isToday?: boolean) => void
   onSelectionChange?: (count: number, selectedIds: number[]) => void
   onUpdateServicesClick?: (contact: Contact) => void
-  onClientRowClick?: (clientName: string) => void // NEW: For "All Clients" tab navigation
+  onClientRowClick?: (clientName: string) => void
+  showServices?: boolean
+  servicesVariant?: "default" | "badges" | "dots" | "cards" | "progress"
 }
 
 export function ContactTable({
-  activeTab,
   contacts,
   isLoading,
   error,
   onClientClick,
   onSelectionChange,
   onUpdateServicesClick,
-  onClientRowClick, // NEW: Client row click handler
+  onClientRowClick,
+  showServices = false,
+  servicesVariant = "badges",
 }: ContactTableProps) {
-  // Ensure we always work with an array
   const safeContacts = Array.isArray(contacts) ? contacts : []
   const [selectedRows, setSelectedRows] = useState<number[]>([])
   const [sortColumn, setSortColumn] = useState<string>("date")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const [clearingAlert, setClearingAlert] = useState<string | null>(null)
-  const [servicesVariant, setServicesVariant] = useState<"default" | "badges" | "dots" | "cards" | "progress">("badges")
 
   const handleSort = useCallback(
     (column: string) => {
@@ -89,16 +88,13 @@ export function ContactTable({
 
   const handleRowClick = useCallback(
     (clientName: string) => {
-      if (activeTab === "all" && onClientRowClick) {
-        // NEW: Navigate to client master record for "All Clients" tab
+      if (onClientRowClick) {
         onClientRowClick(clientName)
       } else {
-        // PRESERVE: Existing behavior for "Today's Check-ins" tab
-        const isToday = activeTab === "today"
-        onClientClick(clientName, isToday)
+        onClientClick(clientName, false)
       }
     },
-    [activeTab, onClientClick, onClientRowClick],
+    [onClientClick, onClientRowClick],
   )
 
   const handleClearClientAlert = useCallback(async (clientName: string) => {
@@ -163,9 +159,8 @@ export function ContactTable({
   const ContactCard = ({ contact }: { contact: Contact }) => (
     <div
       className={`p-4 border rounded-lg cursor-pointer transition-colors ${getRowBackgroundColor(contact.hasAlert)}`}
-      onClick={activeTab === "today" ? () => handleTodayRowClick(contact) : () => handleRowClick(contact.client)}
+      onClick={showServices ? () => handleTodayRowClick(contact) : () => handleRowClick(contact.client)}
     >
-      {/* Card Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-start space-x-3 flex-1 min-w-0">
           <div onClick={(e) => e.stopPropagation()} className="pt-1">
@@ -182,17 +177,12 @@ export function ContactTable({
             <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
               <Calendar className="h-4 w-4" />
               <span>{contact.date}</span>
-              {activeTab === "all" && (
-                <>
-                  <span>•</span>
-                  <span>{contact.daysAgo} days ago</span>
-                </>
-              )}
+              <span>•</span>
+              <span>{contact.daysAgo} days ago</span>
             </div>
           </div>
         </div>
 
-        {/* Alert Section */}
         <div onClick={(e) => e.stopPropagation()} className="flex items-center space-x-2">
           {contact.hasAlert ? (
             <div className="flex items-center space-x-2">
@@ -217,14 +207,12 @@ export function ContactTable({
         </div>
       </div>
 
-      {/* Category */}
       <div className="flex items-center space-x-2 mb-3">
         <Tag className="h-4 w-4 text-gray-400" />
         <span className="text-sm text-gray-600">{contact.category}</span>
       </div>
 
-      {/* Services - Today tab only */}
-      {activeTab === "today" && (
+      {showServices && (
         <div className="mb-3" onClick={(e) => e.stopPropagation()}>
           <div className="text-sm font-medium text-gray-700 mb-2">Services</div>
           <ServicesDisplay
@@ -236,8 +224,7 @@ export function ContactTable({
         </div>
       )}
 
-      {/* Comments/Alerts - Today tab only */}
-      {activeTab === "today" && (
+      {showServices && (
         <div onClick={(e) => e.stopPropagation()}>
           {contact.hasAlert && contact.alertDetails ? (
             <div className="text-red-800 font-bold bg-red-100 p-3 rounded border border-red-300 text-sm">
@@ -261,38 +248,6 @@ export function ContactTable({
 
   return (
     <div className="bg-white">
-      {/* Services Display Variant Switcher */}
-      {activeTab === "today" && safeContacts.length > 0 && (
-        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Settings className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Services Display:</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 bg-transparent">
-                    {variantOptions.find((option) => option.value === servicesVariant)?.label}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {variantOptions.map((option) => (
-                    <DropdownMenuItem
-                      key={option.value}
-                      onClick={() => setServicesVariant(option.value)}
-                      className={servicesVariant === option.value ? "bg-blue-50 text-blue-700" : ""}
-                    >
-                      {option.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div className="text-xs text-gray-500">Test different visualizations</div>
-          </div>
-        </div>
-      )}
-
-      {/* Desktop Table View */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead className="border-b border-gray-200">
@@ -315,17 +270,15 @@ export function ContactTable({
                   {sortColumn === "date" && <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>}
                 </button>
               </th>
-              {activeTab === "all" && (
-                <th className="px-3 py-4 text-left text-sm font-medium text-gray-900">
-                  <button
-                    className="flex items-center space-x-1 hover:text-gray-700"
-                    onClick={() => handleSort("daysAgo")}
-                  >
-                    <span>Days Ago</span>
-                    {sortColumn === "daysAgo" && <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>}
-                  </button>
-                </th>
-              )}
+              <th className="px-3 py-4 text-left text-sm font-medium text-gray-900">
+                <button
+                  className="flex items-center space-x-1 hover:text-gray-700"
+                  onClick={() => handleSort("daysAgo")}
+                >
+                  <span>Days Ago</span>
+                  {sortColumn === "daysAgo" && <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>}
+                </button>
+              </th>
               <th className="px-3 py-4 text-left text-sm font-medium text-gray-900">
                 <button
                   className="flex items-center space-x-1 hover:text-gray-700"
@@ -344,7 +297,7 @@ export function ContactTable({
                   {sortColumn === "category" && <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>}
                 </button>
               </th>
-              {activeTab === "today" && (
+              {showServices && (
                 <>
                   <th className="px-3 py-4 text-left text-sm font-medium text-gray-900">Services</th>
                   <th className="px-3 py-4 text-left text-sm font-medium text-gray-900">Comments / Alerts</th>
@@ -357,7 +310,7 @@ export function ContactTable({
               <tr
                 key={row.id}
                 className={`cursor-pointer ${getRowBackgroundColor(row.hasAlert)}`}
-                onClick={activeTab === "today" ? () => handleTodayRowClick(row) : () => handleRowClick(row.client)}
+                onClick={showServices ? () => handleTodayRowClick(row) : () => handleRowClick(row.client)}
               >
                 <td className="px-3 py-4" onClick={(e) => e.stopPropagation()}>
                   <Checkbox
@@ -390,12 +343,12 @@ export function ContactTable({
                   )}
                 </td>
                 <td className="px-3 py-4 text-sm text-gray-900">{row.date}</td>
-                {activeTab === "all" && <td className="px-3 py-4 text-sm text-gray-900">{row.daysAgo}</td>}
+                <td className="px-3 py-4 text-sm text-gray-900">{row.daysAgo}</td>
                 <td className="px-3 py-4 text-sm">
                   <span className={`font-bold ${row.hasAlert ? "text-red-900" : "text-black"}`}>{row.client}</span>
                 </td>
                 <td className="px-3 py-4 text-sm text-gray-900">{row.category}</td>
-                {activeTab === "today" && (
+                {showServices && (
                   <>
                     <td className="px-3 py-4 text-sm" onClick={(e) => e.stopPropagation()}>
                       <ServicesDisplay
@@ -431,9 +384,7 @@ export function ContactTable({
         </table>
       </div>
 
-      {/* Mobile Card View */}
       <div className="md:hidden">
-        {/* Mobile Select All */}
         <div className="p-4 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -452,7 +403,6 @@ export function ContactTable({
           </div>
         </div>
 
-        {/* Mobile Cards */}
         <div className="divide-y divide-gray-200">
           {safeContacts.map((contact) => (
             <ContactCard key={contact.id} contact={contact} />
