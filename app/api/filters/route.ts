@@ -97,6 +97,11 @@ export async function GET(request: NextRequest) {
     const categoriesResult = await sql.query(categoriesQuery)
     const categories = categoriesResult.map((row: any) => row.category)
 
+    if (!categories.includes("Outreach")) {
+      categories.push("Outreach")
+      categories.sort()
+    }
+
     // Get unique clients
     const clientsQuery = `
       SELECT DISTINCT client_name as name

@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { Header } from "@/components/header"
 import { DatabaseSetup } from "@/components/database-setup"
+import { ClientDrawer } from "@/components/client-drawer"
 import { useDatabase } from "@/hooks/use-database"
 import { OutreachLocations } from "@/components/outreach-locations"
 import { OutreachRuns } from "@/components/outreach-runs"
@@ -15,6 +16,13 @@ export default function OutreachPage() {
   // Use the same database initialization logic as Contact Log
   const { isInitialized, isLoading: dbLoading } = useDatabase()
   const [activeTab, setActiveTab] = useState("runs")
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [drawerClientName, setDrawerClientName] = useState<string | null>(null)
+
+  const handleClientSelect = useCallback((clientName: string) => {
+    setDrawerClientName(clientName)
+    setIsDrawerOpen(true)
+  }, [])
 
   // Show database setup if not initialized
   if (!isInitialized && !dbLoading) {
@@ -35,7 +43,7 @@ export default function OutreachPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <Header onClientSelect={handleClientSelect} />
 
       <main className="bg-white">
         <div className="px-4 sm:px-6 py-6">
@@ -84,6 +92,8 @@ export default function OutreachPage() {
           </div>
         </div>
       </main>
+
+      <ClientDrawer isOpen={isDrawerOpen} clientName={drawerClientName} onClose={() => setIsDrawerOpen(false)} />
     </div>
   )
 }

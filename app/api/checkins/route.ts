@@ -2,7 +2,7 @@ import { sql } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
 
 interface CreateCheckinRequest {
-  contact_id: number
+  contact_id?: number | null
   client_name: string
   client_uuid?: string
   provider_name: string
@@ -11,7 +11,7 @@ interface CreateCheckinRequest {
 
 interface CheckinResponse {
   id: number
-  contact_id: number
+  contact_id: number | null
   client_name: string
   client_uuid: string | null
   provider_name: string
@@ -31,13 +31,13 @@ export async function POST(request: NextRequest) {
     const { contact_id, client_name, client_uuid, provider_name, notes } = body
 
     // Validation
-    if (!contact_id || typeof contact_id !== "number") {
+    if (contact_id !== undefined && contact_id !== null && typeof contact_id !== "number") {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: "VALIDATION_ERROR",
-            message: "Contact ID is required and must be a number",
+            message: "Contact ID must be a number",
             details: { field: "contact_id", value: contact_id },
           },
         },
@@ -73,10 +73,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const finalContactId = contact_id && contact_id > 0 ? contact_id : null
+
     // Create the check-in record with status 'Draft'
     const result = await sql`
       INSERT INTO cm_checkins (contact_id, client_name, client_uuid, provider_name, notes, status)
-      VALUES (${contact_id}, ${client_name.trim()}, ${client_uuid || null}, ${provider_name.trim()}, ${notes || null}, 'Draft')
+      VALUES (${finalContactId}, ${client_name.trim()}, ${client_uuid || null}, ${provider_name.trim()}, ${notes || null}, 'Draft')
       RETURNING id, contact_id, client_name, client_uuid, provider_name, notes, status, created_at, updated_at
     `
 

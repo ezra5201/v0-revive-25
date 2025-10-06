@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import type React from "react"
 
 import Image from "next/image"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -1301,6 +1302,20 @@ export default function RunLogPage() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div>
               <h1 className="text-4xl font-bold text-foreground mb-2">Run Log</h1>
+
+              <div className="flex gap-2 mb-3">
+                <Link href="/run-log" className="flex-1">
+                  <Button variant="default" className="w-full h-12 text-base font-semibold">
+                    Run Log
+                  </Button>
+                </Link>
+                <Link href="/contact-log" className="flex-1">
+                  <Button variant="outline" className="w-full h-12 text-base font-semibold border-2 bg-transparent">
+                    Contact Log
+                  </Button>
+                </Link>
+              </div>
+
               <p className="text-xl font-medium text-foreground">{today}</p>
             </div>
 
