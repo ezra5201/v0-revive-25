@@ -11,6 +11,7 @@ import {
   SlidersHorizontal,
   Filter,
   Columns3,
+  Edit,
 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -36,6 +37,7 @@ interface ActionBarProps {
   onFiltersChange?: (filters: { categories: string[]; providers: string[] }) => void
   onServiceCompleted?: () => void
   onDateChangeClick?: () => void
+  onBulkUpdateServicesClick?: () => void
   hasData?: boolean
   servicesVariant?: "default" | "badges" | "dots" | "cards" | "progress"
   onServicesVariantChange?: (variant: "default" | "badges" | "dots" | "cards" | "progress") => void
@@ -52,6 +54,7 @@ export function ActionBar({
   onFiltersChange,
   onServiceCompleted,
   onDateChangeClick,
+  onBulkUpdateServicesClick,
   hasData = true,
   servicesVariant = "badges",
   onServicesVariantChange,
@@ -309,6 +312,10 @@ export function ActionBar({
                       <span className="hidden sm:inline">Food</span>
                     </>
                   )}
+                </Button>
+                <Button variant="outline" size="sm" onClick={onBulkUpdateServicesClick} className="h-10 bg-transparent">
+                  <Edit className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Update Services</span>
                 </Button>
                 <Button variant="outline" size="sm" onClick={onDateChangeClick} className="h-10 bg-transparent">
                   <CalendarDays className="h-4 w-4 sm:mr-2" />

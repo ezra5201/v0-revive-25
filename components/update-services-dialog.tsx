@@ -13,7 +13,7 @@ import { IntakeFormModal } from "./intake-form-modal"
 interface UpdateServicesDialogProps {
   isOpen: boolean
   onClose: () => void
-  contactData: {
+  contactData?: {
     id: number
     client: string
     date: string
@@ -24,6 +24,9 @@ interface UpdateServicesDialogProps {
       completedAt: string
     }>
   } | null
+  bulkMode?: boolean
+  selectedContactIds?: number[]
+  selectedCount?: number
   onServicesUpdate?: () => void
   isFromCMTab?: boolean
   isFromOTTab?: boolean
@@ -56,6 +59,9 @@ export function UpdateServicesDialog({
   isOpen,
   onClose,
   contactData,
+  bulkMode = false,
+  selectedContactIds = [],
+  selectedCount = 0,
   onServicesUpdate,
   isFromCMTab = false,
   isFromOTTab = false,
@@ -73,26 +79,31 @@ export function UpdateServicesDialog({
   const [isIntakeFormModalOpen, setIsIntakeFormModalOpen] = useState(false)
 
   useEffect(() => {
-    if (isOpen && contactData) {
-      const currentlyProvided = contactData.servicesProvided.map((sp) => sp.service)
-      setSelectedServices(currentlyProvided)
+    if (isOpen) {
+      if (bulkMode) {
+        setSelectedServices([])
+        setServiceProviders({})
+      } else if (contactData) {
+        const currentlyProvided = contactData.servicesProvided.map((sp) => sp.service)
+        setSelectedServices(currentlyProvided)
 
-      const initialProviders: { [key: string]: string } = {}
-      contactData.servicesProvided.forEach((sp) => {
-        if (sp.provider && (sp.service === "Case Management" || sp.service === "Occupational")) {
-          initialProviders[sp.service] = sp.provider
+        const initialProviders: { [key: string]: string } = {}
+        contactData.servicesProvided.forEach((sp) => {
+          if (sp.provider && (sp.service === "Case Management" || sp.service === "Occupational")) {
+            initialProviders[sp.service] = sp.provider
+          }
+        })
+        setServiceProviders(initialProviders)
+
+        if (isFromCMTab) {
+          checkForTodaysCheckin()
         }
-      })
-      setServiceProviders(initialProviders)
-
-      if (isFromCMTab) {
-        checkForTodaysCheckin()
-      }
-      if (isFromOTTab) {
-        checkForTodaysOTCheckin()
+        if (isFromOTTab) {
+          checkForTodaysOTCheckin()
+        }
       }
     }
-  }, [isOpen, contactData, isFromCMTab, isFromOTTab])
+  }, [isOpen, contactData, bulkMode, isFromCMTab, isFromOTTab])
 
   const checkForTodaysCheckin = async () => {
     if (!contactData) return
@@ -178,51 +189,100 @@ export function UpdateServicesDialog({
   }
 
   const handleSubmit = async () => {
-    if (!contactData) return
+    if (bulkMode) {
+      if (selectedContactIds.length === 0) return
 
-    setIsSubmitting(true)
-    setSubmitError(null)
+      setIsSubmitting(true)
+      setSubmitError(null)
 
-    try {
-      const updatedServicesProvided = selectedServices.map((service) => {
-        const serviceRecord: any = {
-          service,
-          completedAt: new Date().toISOString(),
+      try {
+        const updatedServicesProvided = selectedServices.map((service) => {
+          const serviceRecord: any = {
+            service,
+            completedAt: new Date().toISOString(),
+          }
+
+          if ((service === "Case Management" || service === "Occupational") && serviceProviders[service]) {
+            serviceRecord.provider = serviceProviders[service]
+          }
+
+          return serviceRecord
+        })
+
+        const response = await fetch("/api/bulk-update-services", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contactIds: selectedContactIds,
+            servicesProvided: updatedServicesProvided,
+            updatedBy: "Andrea Leflore",
+          }),
+        })
+
+        const result = await response.json()
+
+        if (response.ok) {
+          console.log("Services updated successfully for multiple contacts:", result)
+          onServicesUpdate?.()
+          handleClose()
+        } else {
+          setSubmitError(result.error || "Failed to update services")
         }
-
-        if ((service === "Case Management" || service === "Occupational") && serviceProviders[service]) {
-          serviceRecord.provider = serviceProviders[service]
-        }
-
-        return serviceRecord
-      })
-
-      const response = await fetch("/api/update-services", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contactId: contactData.id,
-          servicesProvided: updatedServicesProvided,
-          updatedBy: "Andrea Leflore",
-        }),
-      })
-
-      const result = await response.json()
-
-      if (response.ok) {
-        console.log("Services updated successfully:", result)
-        onServicesUpdate?.()
-        handleClose()
-      } else {
-        setSubmitError(result.error || "Failed to update services")
+      } catch (error) {
+        console.error("Bulk services update error:", error)
+        setSubmitError("Failed to connect to server")
+      } finally {
+        setIsSubmitting(false)
       }
-    } catch (error) {
-      console.error("Services update error:", error)
-      setSubmitError("Failed to connect to server")
-    } finally {
-      setIsSubmitting(false)
+    } else {
+      if (!contactData) return
+
+      setIsSubmitting(true)
+      setSubmitError(null)
+
+      try {
+        const updatedServicesProvided = selectedServices.map((service) => {
+          const serviceRecord: any = {
+            service,
+            completedAt: new Date().toISOString(),
+          }
+
+          if ((service === "Case Management" || service === "Occupational") && serviceProviders[service]) {
+            serviceRecord.provider = serviceProviders[service]
+          }
+
+          return serviceRecord
+        })
+
+        const response = await fetch("/api/update-services", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contactId: contactData.id,
+            servicesProvided: updatedServicesProvided,
+            updatedBy: "Andrea Leflore",
+          }),
+        })
+
+        const result = await response.json()
+
+        if (response.ok) {
+          console.log("Services updated successfully:", result)
+          onServicesUpdate?.()
+          handleClose()
+        } else {
+          setSubmitError(result.error || "Failed to update services")
+        }
+      } catch (error) {
+        console.error("Services update error:", error)
+        setSubmitError("Failed to connect to server")
+      } finally {
+        setIsSubmitting(false)
+      }
     }
   }
 
@@ -276,7 +336,7 @@ export function UpdateServicesDialog({
     setIsIntakeFormModalOpen(true)
   }
 
-  if (!contactData) return null
+  if (!contactData && !bulkMode) return null
 
   return (
     <>
@@ -285,72 +345,86 @@ export function UpdateServicesDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between pr-8">
               <div className="flex items-center space-x-4">
-                <span>Update Services</span>
-                <div className="flex items-center space-x-2 text-blue-600">
-                  <Clock className="h-4 w-4" />
-                  <span className="text-sm font-normal">Check-in: {contactData.date}</span>
-                </div>
+                <span>{bulkMode ? "Bulk Update Services" : "Update Services"}</span>
+                {!bulkMode && contactData && (
+                  <div className="flex items-center space-x-2 text-blue-600">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-sm font-normal">Check-in: {contactData.date}</span>
+                  </div>
+                )}
               </div>
             </DialogTitle>
             <div id="dialog-description" className="sr-only">
-              Update services provided for {contactData.client} on {contactData.date}
+              {bulkMode
+                ? `Update services for ${selectedCount} selected contacts`
+                : `Update services provided for ${contactData?.client} on ${contactData?.date}`}
             </div>
           </DialogHeader>
 
           <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="bg-black text-white px-4 py-3 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-lg">{contactData.client}</span>
+            {bulkMode ? (
+              <div className="bg-blue-50 border border-blue-200 px-4 py-3 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <span className="font-medium">Updating {selectedCount} contacts</span>
+                  <br />
+                  Services selected below will be added to all selected contacts.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-black text-white px-4 py-3 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-lg">{contactData?.client}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleIntakeFormClick}
+                      className="text-sm text-gray-300 hover:text-white hover:bg-gray-800 border-gray-500 hover:border-gray-400 h-auto px-2 py-1 bg-transparent"
+                    >
+                      <FileText className="h-3 w-3 mr-1" />
+                      Intake form not started
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleIntakeFormClick}
-                    className="text-sm text-gray-300 hover:text-white hover:bg-gray-800 border-gray-500 hover:border-gray-400 h-auto px-2 py-1 bg-transparent"
+                    onClick={handleCMCheckinClick}
+                    disabled={checkingCheckin}
+                    className="flex-1 bg-transparent"
                   >
-                    <FileText className="h-3 w-3 mr-1" />
-                    Intake form not started
+                    {checkingCheckin ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-2" />
+                    ) : hasCheckinToday ? (
+                      <Edit className="h-4 w-4 mr-2" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
+                    {checkingCheckin ? "Checking..." : hasCheckinToday ? "Edit CM Check-In" : "+ CM Check-In"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleOTCheckinClick}
+                    disabled={checkingOTCheckin}
+                    className="flex-1 bg-transparent"
+                  >
+                    {checkingOTCheckin ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-2" />
+                    ) : hasOTCheckinToday ? (
+                      <Edit className="h-4 w-4 mr-2" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
+                    {checkingOTCheckin ? "Checking..." : hasOTCheckinToday ? "Edit OT Check-In" : "+ OT Check-In"}
                   </Button>
                 </div>
               </div>
+            )}
 
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCMCheckinClick}
-                  disabled={checkingCheckin}
-                  className="flex-1 bg-transparent"
-                >
-                  {checkingCheckin ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-2" />
-                  ) : hasCheckinToday ? (
-                    <Edit className="h-4 w-4 mr-2" />
-                  ) : (
-                    <Plus className="h-4 w-4 mr-2" />
-                  )}
-                  {checkingCheckin ? "Checking..." : hasCheckinToday ? "Edit CM Check-In" : "+ CM Check-In"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleOTCheckinClick}
-                  disabled={checkingOTCheckin}
-                  className="flex-1 bg-transparent"
-                >
-                  {checkingOTCheckin ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent mr-2" />
-                  ) : hasOTCheckinToday ? (
-                    <Edit className="h-4 w-4 mr-2" />
-                  ) : (
-                    <Plus className="h-4 w-4 mr-2" />
-                  )}
-                  {checkingOTCheckin ? "Checking..." : hasOTCheckinToday ? "Edit OT Check-In" : "+ OT Check-In"}
-                </Button>
-              </div>
-            </div>
-
-            {contactData.servicesRequested.length > 0 && (
+            {!bulkMode && contactData && contactData.servicesRequested.length > 0 && (
               <div className="space-y-2">
                 <Label className="text-base font-medium">Services Originally Requested:</Label>
                 <div className="bg-gray-50 p-3 rounded border">
@@ -369,7 +443,9 @@ export function UpdateServicesDialog({
             )}
 
             <div className="space-y-4">
-              <Label className="text-base font-medium">Services Provided Today:</Label>
+              <Label className="text-base font-medium">
+                {bulkMode ? "Services to Add:" : "Services Provided Today:"}
+              </Label>
               <div className="grid grid-cols-2 gap-4">
                 {services.map((service) => (
                   <div key={service.value} className="space-y-2 break-inside-avoid">
@@ -447,32 +523,34 @@ export function UpdateServicesDialog({
         </DialogContent>
       </Dialog>
 
-      {isFromCMTab && (
+      {!bulkMode && isFromCMTab && contactData && (
         <CMCheckinModal
           isOpen={isCMCheckinModalOpen}
           onClose={handleCMCheckinClose}
           onSubmit={handleCMCheckinSubmit}
-          clientName={contactData?.client || ""}
-          contactId={contactData?.id || 0}
+          clientName={contactData.client}
+          contactId={contactData.id}
         />
       )}
 
-      {isFromOTTab && (
+      {!bulkMode && isFromOTTab && contactData && (
         <OTCheckinModal
           isOpen={isOTCheckinModalOpen}
           onClose={handleOTCheckinClose}
           onSubmit={handleOTCheckinSubmit}
-          clientName={contactData?.client || ""}
-          contactId={contactData?.id || 0}
+          clientName={contactData.client}
+          contactId={contactData.id}
         />
       )}
 
-      <IntakeFormModal
-        isOpen={isIntakeFormModalOpen}
-        onClose={() => setIsIntakeFormModalOpen(false)}
-        clientId={contactData?.id || 0}
-        clientName={contactData?.client || ""}
-      />
+      {!bulkMode && contactData && (
+        <IntakeFormModal
+          isOpen={isIntakeFormModalOpen}
+          onClose={() => setIsIntakeFormModalOpen(false)}
+          clientId={contactData.id}
+          clientName={contactData.client}
+        />
+      )}
     </>
   )
 }

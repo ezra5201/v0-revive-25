@@ -28,6 +28,7 @@ export default function ContactLogPage() {
   const [isChangeDateDialogOpen, setIsChangeDateDialogOpen] = useState(false)
   const [isUpdateServicesDialogOpen, setIsUpdateServicesDialogOpen] = useState(false)
   const [selectedContactForUpdate, setSelectedContactForUpdate] = useState<any>(null)
+  const [isBulkUpdateServicesDialogOpen, setIsBulkUpdateServicesDialogOpen] = useState(false)
   const [selectedCount, setSelectedCount] = useState(0)
   const [selectedContactIds, setSelectedContactIds] = useState<number[]>([])
   const [filters, setFilters] = useState<{ categories: string[]; providers: string[] }>({
@@ -116,6 +117,21 @@ export default function ContactLogPage() {
     setSelectedContactForUpdate(null)
   }, [refetchContacts])
 
+  const handleBulkUpdateServicesClick = useCallback(() => {
+    setIsBulkUpdateServicesDialogOpen(true)
+  }, [])
+
+  const handleCloseBulkUpdateServicesDialog = useCallback(() => {
+    setIsBulkUpdateServicesDialogOpen(false)
+  }, [])
+
+  const handleBulkServicesUpdated = useCallback(() => {
+    refetchContacts()
+    setIsBulkUpdateServicesDialogOpen(false)
+    setSelectedCount(0)
+    setSelectedContactIds([])
+  }, [refetchContacts])
+
   if (!isInitialized && !dbLoading) {
     return <DatabaseSetup />
   }
@@ -169,6 +185,7 @@ export default function ContactLogPage() {
         onFiltersChange={setFilters}
         onServiceCompleted={handleDataUpdate}
         onDateChangeClick={() => setIsChangeDateDialogOpen(true)}
+        onBulkUpdateServicesClick={handleBulkUpdateServicesClick}
         hasData={contacts.length > 0}
         servicesVariant={servicesVariant}
         onServicesVariantChange={setServicesVariant}
@@ -221,6 +238,15 @@ export default function ContactLogPage() {
         onServicesUpdate={handleServicesUpdated}
         isFromCMTab={viewFilter === "cm"}
         isFromOTTab={viewFilter === "ot"}
+      />
+
+      <UpdateServicesDialog
+        isOpen={isBulkUpdateServicesDialogOpen}
+        onClose={handleCloseBulkUpdateServicesDialog}
+        bulkMode={true}
+        selectedContactIds={selectedContactIds}
+        selectedCount={selectedCount}
+        onServicesUpdate={handleBulkServicesUpdated}
       />
     </div>
   )
