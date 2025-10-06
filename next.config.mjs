@@ -9,6 +9,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  output: 'standalone',
   // Removed the redirects - we're handling this in app/page.tsx now
 }
 

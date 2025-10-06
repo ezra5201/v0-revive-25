@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Menu, User, Settings, ArrowLeftRight } from "lucide-react"
+import { Menu, User, Settings, ArrowLeftRight, BookOpen } from "lucide-react"
 import { useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { AlertHeaderIndicator } from "./alert-header-indicator"
@@ -134,6 +134,10 @@ export function Header({ onClientSelect }: HeaderProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => router.push("/docs")} className="min-h-[44px] flex items-center">
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Developer Documentation
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleViewSwitch} className="min-h-[44px] flex items-center">
                   <ArrowLeftRight className="h-4 w-4 mr-2" />
                   {viewSwitchText}
@@ -193,6 +197,10 @@ export function Header({ onClientSelect }: HeaderProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => router.push("/docs")} className="min-h-[44px] flex items-center">
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Developer Documentation
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleViewSwitch} className="min-h-[44px] flex items-center">
                     <ArrowLeftRight className="h-4 w-4 mr-2" />
                     {viewSwitchText}
