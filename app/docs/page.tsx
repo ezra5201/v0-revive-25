@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { BookOpen, Database, Cloud, Code, FileText, AlertCircle, Wrench, ChevronLeft } from "lucide-react"
 import ReactMarkdown from "react-markdown"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { useRouter } from "next/navigation"
 
 const docs = [
@@ -69,12 +71,15 @@ export default function DocsPage() {
   const loadDoc = async (file: string) => {
     setIsLoading(true)
     try {
-      const response = await fetch(`/docs/${file}`)
+      const response = await fetch(`/api/docs/${file}`)
+      if (!response.ok) {
+        throw new Error("Failed to load documentation")
+      }
       const text = await response.text()
       setContent(text)
     } catch (error) {
       console.error("[v0] Error loading doc:", error)
-      setContent("# Error\n\nFailed to load documentation.")
+      setContent("# Error\n\nFailed to load documentation. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -91,7 +96,7 @@ export default function DocsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
@@ -101,8 +106,8 @@ export default function DocsPage() {
               Back to App
             </Button>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Developer Documentation</h1>
-          <p className="text-lg text-gray-600">
+          <h1 className="text-4xl font-bold mb-2">Developer Documentation</h1>
+          <p className="text-lg text-muted-foreground">
             Complete guide for deploying and maintaining ReVive IMPACT on Google Cloud Run
           </p>
         </div>
@@ -121,8 +126,8 @@ export default function DocsPage() {
                 >
                   <CardHeader>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-orange-100 rounded-lg">
-                        <Icon className="h-6 w-6 text-orange-600" />
+                      <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                        <Icon className="h-6 w-6 text-orange-600 dark:text-orange-400" />
                       </div>
                     </div>
                     <CardTitle className="text-xl">{doc.title}</CardTitle>
@@ -139,8 +144,8 @@ export default function DocsPage() {
           </div>
         ) : (
           // Documentation Viewer
-          <div className="bg-white rounded-lg shadow-lg">
-            <div className="border-b border-gray-200 p-4">
+          <Card className="shadow-lg">
+            <div className="border-b p-4">
               <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2">
                 <ChevronLeft className="h-4 w-4" />
                 Back to Documentation
@@ -150,39 +155,87 @@ export default function DocsPage() {
               <div className="p-8">
                 {isLoading ? (
                   <div className="flex items-center justify-center py-12">
-                    <div className="text-gray-500">Loading documentation...</div>
+                    <div className="text-muted-foreground">Loading documentation...</div>
                   </div>
                 ) : (
-                  <div className="prose prose-slate max-w-none">
+                  <div className="prose prose-slate dark:prose-invert max-w-none">
                     <ReactMarkdown
                       components={{
-                        h1: ({ children }) => <h1 className="text-4xl font-bold text-gray-900 mb-4">{children}</h1>,
+                        h1: ({ children }) => (
+                          <h1 className="text-4xl font-bold mb-6 mt-2 text-foreground">{children}</h1>
+                        ),
                         h2: ({ children }) => (
-                          <h2 className="text-3xl font-bold text-gray-900 mt-8 mb-4">{children}</h2>
+                          <h2 className="text-3xl font-bold mt-12 mb-4 text-foreground border-b pb-2">{children}</h2>
                         ),
                         h3: ({ children }) => (
-                          <h3 className="text-2xl font-semibold text-gray-900 mt-6 mb-3">{children}</h3>
+                          <h3 className="text-2xl font-semibold mt-8 mb-3 text-foreground">{children}</h3>
                         ),
-                        p: ({ children }) => <p className="text-gray-700 leading-relaxed mb-4">{children}</p>,
-                        code: ({ children, className }) => {
-                          const isBlock = className?.includes("language-")
-                          return isBlock ? (
-                            <code className="block bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
-                              {children}
-                            </code>
+                        h4: ({ children }) => (
+                          <h4 className="text-xl font-semibold mt-6 mb-2 text-foreground">{children}</h4>
+                        ),
+                        p: ({ children }) => <p className="text-foreground leading-relaxed mb-4">{children}</p>,
+                        a: ({ children, href }) => (
+                          <a href={href} className="text-orange-600 hover:text-orange-700 underline">
+                            {children}
+                          </a>
+                        ),
+                        code: ({ node, inline, className, children, ...props }) => {
+                          const match = /language-(\w+)/.exec(className || "")
+                          const language = match ? match[1] : ""
+
+                          return !inline && language ? (
+                            <div className="my-4 rounded-lg overflow-hidden">
+                              <SyntaxHighlighter
+                                style={vscDarkPlus}
+                                language={language}
+                                PreTag="div"
+                                customStyle={{
+                                  margin: 0,
+                                  borderRadius: "0.5rem",
+                                  fontSize: "0.875rem",
+                                }}
+                                {...props}
+                              >
+                                {String(children).replace(/\n$/, "")}
+                              </SyntaxHighlighter>
+                            </div>
                           ) : (
-                            <code className="bg-gray-100 text-orange-600 px-1.5 py-0.5 rounded text-sm">
+                            <code
+                              className="bg-muted text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded text-sm font-mono"
+                              {...props}
+                            >
                               {children}
                             </code>
                           )
                         },
-                        ul: ({ children }) => <ul className="list-disc list-inside space-y-2 mb-4">{children}</ul>,
-                        ol: ({ children }) => <ol className="list-decimal list-inside space-y-2 mb-4">{children}</ol>,
+                        pre: ({ children }) => <div className="my-4">{children}</div>,
+                        ul: ({ children }) => (
+                          <ul className="list-disc list-outside ml-6 space-y-2 mb-4 text-foreground">{children}</ul>
+                        ),
+                        ol: ({ children }) => (
+                          <ol className="list-decimal list-outside ml-6 space-y-2 mb-4 text-foreground">{children}</ol>
+                        ),
+                        li: ({ children }) => <li className="text-foreground leading-relaxed">{children}</li>,
                         blockquote: ({ children }) => (
-                          <blockquote className="border-l-4 border-orange-500 pl-4 italic text-gray-600 my-4">
+                          <blockquote className="border-l-4 border-orange-500 pl-4 italic text-muted-foreground my-4 bg-muted/50 py-2 rounded-r">
                             {children}
                           </blockquote>
                         ),
+                        table: ({ children }) => (
+                          <div className="my-4 overflow-x-auto">
+                            <table className="min-w-full divide-y divide-border">{children}</table>
+                          </div>
+                        ),
+                        thead: ({ children }) => <thead className="bg-muted">{children}</thead>,
+                        tbody: ({ children }) => <tbody className="divide-y divide-border">{children}</tbody>,
+                        tr: ({ children }) => <tr>{children}</tr>,
+                        th: ({ children }) => (
+                          <th className="px-4 py-2 text-left text-sm font-semibold text-foreground">{children}</th>
+                        ),
+                        td: ({ children }) => <td className="px-4 py-2 text-sm text-foreground">{children}</td>,
+                        hr: () => <hr className="my-8 border-border" />,
+                        strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                        em: ({ children }) => <em className="italic">{children}</em>,
                       }}
                     >
                       {content}
@@ -191,7 +244,7 @@ export default function DocsPage() {
                 )}
               </div>
             </ScrollArea>
-          </div>
+          </Card>
         )}
       </div>
     </div>
