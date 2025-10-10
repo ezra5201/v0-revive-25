@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
+import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
 
 export async function POST(request: NextRequest) {
   try {
@@ -84,6 +85,21 @@ export async function POST(request: NextRequest) {
     `
 
     const newGoal = result[0]
+
+    await auditLog({
+      action: "CREATE",
+      tableName: "ot_goals",
+      recordId: newGoal.id.toString(),
+      clientName: client_name,
+      userEmail: getUserFromRequest(request),
+      ipAddress: getIpFromRequest(request),
+      changes: {
+        goal_text,
+        target_date,
+        priority: priority || 1,
+        status: newGoal.status,
+      },
+    })
 
     return NextResponse.json(
       {

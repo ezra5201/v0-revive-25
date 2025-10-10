@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
+import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
 
 export async function PUT(request: NextRequest, { params }: { params: { goalId: string } }) {
   try {
@@ -51,9 +52,8 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
       )
     }
 
-    // Check if goal exists and get current status
     const existingGoal = await sql`
-      SELECT id, status FROM cm_goals WHERE id = ${goalId}
+      SELECT id, status, client_name FROM cm_goals WHERE id = ${goalId}
     `
 
     if (existingGoal.length === 0) {
@@ -71,6 +71,7 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
     }
 
     const previousStatus = existingGoal[0].status
+    const clientName = existingGoal[0].client_name
 
     // Update the goal status
     const updatedGoal = await sql`
@@ -79,6 +80,20 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
       WHERE id = ${goalId}
       RETURNING id, status, updated_at
     `
+
+    await auditLog({
+      action: "UPDATE",
+      tableName: "cm_goals",
+      recordId: goalId.toString(),
+      clientName: clientName,
+      userEmail: getUserFromRequest(request),
+      ipAddress: getIpFromRequest(request),
+      changes: {
+        before: { status: previousStatus },
+        after: { status: status },
+        progress_note: progress_note || undefined,
+      },
+    })
 
     // Create progress entry if there's a note or status change
     if (progress_note || previousStatus !== status) {
@@ -104,6 +119,84 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
         error: {
           code: "DATABASE_ERROR",
           message: "Failed to update goal",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
+      },
+      { status: 500 },
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { goalId: string } }) {
+  try {
+    const goalId = Number.parseInt(params.goalId)
+    if (isNaN(goalId)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid goal ID",
+            details: { field: "goalId", value: params.goalId },
+          },
+        },
+        { status: 400 },
+      )
+    }
+
+    // Get data BEFORE delete for audit logging
+    const existingGoal = await sql`
+      SELECT id, client_name, goal_text, status, priority FROM cm_goals WHERE id = ${goalId}
+    `
+
+    if (existingGoal.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "NOT_FOUND",
+            message: "Goal not found",
+            details: { goalId },
+          },
+        },
+        { status: 404 },
+      )
+    }
+
+    const deletedGoal = existingGoal[0]
+
+    // Delete the goal
+    await sql`DELETE FROM cm_goals WHERE id = ${goalId}`
+
+    // Add audit logging after successful delete
+    await auditLog({
+      action: "DELETE",
+      tableName: "cm_goals",
+      recordId: goalId.toString(),
+      clientName: deletedGoal.client_name,
+      userEmail: getUserFromRequest(request),
+      ipAddress: getIpFromRequest(request),
+      changes: {
+        deleted_record: {
+          goal_text: deletedGoal.goal_text,
+          status: deletedGoal.status,
+          priority: deletedGoal.priority,
+        },
+      },
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: { id: goalId, message: "Goal deleted successfully" },
+    })
+  } catch (error) {
+    console.error("Failed to delete goal:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "DATABASE_ERROR",
+          message: "Failed to delete goal",
           details: error instanceof Error ? error.message : "Unknown error",
         },
       },

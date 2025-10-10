@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
+import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
 
 interface CreateOTCheckinRequest {
   contact_id?: number | null
@@ -81,6 +82,21 @@ export async function POST(request: NextRequest) {
     `
 
     const newCheckin = result[0]
+
+    await auditLog({
+      action: "CREATE",
+      tableName: "ot_checkins",
+      recordId: newCheckin.id.toString(),
+      clientName: client_name,
+      userEmail: getUserFromRequest(request),
+      ipAddress: getIpFromRequest(request),
+      changes: {
+        contact_id: finalContactId,
+        provider_name: provider_name.trim(),
+        status: "Draft",
+        notes: notes || null,
+      },
+    })
 
     return NextResponse.json(
       {

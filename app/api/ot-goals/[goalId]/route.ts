@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
+import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
 
 export async function PUT(request: NextRequest, { params }: { params: { goalId: string } }) {
   try {
@@ -104,7 +105,7 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
     }
 
     const existingGoal = await sql`
-      SELECT id, status, goal_text, target_date, priority FROM ot_goals WHERE id = ${goalId}
+      SELECT id, status, goal_text, target_date, priority, client_name FROM ot_goals WHERE id = ${goalId}
     `
 
     console.log("DEBUG: Database query for goalId:", goalId)
@@ -141,8 +142,11 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
     }
 
     const previousStatus = goalRecord.status
+    const previousGoalText = goalRecord.goal_text
+    const previousTargetDate = goalRecord.target_date
+    const previousPriority = goalRecord.priority
+    const clientName = goalRecord.client_name
 
-    // Build update query dynamically based on provided fields
     const updateFields: string[] = []
     const updateValues: any[] = []
     let paramIndex = 1
@@ -169,7 +173,6 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
     }
     updateFields.push(`updated_at = CURRENT_TIMESTAMP`)
 
-    // Add the goalId as the last parameter for WHERE clause
     updateValues.push(goalId)
 
     const updateQuery = `
@@ -199,7 +202,37 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
       )
     }
 
-    // Create progress entry if status changed or progress note provided
+    const auditChanges: any = { before: {}, after: {} }
+    if (goal_text !== undefined) {
+      auditChanges.before.goal_text = previousGoalText
+      auditChanges.after.goal_text = updatedGoal.goal_text
+    }
+    if (target_date !== undefined) {
+      auditChanges.before.target_date = previousTargetDate
+      auditChanges.after.target_date = updatedGoal.target_date
+    }
+    if (priority !== undefined) {
+      auditChanges.before.priority = previousPriority
+      auditChanges.after.priority = updatedGoal.priority
+    }
+    if (status !== undefined) {
+      auditChanges.before.status = previousStatus
+      auditChanges.after.status = updatedGoal.status
+    }
+    if (progress_note) {
+      auditChanges.progress_note = progress_note
+    }
+
+    await auditLog({
+      action: "UPDATE",
+      tableName: "ot_goals",
+      recordId: goalId.toString(),
+      clientName: clientName,
+      userEmail: getUserFromRequest(request),
+      ipAddress: getIpFromRequest(request),
+      changes: auditChanges,
+    })
+
     if (progress_note || (status && previousStatus !== status)) {
       await sql`
         INSERT INTO ot_goal_progress (goal_id, progress_note, previous_status, new_status)
@@ -226,6 +259,81 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
         error: {
           code: "DATABASE_ERROR",
           message: "Failed to update OT goal",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
+      },
+      { status: 500 },
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { goalId: string } }) {
+  try {
+    const goalId = Number.parseInt(params.goalId)
+    if (isNaN(goalId)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid goal ID",
+            details: { field: "goalId", value: params.goalId },
+          },
+        },
+        { status: 400 },
+      )
+    }
+
+    const existingGoal = await sql`
+      SELECT id, client_name, goal_text, status, priority FROM ot_goals WHERE id = ${goalId}
+    `
+
+    if (existingGoal.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "NOT_FOUND",
+            message: "OT goal not found",
+            details: { goalId },
+          },
+        },
+        { status: 404 },
+      )
+    }
+
+    const deletedGoal = existingGoal[0]
+
+    await sql`DELETE FROM ot_goals WHERE id = ${goalId}`
+
+    await auditLog({
+      action: "DELETE",
+      tableName: "ot_goals",
+      recordId: goalId.toString(),
+      clientName: deletedGoal.client_name,
+      userEmail: getUserFromRequest(request),
+      ipAddress: getIpFromRequest(request),
+      changes: {
+        deleted_record: {
+          goal_text: deletedGoal.goal_text,
+          status: deletedGoal.status,
+          priority: deletedGoal.priority,
+        },
+      },
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: { id: goalId, message: "OT goal deleted successfully" },
+    })
+  } catch (error) {
+    console.error("Failed to delete OT goal:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "DATABASE_ERROR",
+          message: "Failed to delete OT goal",
           details: error instanceof Error ? error.message : "Unknown error",
         },
       },

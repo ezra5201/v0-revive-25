@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
+import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
 
 const sql = neon(process.env.DATABASE_URL!)
 
@@ -20,6 +21,11 @@ export async function POST(request: NextRequest) {
     console.log("[v0] Existing form check completed, found:", existingForm.length, "records")
 
     if (existingForm.length > 0) {
+      const currentForm = await sql`
+        SELECT * FROM intake_forms WHERE client_id = ${clientId}
+      `
+      const previousData = currentForm[0]
+
       // Update existing form
       await sql`
         UPDATE intake_forms SET
@@ -58,9 +64,29 @@ export async function POST(request: NextRequest) {
           completed_at = ${overallCompletion === 100 ? "NOW()" : null}
         WHERE client_id = ${clientId}
       `
+
+      await auditLog({
+        action: "UPDATE",
+        tableName: "intake_forms",
+        recordId: existingForm[0].id.toString(),
+        clientName: formData.name,
+        userEmail: getUserFromRequest(request),
+        ipAddress: getIpFromRequest(request),
+        changes: {
+          before: {
+            completion_percentage: previousData.completion_percentage,
+            is_completed: previousData.is_completed,
+          },
+          after: {
+            completion_percentage: overallCompletion,
+            is_completed: overallCompletion === 100,
+          },
+          updated_fields: Object.keys(formData),
+        },
+      })
     } else {
       // Create new form
-      await sql`
+      const result = await sql`
         INSERT INTO intake_forms (
           client_id, name, pronouns, date_of_birth, birth_year, program, how_heard_about_us,
           needs, see_staff, other_support, languages, current_housing_status, past_housing_status,
@@ -84,7 +110,23 @@ export async function POST(request: NextRequest) {
           ${overallCompletion}, ${JSON.stringify(sectionCompletion)}, ${overallCompletion === 100},
           ${overallCompletion === 100 ? new Date() : null}
         )
+        RETURNING id
       `
+
+      await auditLog({
+        action: "CREATE",
+        tableName: "intake_forms",
+        recordId: result[0].id.toString(),
+        clientName: formData.name,
+        userEmail: getUserFromRequest(request),
+        ipAddress: getIpFromRequest(request),
+        changes: {
+          client_id: clientId,
+          program: formData.program,
+          completion_percentage: overallCompletion,
+          is_completed: overallCompletion === 100,
+        },
+      })
     }
 
     return NextResponse.json({ success: true })

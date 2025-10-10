@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
 import { getTodayString } from "@/lib/date-utils"
+import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
 
 export async function GET(request: NextRequest) {
   if (!sql) {
@@ -262,6 +263,7 @@ export async function GET(request: NextRequest) {
       c.alert_id,
       c.services_requested,
       c.services_provided,
+      c.comments,
       c.created_at,
       (DATE '${todayString}' - c.contact_date)::INTEGER AS days_ago,
       ROW_NUMBER() OVER (
@@ -436,5 +438,73 @@ export async function GET(request: NextRequest) {
     console.error(`=== ${serviceFilter || "no-filter"} API ERROR:`, error)
     console.error("Error details:", error.message, error.stack)
     return NextResponse.json({ error: "Database error", details: error.message }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  if (!sql) {
+    return NextResponse.json({ error: "Database not available" }, { status: 500 })
+  }
+
+  try {
+    const body = await request.json()
+    const {
+      contactDate,
+      providerName,
+      clientName,
+      category,
+      foodAccessed,
+      servicesRequested,
+      servicesProvided,
+      comments,
+    } = body
+
+    // Validation
+    if (!contactDate || !providerName || !clientName || !category) {
+      return NextResponse.json(
+        { error: "Missing required fields: contactDate, providerName, clientName, category" },
+        { status: 400 },
+      )
+    }
+
+    // Insert the new contact
+    const result = await sql`
+      INSERT INTO contacts (
+        contact_date, provider_name, client_name, category, food_accessed,
+        services_requested, services_provided, comments
+      )
+      VALUES (
+        ${contactDate}, ${providerName}, ${clientName}, ${category}, ${foodAccessed || false},
+        ${JSON.stringify(servicesRequested || [])}, ${JSON.stringify(servicesProvided || [])}, ${comments || ""}
+      )
+      RETURNING *
+    `
+
+    const newContact = result[0]
+
+    await auditLog({
+      action: "CREATE",
+      tableName: "contacts",
+      recordId: newContact.id.toString(),
+      clientName: clientName,
+      userEmail: getUserFromRequest(request),
+      ipAddress: getIpFromRequest(request),
+      changes: {
+        contact_date: contactDate,
+        provider_name: providerName,
+        category: category,
+        food_accessed: foodAccessed || false,
+        services_requested: servicesRequested || [],
+        services_provided: servicesProvided || [],
+      },
+    })
+
+    return NextResponse.json({ contact: newContact }, { status: 201 })
+  } catch (error) {
+    console.error("Failed to create contact:", error)
+    return NextResponse.json(
+      { error: `Failed to create contact: ${error instanceof Error ? error.message : "Unknown error"}` },
+      { status: 500 },
+    )
   }
 }
