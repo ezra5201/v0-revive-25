@@ -73,7 +73,7 @@ export function QuickCheckinDialog({ isOpen, onClose, clientName, onCheckInSubmi
     setIsSubmitting(true)
     setSubmitError(null)
 
-    console.log("Starting check-in submission for:", clientName)
+    console.log("[v0] QuickCheckinDialog: Starting check-in submission for:", clientName)
 
     try {
       // First, submit the check-in (all fields are optional except client name)
@@ -85,7 +85,7 @@ export function QuickCheckinDialog({ isOpen, onClose, clientName, onCheckInSubmi
         providerName: "Andrea Leflore", // TODO: Get from current user context
       }
 
-      console.log("Sending check-in data:", checkInData)
+      console.log("[v0] QuickCheckinDialog: Sending check-in data:", checkInData)
 
       const response = await fetch("/api/checkin", {
         method: "POST",
@@ -95,7 +95,7 @@ export function QuickCheckinDialog({ isOpen, onClose, clientName, onCheckInSubmi
         body: JSON.stringify(checkInData),
       })
 
-      console.log("Check-in response status:", response.status)
+      console.log("[v0] QuickCheckinDialog: Check-in response status:", response.status)
 
       const isJson = response.headers.get("content-type")?.toLowerCase().includes("application/json")
 
@@ -107,7 +107,7 @@ export function QuickCheckinDialog({ isOpen, onClose, clientName, onCheckInSubmi
         return
       }
 
-      console.log("Check-in response data:", data)
+      console.log("[v0] QuickCheckinDialog: Check-in response data:", data)
 
       if (response.ok) {
         let alertCreated = false
@@ -124,7 +124,7 @@ export function QuickCheckinDialog({ isOpen, onClose, clientName, onCheckInSubmi
               severity: "medium",
             }
 
-            console.log("Creating alert with data:", alertData)
+            console.log("[v0] QuickCheckinDialog: Creating alert with data:", alertData)
 
             const alertResponse = await fetch("/api/alerts", {
               method: "POST",
@@ -135,16 +135,16 @@ export function QuickCheckinDialog({ isOpen, onClose, clientName, onCheckInSubmi
             })
 
             const alertResult = await alertResponse.json()
-            console.log("Alert response:", alertResult)
+            console.log("[v0] QuickCheckinDialog: Alert response:", alertResult)
 
             if (alertResponse.ok) {
               alertCreated = true
-              console.log("Alert created successfully")
+              console.log("[v0] QuickCheckinDialog: Alert created successfully")
             } else {
-              console.error("Failed to create alert:", alertResult)
+              console.error("[v0] QuickCheckinDialog: Failed to create alert:", alertResult)
             }
           } catch (alertError) {
-            console.error("Alert creation failed:", alertError)
+            console.error("[v0] QuickCheckinDialog: Alert creation failed:", alertError)
           }
         }
 
@@ -158,13 +158,15 @@ export function QuickCheckinDialog({ isOpen, onClose, clientName, onCheckInSubmi
           alertDetails,
         }
 
+        console.log("[v0] QuickCheckinDialog: Check-in successful, calling onCheckInSubmit callback")
         onCheckInSubmit?.(checkInResult)
+        console.log("[v0] QuickCheckinDialog: Callback completed, closing dialog")
         handleClose()
       } else {
         setSubmitError(data.error || "Check-in failed")
       }
     } catch (error) {
-      console.error("Check-in submission error:", error)
+      console.error("[v0] QuickCheckinDialog: Check-in submission error:", error)
       setSubmitError("Failed to connect to server")
     } finally {
       setIsSubmitting(false)

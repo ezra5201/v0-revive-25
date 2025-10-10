@@ -45,6 +45,7 @@ export function useContacts(viewFilter: ViewFilter, filters: Filters) {
   const [error, setError] = useState<string | null>(null)
 
   const fetchContacts = useCallback(async () => {
+    console.log("[v0] useContacts: fetchContacts called with viewFilter:", viewFilter, "filters:", filters)
     setIsLoading(true)
     setError(null)
 
@@ -71,6 +72,7 @@ export function useContacts(viewFilter: ViewFilter, filters: Filters) {
       }
 
       const url = `/api/contacts?${params.toString()}`
+      console.log("[v0] useContacts: Fetching from URL:", url)
       const response = await fetch(url)
 
       if (!response.ok) {
@@ -78,17 +80,20 @@ export function useContacts(viewFilter: ViewFilter, filters: Filters) {
       }
 
       const data = await response.json()
+      console.log("[v0] useContacts: Received data, contacts count:", data.contacts?.length || 0)
 
       if (response.ok) {
         setContacts(data.contacts || [])
+        console.log("[v0] useContacts: Contacts state updated successfully")
       } else {
         setError(data.error || "Failed to fetch contacts")
       }
     } catch (err) {
-      console.error("Contacts fetch error:", err)
+      console.error("[v0] useContacts: Contacts fetch error:", err)
       setError(`Failed to connect to server`)
     } finally {
       setIsLoading(false)
+      console.log("[v0] useContacts: fetchContacts completed")
     }
   }, [viewFilter, filters])
 

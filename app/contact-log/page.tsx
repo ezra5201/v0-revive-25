@@ -96,10 +96,13 @@ export default function ContactLogPage() {
   }, [])
 
   const handleDataUpdate = useCallback(() => {
+    console.log("[v0] handleDataUpdate called - starting refetch process")
     setTimeout(() => {
+      console.log("[v0] handleDataUpdate - executing refetch after delay")
       refetchContacts()
       setSelectedCount(0)
       setSelectedContactIds([])
+      console.log("[v0] handleDataUpdate - refetch triggered, selection cleared")
     }, 500)
   }, [refetchContacts])
 
