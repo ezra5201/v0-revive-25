@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Download, Search, ChevronLeft, ChevronRight, Shield } from "lucide-react"
+import { Download, Search, ChevronLeft, ChevronRight, Shield, AlertCircle } from "lucide-react"
 import { format } from "date-fns"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface AuditLog {
   id: number
@@ -39,8 +40,8 @@ export default function AuditLogsPage() {
     totalPages: 0,
   })
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Filter states
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [userEmail, setUserEmail] = useState("")
@@ -50,6 +51,7 @@ export default function AuditLogsPage() {
 
   const fetchLogs = async (page = 1) => {
     setLoading(true)
+    setError(null)
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -64,12 +66,33 @@ export default function AuditLogsPage() {
       if (tableName) params.append("tableName", tableName)
 
       const response = await fetch(`/api/admin/audit-logs?${params}`)
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch audit logs: ${response.statusText}`)
+      }
+
       const data = await response.json()
+
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      if (!data.logs || !data.pagination) {
+        throw new Error("Invalid response format from server")
+      }
 
       setLogs(data.logs)
       setPagination(data.pagination)
     } catch (error) {
       console.error("Failed to fetch audit logs:", error)
+      setError(error instanceof Error ? error.message : "Failed to fetch audit logs")
+      setLogs([])
+      setPagination({
+        page: 1,
+        limit: 50,
+        total: 0,
+        totalPages: 0,
+      })
     } finally {
       setLoading(false)
     }
@@ -87,6 +110,11 @@ export default function AuditLogsPage() {
       if (tableName) params.append("tableName", tableName)
 
       const response = await fetch(`/api/admin/audit-logs/export?${params}`)
+
+      if (!response.ok) {
+        throw new Error("Failed to export audit logs")
+      }
+
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -98,6 +126,7 @@ export default function AuditLogsPage() {
       document.body.removeChild(a)
     } catch (error) {
       console.error("Failed to export audit logs:", error)
+      setError(error instanceof Error ? error.message : "Failed to export audit logs")
     }
   }
 
@@ -147,7 +176,24 @@ export default function AuditLogsPage() {
           <p className="text-gray-600">HIPAA-compliant audit trail of all data access and modifications</p>
         </div>
 
-        {/* Filters Card */}
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              {error}
+              {error.includes("audit_logs") && (
+                <div className="mt-2">
+                  <p className="text-sm">
+                    The audit_logs table may not exist. Please run the SQL script:{" "}
+                    <code className="bg-red-100 px-1 rounded">scripts/create-audit-logs-table.sql</code>
+                  </p>
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Filters</CardTitle>
@@ -155,7 +201,6 @@ export default function AuditLogsPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Date Range */}
               <div>
                 <label className="text-sm font-medium mb-2 block">Start Date</label>
                 <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -166,7 +211,6 @@ export default function AuditLogsPage() {
                 <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
               </div>
 
-              {/* User Email */}
               <div>
                 <label className="text-sm font-medium mb-2 block">User Email</label>
                 <Input
@@ -177,7 +221,6 @@ export default function AuditLogsPage() {
                 />
               </div>
 
-              {/* Action Type */}
               <div>
                 <label className="text-sm font-medium mb-2 block">Action Type</label>
                 <Select value={action} onValueChange={setAction}>
@@ -194,7 +237,6 @@ export default function AuditLogsPage() {
                 </Select>
               </div>
 
-              {/* Client Name */}
               <div>
                 <label className="text-sm font-medium mb-2 block">Client Name</label>
                 <Input
@@ -205,7 +247,6 @@ export default function AuditLogsPage() {
                 />
               </div>
 
-              {/* Table Name */}
               <div>
                 <label className="text-sm font-medium mb-2 block">Table Name</label>
                 <Input
@@ -217,7 +258,6 @@ export default function AuditLogsPage() {
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex gap-2 mt-4">
               <Button onClick={handleSearch} className="min-h-[44px]">
                 <Search className="h-4 w-4 mr-2" />
@@ -234,14 +274,13 @@ export default function AuditLogsPage() {
           </CardContent>
         </Card>
 
-        {/* Results Card */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Audit Log Entries</CardTitle>
                 <CardDescription>
-                  Showing {logs.length} of {pagination.total} total entries
+                  Showing {logs?.length || 0} of {pagination?.total || 0} total entries
                 </CardDescription>
               </div>
             </div>
@@ -250,7 +289,9 @@ export default function AuditLogsPage() {
             {loading ? (
               <div className="text-center py-8 text-gray-500">Loading audit logs...</div>
             ) : logs.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No audit logs found</div>
+              <div className="text-center py-8 text-gray-500">
+                {error ? "Unable to load audit logs" : "No audit logs found"}
+              </div>
             ) : (
               <>
                 <div className="overflow-x-auto">
@@ -299,7 +340,6 @@ export default function AuditLogsPage() {
                   </Table>
                 </div>
 
-                {/* Pagination */}
                 <div className="flex items-center justify-between mt-4">
                   <div className="text-sm text-gray-600">
                     Page {pagination.page} of {pagination.totalPages}
