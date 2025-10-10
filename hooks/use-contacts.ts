@@ -45,7 +45,6 @@ export function useContacts(viewFilter: ViewFilter, filters: Filters) {
   const [error, setError] = useState<string | null>(null)
 
   const fetchContacts = useCallback(async () => {
-    console.log("[v0] useContacts: fetchContacts called with viewFilter:", viewFilter, "filters:", filters)
     setIsLoading(true)
     setError(null)
 
@@ -57,7 +56,6 @@ export function useContacts(viewFilter: ViewFilter, filters: Filters) {
       } else {
         params.set("tab", "all")
 
-        // Apply service filters for CM/OT views
         if (viewFilter === "cm") {
           params.set("serviceFilter", "cm")
         } else if (viewFilter === "ot") {
@@ -65,7 +63,6 @@ export function useContacts(viewFilter: ViewFilter, filters: Filters) {
         }
       }
 
-      // Apply category and provider filters
       if (filters.categories.length) {
         params.set("categories", filters.categories.join(","))
       }
@@ -74,28 +71,24 @@ export function useContacts(viewFilter: ViewFilter, filters: Filters) {
       }
 
       const url = `/api/contacts?${params.toString()}`
-      console.log("[v0] useContacts: Fetching from URL:", url)
       const response = await fetch(url)
 
       if (!response.ok) {
-        throw new Error(`Contacts API returned ${response.status}: ${response.statusText}`)
+        throw new Error(`Contacts API returned ${response.status}`)
       }
 
       const data = await response.json()
-      console.log("[v0] useContacts: Received data, contacts count:", data.contacts?.length || 0)
 
       if (response.ok) {
         setContacts(data.contacts || [])
-        console.log("[v0] useContacts: Contacts state updated successfully")
       } else {
         setError(data.error || "Failed to fetch contacts")
       }
     } catch (err) {
-      console.error("[v0] Contacts fetch error:", err)
-      setError(`Failed to connect to server: ${err instanceof Error ? err.message : "Unknown error"}`)
+      console.error("Contacts fetch error:", err)
+      setError(`Failed to connect to server`)
     } finally {
       setIsLoading(false)
-      console.log("[v0] useContacts: fetchContacts completed")
     }
   }, [viewFilter, filters])
 

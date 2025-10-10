@@ -158,9 +158,7 @@ export function QuickCheckinDialog({ isOpen, onClose, clientName, onCheckInSubmi
           alertDetails,
         }
 
-        console.log("[v0] QuickCheckinDialog: Check-in successful, calling onCheckInSubmit callback")
         onCheckInSubmit?.(checkInResult)
-        console.log("[v0] QuickCheckinDialog: onCheckInSubmit callback completed, closing dialog")
         handleClose()
       } else {
         setSubmitError(data.error || "Check-in failed")
