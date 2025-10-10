@@ -138,6 +138,13 @@ export function Header({ onClientSelect }: HeaderProps) {
                   <BookOpen className="h-4 w-4 mr-2" />
                   Developer Documentation
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push("/admin/audit-logs")}
+                  className="min-h-[44px] flex items-center"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Audit Logs
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleViewSwitch} className="min-h-[44px] flex items-center">
                   <ArrowLeftRight className="h-4 w-4 mr-2" />
                   {viewSwitchText}
@@ -200,6 +207,13 @@ export function Header({ onClientSelect }: HeaderProps) {
                   <DropdownMenuItem onClick={() => router.push("/docs")} className="min-h-[44px] flex items-center">
                     <BookOpen className="h-4 w-4 mr-2" />
                     Developer Documentation
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => router.push("/admin/audit-logs")}
+                    className="min-h-[44px] flex items-center"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Audit Logs
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleViewSwitch} className="min-h-[44px] flex items-center">
                     <ArrowLeftRight className="h-4 w-4 mr-2" />

@@ -2,6 +2,7 @@ import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { getTodayString } from "@/lib/date-utils"
 import { syncServicesToIntegerColumns } from "@/lib/service-sync"
+import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
 
 // Helper function to safely parse JSON
 function safeJson(value: unknown, fallback: any = []) {
@@ -117,6 +118,22 @@ export async function POST(request: Request) {
     `
 
     console.log("Contact inserted successfully:", result[0])
+
+    await auditLog({
+      action: "CREATE",
+      tableName: "contacts",
+      recordId: result[0].id.toString(),
+      clientName: clientName,
+      userEmail: getUserFromRequest(request) || providerName,
+      ipAddress: getIpFromRequest(request),
+      changes: {
+        category,
+        services_requested: servicesRequested,
+        services_provided: servicesProvided,
+        comments,
+        food_accessed: accessedFood,
+      },
+    })
 
     // Sync JSONB services to integer columns
     const integerColumnUpdates = syncServicesToIntegerColumns(servicesRequested, servicesProvided)

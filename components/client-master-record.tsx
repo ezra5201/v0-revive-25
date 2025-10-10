@@ -38,7 +38,8 @@ interface ClientMasterRecordProps {
   context: "cm" | "ot" | "clients"
   currentView?: "list" | "visual"
   onViewChange?: (view: "list" | "visual") => void
-  showContentOnly?: boolean // Add prop to control whether to show only header or full content
+  showContentOnly?: boolean
+  onDataUpdate?: () => void
 }
 
 interface ClientData {
@@ -75,7 +76,8 @@ export function ClientMasterRecord({
   context,
   currentView = "list",
   onViewChange,
-  showContentOnly = false, // Add showContentOnly prop with default false
+  showContentOnly = false,
+  onDataUpdate,
 }: ClientMasterRecordProps) {
   const [clientData, setClientData] = useState<ClientData | null>(null)
   const [contactHistory, setContactHistory] = useState<ContactRecord[]>([])
@@ -311,6 +313,7 @@ export function ClientMasterRecord({
       }
     }
     fetchClientData()
+    onDataUpdate?.()
   }
 
   const handleCMCheckinSuccess = () => {
@@ -329,6 +332,7 @@ export function ClientMasterRecord({
       }
     }
     fetchClientData()
+    onDataUpdate?.()
   }
 
   const handleOTCheckinSuccess = () => {
@@ -347,6 +351,7 @@ export function ClientMasterRecord({
       }
     }
     fetchClientData()
+    onDataUpdate?.()
   }
 
   if (isLoading) {

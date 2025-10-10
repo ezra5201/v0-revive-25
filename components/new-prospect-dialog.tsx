@@ -241,9 +241,12 @@ export function NewProspectDialog({
           alertDetails,
         }
 
+        console.log("[v0] NewProspectDialog: Check-in successful, calling callbacks")
         // Trigger table refresh
         onCheckInSubmit?.(prospectData)
+        console.log("[v0] NewProspectDialog: onCheckInSubmit callback completed")
         onProspectCreated?.(prospectData)
+        console.log("[v0] NewProspectDialog: onProspectCreated callback completed, closing dialog")
         handleClose()
       } else {
         setSubmitError(data.error || "Prospect creation failed")
