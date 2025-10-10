@@ -10,9 +10,10 @@ interface ClientDrawerProps {
   isOpen: boolean
   clientName: string | null
   onClose: () => void
+  onDataUpdate?: () => void
 }
 
-export function ClientDrawer({ isOpen, clientName, onClose }: ClientDrawerProps) {
+export function ClientDrawer({ isOpen, clientName, onClose, onDataUpdate }: ClientDrawerProps) {
   const { addClient } = useRecentlyViewed()
   const [activeSection, setActiveSection] = useState<
     "basic-info" | "contact-history" | "journey-timeline" | "cm-goals" | "ot-goals" | "ot-checkins" | "full-profile"
@@ -73,6 +74,7 @@ export function ClientDrawer({ isOpen, clientName, onClose }: ClientDrawerProps)
             context="clients"
             currentView="list"
             showContentOnly={false}
+            onDataUpdate={onDataUpdate}
           />
         </div>
       </div>

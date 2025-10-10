@@ -96,9 +96,14 @@ export default function ContactLogPage() {
   }, [])
 
   const handleDataUpdate = useCallback(() => {
-    refetchContacts()
-    setSelectedCount(0)
-    setSelectedContactIds([])
+    console.log("[v0] handleDataUpdate called - starting refetch process")
+    setTimeout(() => {
+      console.log("[v0] handleDataUpdate - executing refetch after delay")
+      refetchContacts()
+      setSelectedCount(0)
+      setSelectedContactIds([])
+      console.log("[v0] handleDataUpdate - refetch triggered, selection cleared")
+    }, 500)
   }, [refetchContacts])
 
   const handleUpdateServicesClick = useCallback((contact: any) => {
@@ -205,7 +210,12 @@ export default function ContactLogPage() {
         />
       </main>
 
-      <ClientDrawer isOpen={isDrawerOpen} clientName={drawerClientName} onClose={() => setIsDrawerOpen(false)} />
+      <ClientDrawer
+        isOpen={isDrawerOpen}
+        clientName={drawerClientName}
+        onClose={() => setIsDrawerOpen(false)}
+        onDataUpdate={handleDataUpdate}
+      />
 
       <QuickCheckinDialog
         isOpen={isDialogOpen}

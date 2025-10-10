@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { syncServicesToIntegerColumns } from "@/lib/service-sync"
+import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
 
 // Helper function to safely parse JSON
 function safeJson(value: unknown, fallback: any = []) {
@@ -97,6 +98,21 @@ export async function POST(request: Request) {
       WHERE id = ${contactId}
       RETURNING id, client_name, contact_date, services_requested, services_provided
     `
+
+    await auditLog({
+      action: "UPDATE",
+      tableName: "contacts",
+      recordId: contactId.toString(),
+      clientName: contact.client_name,
+      userEmail: getUserFromRequest(request) || updatedBy,
+      ipAddress: getIpFromRequest(request),
+      changes: {
+        services_added: servicesAdded,
+        services_removed: servicesRemoved,
+        services_provided_before: currentServicesProvided,
+        services_provided_after: servicesProvided,
+      },
+    })
 
     // Sync JSONB services to integer columns
     const integerColumnUpdates = syncServicesToIntegerColumns(currentServicesRequested, servicesProvided)
