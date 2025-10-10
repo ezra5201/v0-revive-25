@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Menu, User, Settings, ArrowLeftRight, BookOpen, Users } from "lucide-react"
+import { Menu, User, Settings, ArrowLeftRight, BookOpen, Users, Database } from "lucide-react"
 import { useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { AlertHeaderIndicator } from "./alert-header-indicator"
@@ -152,6 +152,13 @@ export function Header({ onClientSelect }: HeaderProps) {
                   <Users className="h-4 w-4 mr-2" />
                   User Management
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push("/admin/data-management")}
+                  className="min-h-[44px] flex items-center"
+                >
+                  <Database className="h-4 w-4 mr-2" />
+                  Data Management
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleViewSwitch} className="min-h-[44px] flex items-center">
                   <ArrowLeftRight className="h-4 w-4 mr-2" />
                   {viewSwitchText}
@@ -228,6 +235,13 @@ export function Header({ onClientSelect }: HeaderProps) {
                   >
                     <Users className="h-4 w-4 mr-2" />
                     User Management
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => router.push("/admin/data-management")}
+                    className="min-h-[44px] flex items-center"
+                  >
+                    <Database className="h-4 w-4 mr-2" />
+                    Data Management
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleViewSwitch} className="min-h-[44px] flex items-center">
                     <ArrowLeftRight className="h-4 w-4 mr-2" />
