@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const serviceFilter = searchParams.get("serviceFilter")
-  console.log(`=== ${serviceFilter || "no-filter"} API called at ${new Date().toISOString()} ===`)
-  console.log("Query params:", Object.fromEntries(searchParams.entries()))
+  console.log(`[v0] === ${serviceFilter || "no-filter"} API called at ${new Date().toISOString()} ===`)
+  console.log("[v0] Query params:", Object.fromEntries(searchParams.entries()))
 
   try {
     const tab = searchParams.get("tab") || "all"
@@ -29,8 +29,11 @@ export async function GET(request: NextRequest) {
     const sortDirection = searchParams.get("sortDirection") || "desc"
     const clientName = searchParams.get("client")
 
+    console.log("[v0] Parsed parameters:", { tab, categories, providers, sortColumn, sortDirection, clientName })
+
     // Get today's date in Chicago time (dynamic)
     const todayString = getTodayString()
+    console.log("[v0] Today's date (Chicago):", todayString)
 
     // Build the WHERE clause for filtering
     const whereConditions = []
@@ -397,10 +400,13 @@ export async function GET(request: NextRequest) {
     }
     // -------------------------------------------------------------------
 
+    console.log("[v0] About to execute fetchRows with whereClause:", whereClause)
+    console.log("[v0] Query params:", queryParams)
+
     // Get rows (auto-fallback if necessary)
     const dbRows = await fetchRows()
 
-    console.log(`Fetched ${dbRows.length} rows for tab: ${tab}, serviceFilter: ${serviceFilter}`) // Debug log
+    console.log(`[v0] Fetched ${dbRows.length} rows for tab: ${tab}, serviceFilter: ${serviceFilter}`) // Debug log
 
     // Transform rows for UI – default empty arrays/strings when columns absent
     const contacts = dbRows.map((row: any) => {
@@ -436,9 +442,20 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ contacts })
   } catch (error) {
-    console.error(`=== ${serviceFilter || "no-filter"} API ERROR:`, error)
-    console.error("Error details:", error.message, error.stack)
-    return NextResponse.json({ error: "Database error", details: error.message }, { status: 500 })
+    console.error(`[v0] === ${serviceFilter || "no-filter"} API ERROR:`, error)
+    console.error("[v0] Error name:", error?.name)
+    console.error("[v0] Error message:", error?.message)
+    console.error("[v0] Error stack:", error?.stack)
+    console.error("[v0] Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error)))
+
+    return NextResponse.json(
+      {
+        error: "Database error",
+        details: error?.message || String(error),
+        errorType: error?.name || "Unknown",
+      },
+      { status: 500 },
+    )
   }
 }
 
