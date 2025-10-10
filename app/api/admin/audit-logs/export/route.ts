@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     const clientName = searchParams.get("clientName")
     const tableName = searchParams.get("tableName")
 
-    // Build dynamic WHERE clause
+    // Build dynamic WHERE clause with parameterized queries
     const conditions: string[] = []
     const params: any[] = []
     let paramIndex = 1
