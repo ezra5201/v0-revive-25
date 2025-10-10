@@ -162,3 +162,6 @@ export async function auditLogFromRequest(
     ipAddress,
   })
 }
+
+export const getUserFromRequest = getUserEmailFromRequest
+export const getIpFromRequest = getIpAddressFromRequest
