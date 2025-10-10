@@ -96,9 +96,12 @@ export default function ContactLogPage() {
   }, [])
 
   const handleDataUpdate = useCallback(() => {
-    refetchContacts()
-    setSelectedCount(0)
-    setSelectedContactIds([])
+    setTimeout(() => {
+      console.log("[v0] Refetching contacts after check-in...")
+      refetchContacts()
+      setSelectedCount(0)
+      setSelectedContactIds([])
+    }, 300) // 300ms delay to ensure database commit
   }, [refetchContacts])
 
   const handleUpdateServicesClick = useCallback((contact: any) => {
