@@ -27,55 +27,39 @@ export async function GET(request: Request) {
       limit,
     })
 
-    // Build dynamic WHERE clause
-    const conditions: string[] = []
-    const params: any[] = []
-    let paramIndex = 1
+    // Build WHERE conditions array
+    const conditions: string[] = ["1=1"] // Always true condition to simplify AND logic
 
     if (startDate) {
-      conditions.push(`timestamp >= $${paramIndex}::timestamptz`)
-      params.push(startDate)
-      paramIndex++
+      conditions.push(`timestamp >= '${startDate}'::timestamptz`)
     }
-
     if (endDate) {
-      conditions.push(`timestamp <= $${paramIndex}::timestamptz`)
-      params.push(endDate)
-      paramIndex++
+      conditions.push(`timestamp <= '${endDate}'::timestamptz`)
     }
-
     if (userEmail) {
-      conditions.push(`user_email ILIKE $${paramIndex}`)
-      params.push(`%${userEmail}%`)
-      paramIndex++
+      conditions.push(`user_email ILIKE '%${userEmail.replace(/'/g, "''")}%'`)
     }
-
     if (action) {
-      conditions.push(`action = $${paramIndex}`)
-      params.push(action)
-      paramIndex++
+      conditions.push(`action = '${action.replace(/'/g, "''")}'`)
     }
-
     if (clientName) {
-      conditions.push(`client_name ILIKE $${paramIndex}`)
-      params.push(`%${clientName}%`)
-      paramIndex++
+      conditions.push(`client_name ILIKE '%${clientName.replace(/'/g, "''")}%'`)
     }
-
     if (tableName) {
-      conditions.push(`table_name = $${paramIndex}`)
-      params.push(tableName)
-      paramIndex++
+      conditions.push(`table_name = '${tableName.replace(/'/g, "''")}'`)
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""
+    const whereClause = conditions.join(" AND ")
 
     // Get total count for pagination
-    const countQuery = `SELECT COUNT(*) as total FROM audit_logs ${whereClause}`
-    console.log("[v0] Executing count query:", countQuery)
-    console.log("[v0] With params:", params)
+    console.log("[v0] Executing count query with WHERE:", whereClause)
 
-    const countResult = await sql.unsafe(countQuery, params)
+    const countResult = await sql`
+      SELECT COUNT(*) as total 
+      FROM audit_logs 
+      WHERE ${sql.unsafe(whereClause)}
+    `
+
     console.log("[v0] Count result:", countResult)
 
     if (!countResult || countResult.length === 0) {
@@ -93,7 +77,9 @@ export async function GET(request: Request) {
     console.log("[v0] Total audit logs:", total)
 
     // Get paginated results
-    const dataQuery = `
+    console.log("[v0] Executing data query with limit:", limit, "offset:", offset)
+
+    const logs = await sql`
       SELECT 
         id,
         timestamp,
@@ -106,17 +92,18 @@ export async function GET(request: Request) {
         changes,
         created_at
       FROM audit_logs
-      ${whereClause}
+      WHERE ${sql.unsafe(whereClause)}
       ORDER BY timestamp DESC
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      LIMIT ${limit}
+      OFFSET ${offset}
     `
 
-    console.log("[v0] Executing data query")
-    const logs = await sql.unsafe(dataQuery, [...params, limit, offset])
-    console.log("[v0] Retrieved logs count:", logs.length)
+    console.log("[v0] Retrieved logs count:", logs?.length || 0)
+
+    const logsArray = Array.isArray(logs) ? logs : []
 
     return NextResponse.json({
-      logs,
+      logs: logsArray,
       pagination: {
         page,
         limit,
