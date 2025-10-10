@@ -5,7 +5,10 @@ import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
 import { CreateContactSchema, validateRequest } from "@/lib/validations"
 
 export async function GET(request: NextRequest) {
+  console.log("[v0] ===== CONTACTS API GET HANDLER STARTED =====")
+
   if (!sql) {
+    console.log("[v0] ERROR: Database connection missing")
     return NextResponse.json(
       {
         error:
@@ -16,12 +19,16 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  console.log("[v0] Database connection OK")
+
   const { searchParams } = new URL(request.url)
   const serviceFilter = searchParams.get("serviceFilter")
   console.log(`[v0] === ${serviceFilter || "no-filter"} API called at ${new Date().toISOString()} ===`)
   console.log("[v0] Query params:", Object.fromEntries(searchParams.entries()))
 
   try {
+    console.log("[v0] Entering try block")
+
     const tab = searchParams.get("tab") || "all"
     const categories = searchParams.get("categories")?.split(",").filter(Boolean) || []
     const providers = searchParams.get("providers")?.split(",").filter(Boolean) || []
@@ -31,9 +38,14 @@ export async function GET(request: NextRequest) {
 
     console.log("[v0] Parsed parameters:", { tab, categories, providers, sortColumn, sortDirection, clientName })
 
-    // Get today's date in Chicago time (dynamic)
-    const todayString = getTodayString()
-    console.log("[v0] Today's date (Chicago):", todayString)
+    let todayString
+    try {
+      todayString = getTodayString()
+      console.log("[v0] Today's date (Chicago):", todayString)
+    } catch (dateError) {
+      console.error("[v0] ERROR in getTodayString:", dateError)
+      throw new Error(`Date utility error: ${dateError.message}`)
+    }
 
     // Build the WHERE clause for filtering
     const whereConditions = []
@@ -403,10 +415,20 @@ export async function GET(request: NextRequest) {
     console.log("[v0] About to execute fetchRows with whereClause:", whereClause)
     console.log("[v0] Query params:", queryParams)
 
-    // Get rows (auto-fallback if necessary)
-    const dbRows = await fetchRows()
+    let dbRows
+    try {
+      console.log("[v0] Calling fetchRows...")
+      dbRows = await fetchRows()
+      console.log("[v0] fetchRows completed successfully")
+    } catch (fetchError) {
+      console.error("[v0] ERROR in fetchRows:", fetchError)
+      console.error("[v0] fetchError name:", fetchError?.name)
+      console.error("[v0] fetchError message:", fetchError?.message)
+      console.error("[v0] fetchError stack:", fetchError?.stack)
+      throw fetchError
+    }
 
-    console.log(`[v0] Fetched ${dbRows.length} rows for tab: ${tab}, serviceFilter: ${serviceFilter}`) // Debug log
+    console.log(`[v0] Fetched ${dbRows.length} rows for tab: ${tab}, serviceFilter: ${serviceFilter}`)
 
     // Transform rows for UI – default empty arrays/strings when columns absent
     const contacts = dbRows.map((row: any) => {
@@ -440,8 +462,11 @@ export async function GET(request: NextRequest) {
       return baseContact
     })
 
+    console.log("[v0] Returning successful response with", contacts.length, "contacts")
     return NextResponse.json({ contacts })
   } catch (error) {
+    console.error(`[v0] ===== CONTACTS API ERROR CAUGHT =====`)
+    console.error("[v0] Error type:", typeof error)
     console.error(`[v0] === ${serviceFilter || "no-filter"} API ERROR:`, error)
     console.error("[v0] Error name:", error?.name)
     console.error("[v0] Error message:", error?.message)
