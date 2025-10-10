@@ -1,26 +1,7 @@
 import { sql } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
 import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
-
-interface CreateOTCheckinRequest {
-  contact_id?: number | null
-  client_name: string
-  client_uuid?: string
-  provider_name: string
-  notes?: string
-}
-
-interface OTCheckinResponse {
-  id: number
-  contact_id: number | null
-  client_name: string
-  client_uuid: string | null
-  provider_name: string
-  notes: string | null
-  status: string
-  created_at: string
-  updated_at: string
-}
+import { CreateCheckinSchema, validateRequest } from "@/lib/validations"
 
 export async function POST(request: NextRequest) {
   if (!sql) {
@@ -28,56 +9,22 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body: CreateOTCheckinRequest = await request.json()
-    const { contact_id, client_name, client_uuid, provider_name, notes } = body
+    const body = await request.json()
 
-    if (contact_id !== undefined && contact_id !== null && typeof contact_id !== "number") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Contact ID must be a number",
-            details: { field: "contact_id", value: contact_id },
-          },
-        },
-        { status: 400 },
-      )
+    const validation = validateRequest(CreateCheckinSchema, body)
+
+    if (!validation.success) {
+      return NextResponse.json(validation.formattedError, { status: 400 })
     }
 
-    if (!client_name || typeof client_name !== "string" || client_name.trim().length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Client name is required",
-            details: { field: "client_name", value: client_name },
-          },
-        },
-        { status: 400 },
-      )
-    }
+    const validatedData = validation.data
 
-    if (!provider_name || typeof provider_name !== "string" || provider_name.trim().length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Provider name is required",
-            details: { field: "provider_name", value: provider_name },
-          },
-        },
-        { status: 400 },
-      )
-    }
-
-    const finalContactId = contact_id && contact_id > 0 ? contact_id : null
+    const finalContactId = validatedData.contact_id && validatedData.contact_id > 0 ? validatedData.contact_id : null
 
     const result = await sql`
       INSERT INTO ot_checkins (contact_id, client_name, client_uuid, provider_name, notes, status)
-      VALUES (${finalContactId}, ${client_name.trim()}, ${client_uuid || null}, ${provider_name.trim()}, ${notes || null}, 'Draft')
+      VALUES (${finalContactId}, ${validatedData.client_name}, ${validatedData.client_uuid}, 
+              ${validatedData.provider_name}, ${validatedData.notes}, 'Draft')
       RETURNING id, contact_id, client_name, client_uuid, provider_name, notes, status, created_at, updated_at
     `
 
@@ -87,14 +34,14 @@ export async function POST(request: NextRequest) {
       action: "CREATE",
       tableName: "ot_checkins",
       recordId: newCheckin.id.toString(),
-      clientName: client_name,
+      clientName: validatedData.client_name,
       userEmail: getUserFromRequest(request),
       ipAddress: getIpFromRequest(request),
       changes: {
         contact_id: finalContactId,
-        provider_name: provider_name.trim(),
+        provider_name: validatedData.provider_name,
         status: "Draft",
-        notes: notes || null,
+        notes: validatedData.notes,
       },
     })
 

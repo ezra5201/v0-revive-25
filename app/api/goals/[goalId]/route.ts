@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
 import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
+import { UpdateGoalSchema, validateRequest } from "@/lib/validations"
 
 export async function PUT(request: NextRequest, { params }: { params: { goalId: string } }) {
   try {
@@ -20,37 +21,14 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
     }
 
     const body = await request.json()
-    const { status, progress_note } = body
 
-    // Validation
-    const validStatuses = ["Not Started", "In Progress", "Completed", "Deferred"]
-    if (!status || !validStatuses.includes(status)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Status must be one of: " + validStatuses.join(", "),
-            details: { field: "status", value: status },
-          },
-        },
-        { status: 400 },
-      )
+    const validation = validateRequest(UpdateGoalSchema, body)
+
+    if (!validation.success) {
+      return NextResponse.json(validation.formattedError, { status: 400 })
     }
 
-    if (progress_note && progress_note.length > 1000) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Progress note must be 1000 characters or less",
-            details: { field: "progress_note", value: progress_note },
-          },
-        },
-        { status: 400 },
-      )
-    }
+    const validatedData = validation.data
 
     const existingGoal = await sql`
       SELECT id, status, client_name FROM cm_goals WHERE id = ${goalId}
@@ -76,7 +54,7 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
     // Update the goal status
     const updatedGoal = await sql`
       UPDATE cm_goals 
-      SET status = ${status}, updated_at = CURRENT_TIMESTAMP
+      SET status = ${validatedData.status}, updated_at = CURRENT_TIMESTAMP
       WHERE id = ${goalId}
       RETURNING id, status, updated_at
     `
@@ -90,16 +68,16 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
       ipAddress: getIpFromRequest(request),
       changes: {
         before: { status: previousStatus },
-        after: { status: status },
-        progress_note: progress_note || undefined,
+        after: { status: validatedData.status },
+        progress_note: validatedData.progress_note || undefined,
       },
     })
 
     // Create progress entry if there's a note or status change
-    if (progress_note || previousStatus !== status) {
+    if (validatedData.progress_note || previousStatus !== validatedData.status) {
       await sql`
         INSERT INTO cm_goal_progress (goal_id, progress_note, previous_status, new_status)
-        VALUES (${goalId}, ${progress_note || null}, ${previousStatus}, ${status})
+        VALUES (${goalId}, ${validatedData.progress_note || null}, ${previousStatus}, ${validatedData.status})
       `
     }
 

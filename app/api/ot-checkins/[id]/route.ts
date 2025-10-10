@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
 import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
+import { UpdateCheckinSchema, validateRequest } from "@/lib/validations"
 
 interface UpdateOTCheckinRequest {
   notes?: string
@@ -96,23 +97,15 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       )
     }
 
-    const body: UpdateOTCheckinRequest = await request.json()
-    const { notes, status } = body
+    const body = await request.json()
 
-    // Validate status if provided
-    if (status && !VALID_STATUSES.includes(status)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Invalid status value",
-            details: { field: "status", value: status, validValues: VALID_STATUSES },
-          },
-        },
-        { status: 400 },
-      )
+    const validation = validateRequest(UpdateCheckinSchema, body)
+
+    if (!validation.success) {
+      return NextResponse.json(validation.formattedError, { status: 400 })
     }
+
+    const validatedData = validation.data
 
     const currentCheckin = await sql`
       SELECT id, status, notes, client_name FROM ot_checkins WHERE id = ${checkinId}
@@ -132,46 +125,24 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       )
     }
 
-    const currentStatus = currentCheckin[0].status as keyof typeof VALID_STATUS_TRANSITIONS
+    const currentStatus = currentCheckin[0].status
     const previousNotes = currentCheckin[0].notes
     const clientName = currentCheckin[0].client_name
-
-    // Validate status transition if status is being updated
-    if (status && status !== currentStatus) {
-      const allowedTransitions = VALID_STATUS_TRANSITIONS[currentStatus]
-      if (!allowedTransitions.includes(status)) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: {
-              code: "VALIDATION_ERROR",
-              message: `Invalid status transition from ${currentStatus} to ${status}`,
-              details: {
-                currentStatus,
-                requestedStatus: status,
-                allowedTransitions,
-              },
-            },
-          },
-          { status: 400 },
-        )
-      }
-    }
 
     // Build update query dynamically based on provided fields
     const updateFields: string[] = []
     const updateValues: any[] = []
     let paramIndex = 1
 
-    if (notes !== undefined) {
+    if (validatedData.notes !== undefined) {
       updateFields.push(`notes = $${paramIndex}`)
-      updateValues.push(notes)
+      updateValues.push(validatedData.notes)
       paramIndex++
     }
 
-    if (status !== undefined) {
+    if (validatedData.status !== undefined) {
       updateFields.push(`status = $${paramIndex}`)
-      updateValues.push(status)
+      updateValues.push(validatedData.status)
       paramIndex++
     }
 
@@ -207,13 +178,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const updatedCheckin = result[0]
 
     const auditChanges: any = { before: {}, after: {} }
-    if (notes !== undefined && notes !== previousNotes) {
+    if (validatedData.notes !== undefined && validatedData.notes !== previousNotes) {
       auditChanges.before.notes = previousNotes
-      auditChanges.after.notes = notes
+      auditChanges.after.notes = validatedData.notes
     }
-    if (status !== undefined && status !== currentStatus) {
+    if (validatedData.status !== undefined && validatedData.status !== currentStatus) {
       auditChanges.before.status = currentStatus
-      auditChanges.after.status = status
+      auditChanges.after.status = validatedData.status
     }
 
     await auditLog({

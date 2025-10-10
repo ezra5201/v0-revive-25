@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
+import { CreateOutreachLocationSchema, validateRequest } from "@/lib/validations"
 
 const sql = neon(process.env.DATABASE_URL!)
 
@@ -34,11 +35,19 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, intersection, address, notes, safety_concerns } = body
+
+    const validation = validateRequest(CreateOutreachLocationSchema, body)
+
+    if (!validation.success) {
+      return NextResponse.json(validation.formattedError, { status: 400 })
+    }
+
+    const validatedData = validation.data
 
     const result = await sql`
       INSERT INTO outreach_locations (name, intersection, address, notes, safety_concerns)
-      VALUES (${name}, ${intersection}, ${address || null}, ${notes || null}, ${safety_concerns || null})
+      VALUES (${validatedData.name}, ${validatedData.intersection}, ${validatedData.address}, 
+              ${validatedData.notes}, ${validatedData.safety_concerns})
       RETURNING *
     `
 

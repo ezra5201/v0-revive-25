@@ -2,6 +2,7 @@ import { sql } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
 import { getTodayString } from "@/lib/date-utils"
 import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
+import { CreateContactSchema, validateRequest } from "@/lib/validations"
 
 export async function GET(request: NextRequest) {
   if (!sql) {
@@ -448,34 +449,26 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const {
-      contactDate,
-      providerName,
-      clientName,
-      category,
-      foodAccessed,
-      servicesRequested,
-      servicesProvided,
-      comments,
-    } = body
 
-    // Validation
-    if (!contactDate || !providerName || !clientName || !category) {
-      return NextResponse.json(
-        { error: "Missing required fields: contactDate, providerName, clientName, category" },
-        { status: 400 },
-      )
+    const validation = validateRequest(CreateContactSchema, body)
+
+    if (!validation.success) {
+      return NextResponse.json(validation.formattedError, { status: 400 })
     }
 
-    // Insert the new contact
+    const validatedData = validation.data
+
+    // Insert the new contact using validated data
     const result = await sql`
       INSERT INTO contacts (
         contact_date, provider_name, client_name, category, food_accessed,
         services_requested, services_provided, comments
       )
       VALUES (
-        ${contactDate}, ${providerName}, ${clientName}, ${category}, ${foodAccessed || false},
-        ${JSON.stringify(servicesRequested || [])}, ${JSON.stringify(servicesProvided || [])}, ${comments || ""}
+        ${validatedData.contact_date}, ${validatedData.provider_name}, ${validatedData.client_name}, 
+        ${validatedData.category}, ${validatedData.food_accessed},
+        ${JSON.stringify(validatedData.services_requested)}, ${JSON.stringify(validatedData.services_provided)}, 
+        ${validatedData.comments}
       )
       RETURNING *
     `
@@ -486,16 +479,16 @@ export async function POST(request: NextRequest) {
       action: "CREATE",
       tableName: "contacts",
       recordId: newContact.id.toString(),
-      clientName: clientName,
+      clientName: validatedData.client_name,
       userEmail: getUserFromRequest(request),
       ipAddress: getIpFromRequest(request),
       changes: {
-        contact_date: contactDate,
-        provider_name: providerName,
-        category: category,
-        food_accessed: foodAccessed || false,
-        services_requested: servicesRequested || [],
-        services_provided: servicesProvided || [],
+        contact_date: validatedData.contact_date,
+        provider_name: validatedData.provider_name,
+        category: validatedData.category,
+        food_accessed: validatedData.food_accessed,
+        services_requested: validatedData.services_requested,
+        services_provided: validatedData.services_provided,
       },
     })
 

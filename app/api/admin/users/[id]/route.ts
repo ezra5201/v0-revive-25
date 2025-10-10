@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
+import { UpdateUserSchema, validateRequest } from "@/lib/validations"
 
 // PATCH /api/admin/users/:id - Update user permissions or active status
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -16,6 +17,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     const body = await request.json()
 
+    const validation = validateRequest(UpdateUserSchema, body)
+
+    if (!validation.success) {
+      return NextResponse.json(validation.formattedError, { status: 400 })
+    }
+
+    const validatedData = validation.data
+
     // Get current user data for audit log
     const currentUser = await sql`SELECT * FROM users WHERE id = ${userId}`
     if (currentUser.length === 0) {
@@ -27,33 +36,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const values: any[] = []
     let paramIndex = 1
 
-    // Handle active status
-    if (typeof body.active === "boolean") {
-      updates.push(`active = $${paramIndex}`)
-      values.push(body.active)
-      paramIndex++
-    }
-
-    // Handle permissions
-    const permissionFields = [
-      "can_view_client_demographics",
-      "can_view_client_services",
-      "can_view_all_clients",
-      "can_export_client_data",
-      "can_manage_users",
-      "can_manage_system_settings",
-      "can_view_audit_logs",
-      "can_manage_database",
-      "can_create_contacts",
-      "can_edit_own_contacts",
-      "can_edit_all_contacts",
-      "can_delete_contacts",
-    ]
-
-    for (const field of permissionFields) {
-      if (typeof body[field] === "boolean") {
-        updates.push(`${field} = $${paramIndex}`)
-        values.push(body[field])
+    // Handle all fields from validated data
+    for (const [key, value] of Object.entries(validatedData)) {
+      if (value !== undefined) {
+        updates.push(`${key} = $${paramIndex}`)
+        values.push(value)
         paramIndex++
       }
     }

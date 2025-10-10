@@ -1,86 +1,24 @@
 import { sql } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
 import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
+import { CreateGoalSchema, validateRequest } from "@/lib/validations"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { client_name, client_uuid, goal_text, target_date, priority, checkin_id } = body
 
-    // Validation
-    if (!client_name || typeof client_name !== "string" || client_name.trim().length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Client name is required",
-            details: { field: "client_name", value: client_name },
-          },
-        },
-        { status: 400 },
-      )
+    const validation = validateRequest(CreateGoalSchema, body)
+
+    if (!validation.success) {
+      return NextResponse.json(validation.formattedError, { status: 400 })
     }
 
-    if (!client_uuid || typeof client_uuid !== "string" || client_uuid.trim().length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Client UUID is required",
-            details: { field: "client_uuid", value: client_uuid },
-          },
-        },
-        { status: 400 },
-      )
-    }
-
-    if (!goal_text || typeof goal_text !== "string" || goal_text.trim().length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Goal text is required",
-            details: { field: "goal_text", value: goal_text },
-          },
-        },
-        { status: 400 },
-      )
-    }
-
-    if (goal_text.length > 500) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Goal text must be 500 characters or less",
-            details: { field: "goal_text", value: goal_text },
-          },
-        },
-        { status: 400 },
-      )
-    }
-
-    if (priority && (typeof priority !== "number" || priority < 1 || priority > 5)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Priority must be between 1 and 5",
-            details: { field: "priority", value: priority },
-          },
-        },
-        { status: 400 },
-      )
-    }
+    const validatedData = validation.data
 
     const result = await sql`
       INSERT INTO ot_goals (client_name, client_uuid, goal_text, target_date, priority, checkin_id)
-      VALUES (${client_name.trim()}, ${client_uuid.trim()}, ${goal_text.trim()}, ${target_date || null}, ${priority || 1}, ${checkin_id || null})
+      VALUES (${validatedData.client_name}, ${validatedData.client_uuid}, ${validatedData.goal_text}, 
+              ${validatedData.target_date}, ${validatedData.priority}, ${validatedData.checkin_id})
       RETURNING id, client_name, client_uuid, goal_text, status, target_date, priority, checkin_id, created_at, updated_at
     `
 
@@ -90,13 +28,13 @@ export async function POST(request: NextRequest) {
       action: "CREATE",
       tableName: "ot_goals",
       recordId: newGoal.id.toString(),
-      clientName: client_name,
+      clientName: validatedData.client_name,
       userEmail: getUserFromRequest(request),
       ipAddress: getIpFromRequest(request),
       changes: {
-        goal_text,
-        target_date,
-        priority: priority || 1,
+        goal_text: validatedData.goal_text,
+        target_date: validatedData.target_date,
+        priority: validatedData.priority,
         status: newGoal.status,
       },
     })

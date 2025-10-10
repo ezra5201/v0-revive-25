@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
+import { CreateOutreachContactSchema, validateRequest } from "@/lib/validations"
 
 const sql = neon(process.env.DATABASE_URL!)
 
@@ -28,30 +29,22 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const {
-      run_id,
-      client_id,
-      location_id,
-      staff_member,
-      services_provided,
-      supplies_given,
-      narcan_administered,
-      medical_concerns,
-      housing_status,
-      follow_up_needed,
-      follow_up_notes,
-      is_new_client,
-      new_client_first_name,
-      new_client_last_name,
-    } = body
 
-    let finalClientId = client_id
+    const validation = validateRequest(CreateOutreachContactSchema, body)
+
+    if (!validation.success) {
+      return NextResponse.json(validation.formattedError, { status: 400 })
+    }
+
+    const validatedData = validation.data
+
+    let finalClientId = validatedData.client_id
 
     // Create new client if needed
-    if (is_new_client && (new_client_first_name || new_client_last_name)) {
+    if (validatedData.is_new_client && (validatedData.new_client_first_name || validatedData.new_client_last_name)) {
       const newClient = await sql`
         INSERT INTO outreach_clients (first_name, last_name, is_active)
-        VALUES (${new_client_first_name || null}, ${new_client_last_name || null}, true)
+        VALUES (${validatedData.new_client_first_name || null}, ${validatedData.new_client_last_name || null}, true)
         RETURNING id
       `
       finalClientId = newClient[0].id
@@ -59,44 +52,27 @@ export async function POST(request: NextRequest) {
 
     const result = await sql`
       INSERT INTO outreach_contacts (
-        run_id,
-        client_id,
-        location_id,
-        contact_date,
-        contact_time,
-        staff_member,
-        services_provided,
-        supplies_given,
-        narcan_administered,
-        medical_concerns,
-        housing_status,
-        follow_up_needed,
-        follow_up_notes
+        run_id, client_id, location_id, contact_date, contact_time, staff_member,
+        services_provided, supplies_given, narcan_administered, medical_concerns,
+        housing_status, follow_up_needed, follow_up_notes
       )
       VALUES (
-        ${run_id || null},
-        ${finalClientId || null},
-        ${location_id || null},
-        CURRENT_DATE,
-        CURRENT_TIME,
-        ${staff_member},
-        ${services_provided},
-        ${JSON.stringify(supplies_given)},
-        ${narcan_administered},
-        ${medical_concerns || null},
-        ${housing_status || null},
-        ${follow_up_needed},
-        ${follow_up_notes || null}
+        ${validatedData.run_id}, ${finalClientId}, ${validatedData.location_id},
+        CURRENT_DATE, CURRENT_TIME, ${validatedData.staff_member},
+        ${validatedData.services_provided}, ${JSON.stringify(validatedData.supplies_given)},
+        ${validatedData.narcan_administered}, ${validatedData.medical_concerns},
+        ${validatedData.housing_status}, ${validatedData.follow_up_needed},
+        ${validatedData.follow_up_notes}
       )
       RETURNING *
     `
 
     // Update run contact count if run_id provided
-    if (run_id) {
+    if (validatedData.run_id) {
       await sql`
         UPDATE outreach_runs 
         SET total_contacts = total_contacts + 1
-        WHERE id = ${run_id}
+        WHERE id = ${validatedData.run_id}
       `
     }
 

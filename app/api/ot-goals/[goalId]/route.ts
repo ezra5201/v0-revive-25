@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db"
 import { type NextRequest, NextResponse } from "next/server"
 import { auditLog, getUserFromRequest, getIpFromRequest } from "@/lib/audit-log"
+import { UpdateGoalSchema, validateRequest } from "@/lib/validations"
 
 export async function PUT(request: NextRequest, { params }: { params: { goalId: string } }) {
   try {
@@ -20,89 +21,14 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
     }
 
     const body = await request.json()
-    const { status, progress_note, goal_text, target_date, priority } = body
 
-    // Check if this is a full goal update or just status update
-    const isFullUpdate = goal_text !== undefined || target_date !== undefined || priority !== undefined
+    const validation = validateRequest(UpdateGoalSchema, body)
 
-    if (isFullUpdate) {
-      // Full goal update validation
-      if (goal_text !== undefined) {
-        if (!goal_text || typeof goal_text !== "string" || goal_text.trim().length === 0) {
-          return NextResponse.json(
-            {
-              success: false,
-              error: {
-                code: "VALIDATION_ERROR",
-                message: "Goal text is required",
-                details: { field: "goal_text", value: goal_text },
-              },
-            },
-            { status: 400 },
-          )
-        }
-
-        if (goal_text.length > 500) {
-          return NextResponse.json(
-            {
-              success: false,
-              error: {
-                code: "VALIDATION_ERROR",
-                message: "Goal text must be 500 characters or less",
-                details: { field: "goal_text", value: goal_text },
-              },
-            },
-            { status: 400 },
-          )
-        }
-      }
-
-      if (priority !== undefined && (typeof priority !== "number" || priority < 1 || priority > 5)) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: {
-              code: "VALIDATION_ERROR",
-              message: "Priority must be between 1 and 5",
-              details: { field: "priority", value: priority },
-            },
-          },
-          { status: 400 },
-        )
-      }
+    if (!validation.success) {
+      return NextResponse.json(validation.formattedError, { status: 400 })
     }
 
-    // Status validation (for both update types)
-    if (status !== undefined) {
-      const validStatuses = ["Not Started", "In Progress", "Completed", "Deferred"]
-      if (!validStatuses.includes(status)) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: {
-              code: "VALIDATION_ERROR",
-              message: "Status must be one of: " + validStatuses.join(", "),
-              details: { field: "status", value: status },
-            },
-          },
-          { status: 400 },
-        )
-      }
-    }
-
-    if (progress_note && progress_note.length > 1000) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Progress note must be 1000 characters or less",
-            details: { field: "progress_note", value: progress_note },
-          },
-        },
-        { status: 400 },
-      )
-    }
+    const validatedData = validation.data
 
     const existingGoal = await sql`
       SELECT id, status, goal_text, target_date, priority, client_name FROM ot_goals WHERE id = ${goalId}
@@ -151,24 +77,24 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
     const updateValues: any[] = []
     let paramIndex = 1
 
-    if (goal_text !== undefined) {
+    if (validatedData.goal_text !== undefined) {
       updateFields.push(`goal_text = $${paramIndex}`)
-      updateValues.push(goal_text.trim())
+      updateValues.push(validatedData.goal_text)
       paramIndex++
     }
-    if (target_date !== undefined) {
+    if (validatedData.target_date !== undefined) {
       updateFields.push(`target_date = $${paramIndex}`)
-      updateValues.push(target_date || null)
+      updateValues.push(validatedData.target_date)
       paramIndex++
     }
-    if (priority !== undefined) {
+    if (validatedData.priority !== undefined) {
       updateFields.push(`priority = $${paramIndex}`)
-      updateValues.push(priority)
+      updateValues.push(validatedData.priority)
       paramIndex++
     }
-    if (status !== undefined) {
+    if (validatedData.status !== undefined) {
       updateFields.push(`status = $${paramIndex}`)
-      updateValues.push(status)
+      updateValues.push(validatedData.status)
       paramIndex++
     }
     updateFields.push(`updated_at = CURRENT_TIMESTAMP`)
@@ -203,24 +129,24 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
     }
 
     const auditChanges: any = { before: {}, after: {} }
-    if (goal_text !== undefined) {
+    if (validatedData.goal_text !== undefined) {
       auditChanges.before.goal_text = previousGoalText
       auditChanges.after.goal_text = updatedGoal.goal_text
     }
-    if (target_date !== undefined) {
+    if (validatedData.target_date !== undefined) {
       auditChanges.before.target_date = previousTargetDate
       auditChanges.after.target_date = updatedGoal.target_date
     }
-    if (priority !== undefined) {
+    if (validatedData.priority !== undefined) {
       auditChanges.before.priority = previousPriority
       auditChanges.after.priority = updatedGoal.priority
     }
-    if (status !== undefined) {
+    if (validatedData.status !== undefined) {
       auditChanges.before.status = previousStatus
       auditChanges.after.status = updatedGoal.status
     }
-    if (progress_note) {
-      auditChanges.progress_note = progress_note
+    if (validatedData.progress_note) {
+      auditChanges.progress_note = validatedData.progress_note
     }
 
     await auditLog({
@@ -233,10 +159,10 @@ export async function PUT(request: NextRequest, { params }: { params: { goalId: 
       changes: auditChanges,
     })
 
-    if (progress_note || (status && previousStatus !== status)) {
+    if (validatedData.progress_note || (validatedData.status && previousStatus !== validatedData.status)) {
       await sql`
         INSERT INTO ot_goal_progress (goal_id, progress_note, previous_status, new_status)
-        VALUES (${goalId}, ${progress_note || null}, ${previousStatus}, ${status || previousStatus})
+        VALUES (${goalId}, ${validatedData.progress_note || null}, ${previousStatus}, ${validatedData.status || previousStatus})
       `
     }
 
