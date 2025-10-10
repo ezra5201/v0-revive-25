@@ -210,7 +210,12 @@ export default function ContactLogPage() {
         />
       </main>
 
-      <ClientDrawer isOpen={isDrawerOpen} clientName={drawerClientName} onClose={() => setIsDrawerOpen(false)} />
+      <ClientDrawer
+        isOpen={isDrawerOpen}
+        clientName={drawerClientName}
+        onClose={() => setIsDrawerOpen(false)}
+        onDataUpdate={handleDataUpdate}
+      />
 
       <QuickCheckinDialog
         isOpen={isDialogOpen}
