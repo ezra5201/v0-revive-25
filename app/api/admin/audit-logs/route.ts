@@ -16,6 +16,17 @@ export async function GET(request: Request) {
     const limit = Number.parseInt(searchParams.get("limit") || "50")
     const offset = (page - 1) * limit
 
+    console.log("[v0] Fetching audit logs with filters:", {
+      startDate,
+      endDate,
+      userEmail,
+      action,
+      clientName,
+      tableName,
+      page,
+      limit,
+    })
+
     // Build dynamic WHERE clause
     const conditions: string[] = []
     const params: any[] = []
@@ -61,8 +72,25 @@ export async function GET(request: Request) {
 
     // Get total count for pagination
     const countQuery = `SELECT COUNT(*) as total FROM audit_logs ${whereClause}`
+    console.log("[v0] Executing count query:", countQuery)
+    console.log("[v0] With params:", params)
+
     const countResult = await sql.unsafe(countQuery, params)
-    const total = Number(countResult[0].total)
+    console.log("[v0] Count result:", countResult)
+
+    if (!countResult || countResult.length === 0) {
+      console.error("[v0] No count result returned - table may not exist")
+      return NextResponse.json(
+        {
+          error: "Audit logs table not found or query failed",
+          hint: "Please ensure the audit_logs table has been created by running scripts/create-audit-logs-table.sql",
+        },
+        { status: 500 },
+      )
+    }
+
+    const total = Number(countResult[0]?.total || 0)
+    console.log("[v0] Total audit logs:", total)
 
     // Get paginated results
     const dataQuery = `
@@ -83,7 +111,9 @@ export async function GET(request: Request) {
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `
 
+    console.log("[v0] Executing data query")
     const logs = await sql.unsafe(dataQuery, [...params, limit, offset])
+    console.log("[v0] Retrieved logs count:", logs.length)
 
     return NextResponse.json({
       logs,
@@ -95,7 +125,18 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error("Failed to fetch audit logs:", error)
-    return NextResponse.json({ error: "Failed to fetch audit logs" }, { status: 500 })
+    console.error("[v0] Failed to fetch audit logs:", error)
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    return NextResponse.json(
+      {
+        error: "Failed to fetch audit logs",
+        details: errorMessage,
+        hint:
+          errorMessage.includes("relation") || errorMessage.includes("does not exist")
+            ? "The audit_logs table may not exist. Please run scripts/create-audit-logs-table.sql"
+            : "Check server logs for more details",
+      },
+      { status: 500 },
+    )
   }
 }
